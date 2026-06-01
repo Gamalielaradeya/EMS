@@ -36,6 +36,32 @@ func GatewayBearerAuth(validator gatewayTokenValidator) func(http.Handler) http.
 	}
 }
 
+func AdminOrInternalBearerAuth(adminToken, internalAPIToken string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := bearerToken(r)
+			if token == "" {
+				apiresponse.Error(w, http.StatusUnauthorized, "admin or internal bearer token is required", nil)
+				return
+			}
+			if token != adminToken && token != internalAPIToken {
+				apiresponse.Error(w, http.StatusUnauthorized, "admin or internal bearer token is invalid", nil)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func bearerToken(r *http.Request) string {
+	authorization := r.Header.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
+	if token == authorization {
+		return ""
+	}
+	return token
+}
+
 func CORS(frontendOrigin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -71,4 +97,10 @@ type statusRecorder struct {
 func (r *statusRecorder) WriteHeader(statusCode int) {
 	r.statusCode = statusCode
 	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (r *statusRecorder) Flush() {
+	if flusher, ok := r.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
 }

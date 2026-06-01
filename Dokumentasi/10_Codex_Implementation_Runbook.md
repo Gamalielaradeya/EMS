@@ -259,7 +259,8 @@ Implementasi dibagi menjadi 12 milestone:
 M-1 Documentation Lock
 M0  Repository foundation
 M1  Database migrations and seed
-M2  Backend core API
+M2A Backend core API
+M2B Backend realtime and system core
 M3  Gateway diagnostic and delivery
 M4  Frontend foundation and dashboard shell
 M5  Sensors & readings realtime dashboard
@@ -482,7 +483,7 @@ SELECT key, value FROM settings ORDER BY key;
 
 ---
 
-# M2 — Backend Core API
+# M2A — Backend Core API
 
 ## 12. Tujuan
 
@@ -497,17 +498,13 @@ Membuat Go backend dasar yang dapat menerima readings dari gateway dan menyediak
 5. Buat middleware logging.
 6. Buat middleware CORS.
 7. Buat middleware gateway auth.
-8. Buat middleware simple admin/internal token.
-9. Buat endpoint `GET /api/v1/health`.
-10. Buat endpoint `POST /api/v1/readings`.
-11. Buat endpoint `POST /api/v1/gateway/status`.
-12. Buat endpoint `GET /api/v1/readings/latest`.
-13. Buat endpoint `GET /api/v1/readings/history`.
-14. Buat endpoint `GET /api/v1/sensors`.
-15. Buat endpoint `PUT /api/v1/sensors/{sensorCode}`.
-16. Buat endpoint `GET /api/v1/dashboard/summary` minimal.
-17. Buat SSE hub dan endpoint `GET /api/v1/events`.
-18. Buat offline checker setiap 30 detik.
+8. Buat endpoint `GET /api/v1/health`.
+9. Buat endpoint `POST /api/v1/readings`.
+10. Buat endpoint `POST /api/v1/gateway/status`.
+11. Buat endpoint `GET /api/v1/readings/latest`.
+12. Buat endpoint `GET /api/v1/readings/history`.
+13. Buat endpoint `GET /api/v1/sensors`.
+14. Buat endpoint `PUT /api/v1/sensors/{sensorCode}`.
 
 ## 12.2 Files Expected
 
@@ -591,10 +588,50 @@ curl -N http://localhost:8080/api/v1/events
 [ ] Payload invalid return 422
 [ ] Latest readings menampilkan S1/S2
 [ ] History readings bisa filter sensor
-[ ] Dashboard summary minimal berjalan
-[ ] SSE endpoint berjalan
 [ ] README backend berisi cara run dan contoh curl
 ```
+
+---
+
+# M2B — Backend Realtime and System Core
+
+## 12B. Tujuan
+
+Melengkapi fondasi backend realtime dan status sistem sebelum gateway dibuat.
+
+## 12B.1 Tasks
+
+1. Buat endpoint `GET /api/v1/dashboard/summary` yang aman saat data kosong.
+2. Buat SSE hub dan endpoint `GET /api/v1/events`.
+3. Emit `reading.latest` setelah readings berhasil diterima.
+4. Emit `gateway.status` setelah status gateway berhasil diterima.
+5. Emit `sensor.trouble` untuk status sensor trouble.
+6. Emit `system.log` untuk log sistem penting.
+7. Definisikan konstanta event prediction, anomaly, dan notification untuk milestone lanjutan tanpa mengimplementasikan logic lebih awal.
+8. Buat offline checker configurable dengan default 30 detik.
+9. Gunakan setting `sensor_timeout_minutes`, default 5 menit.
+10. Update gateway offline dan sensor trouble hanya saat status berubah agar log tidak spam.
+11. Buat repository/service untuk insert `system_logs`.
+12. Siapkan middleware Bearer token `ADMIN_TOKEN` atau `INTERNAL_API_TOKEN` untuk endpoint sensitif milestone lanjutan.
+13. Pastikan `APP_PORT` dapat dioverride, gunakan `8081` untuk validation jika `8080` terpakai.
+14. Selaraskan Go module dengan toolchain lokal tanpa automatic toolchain download yang tidak dijelaskan.
+
+## 12B.2 Definition of Done
+
+```text
+[ ] Dashboard summary aman untuk database kosong dan berisi data
+[ ] SSE endpoint dapat terkoneksi
+[ ] reading.latest terkirim setelah POST readings
+[ ] gateway.status terkirim setelah POST gateway/status
+[ ] sensor.trouble terkirim saat sensor trouble
+[ ] system.log terkirim untuk transition penting
+[ ] Offline checker menulis transition log tanpa spam duplicate
+[ ] Middleware admin/internal tersedia untuk future sensitive routes
+[ ] APP_PORT override tervalidasi
+[ ] gofmt, go mod tidy, go test, go vet, dan go build sukses
+```
+
+Milestone M3 tidak boleh dimulai tanpa persetujuan eksplisit user.
 
 ---
 

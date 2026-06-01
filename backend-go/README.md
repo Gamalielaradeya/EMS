@@ -2,9 +2,11 @@
 
 Go REST API for EMS Thermal LSTM.
 
-Milestone `2` implements the core gateway ingestion and reading query surface. Later
-milestones add SSE, prediction integration, final thermal classification, anomaly
-events, and Telegram notification.
+Milestone `2A` implements the core gateway ingestion and reading query surface.
+Milestone `2B` adds dashboard summary, SSE delivery, timeout status checks, system
+logs, and reusable admin/internal authentication middleware. Later milestones add
+prediction integration, final thermal classification, anomaly events, and Telegram
+notification.
 
 ## Database Migrations
 
@@ -81,12 +83,24 @@ APP_ENV=development
 APP_PORT=8080
 FRONTEND_ORIGIN=http://localhost:5173
 ACTIVE_GATEWAY_CODE=raspi-gateway-01
+ADMIN_TOKEN=change-admin-token
+INTERNAL_API_TOKEN=change-internal-api-token
+BACKEND_OFFLINE_CHECK_INTERVAL_SECONDS=30
 ```
 
-## Milestone 2 Endpoints
+`APP_PORT` is configurable. If local port `8080` is occupied, use another port:
+
+```powershell
+$env:APP_PORT = "8081"
+go run ./cmd/server
+```
+
+## Milestone 2A and 2B Endpoints
 
 ```text
 GET  /api/v1/health
+GET  /api/v1/events
+GET  /api/v1/dashboard/summary
 POST /api/v1/readings
 POST /api/v1/gateway/status
 GET  /api/v1/sensors
@@ -97,6 +111,9 @@ GET  /api/v1/readings/history
 ```
 
 Gateway write endpoints require `Authorization: Bearer <gateway-token>`.
+The prepared `AdminOrInternalBearerAuth` middleware accepts `ADMIN_TOKEN` or
+`INTERNAL_API_TOKEN` for future sensitive write endpoints. Those future routes are
+not added during Milestone `2B`.
 
 ## Curl Examples
 
@@ -130,6 +147,27 @@ Read latest values and filtered history:
 curl http://localhost:8080/api/v1/readings/latest
 curl "http://localhost:8080/api/v1/readings/history?sensor_code=S2&limit=100"
 ```
+
+Read dashboard summary and connect to SSE:
+
+```bash
+curl http://localhost:8080/api/v1/dashboard/summary
+curl -N http://localhost:8080/api/v1/events
+```
+
+The backend emits these Milestone `2B` SSE event types:
+
+```text
+reading.latest
+gateway.status
+sensor.trouble
+system.log
+```
+
+The offline checker runs every `BACKEND_OFFLINE_CHECK_INTERVAL_SECONDS`, default
+`30`. It applies the `sensor_timeout_minutes` database setting, default `5`, and
+writes transition-only system logs when a gateway becomes offline or a sensor
+becomes trouble.
 
 ## Verification
 

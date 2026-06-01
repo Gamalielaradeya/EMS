@@ -65,7 +65,7 @@ Environment note:
 - Cleanup passed: dropped `ems_thermal_lstm_m1_validation`, stopped PostgreSQL, and removed the validation Compose container/network with `docker compose down`.
 - The named PostgreSQL volume remains available for later milestones.
 
-## Milestone 2 - Backend Core API
+## Milestone 2A - Backend Core API
 
 Status: Done
 
@@ -108,3 +108,44 @@ Environment note:
 
 - Local port `5432` remained occupied, so runtime validation used host port `55432`.
 - TimescaleDB was not enabled; standard PostgreSQL remains the default.
+
+## Milestone 2B - Backend Realtime and System Core
+
+Status: Done
+
+Build and static checks:
+
+- Passed: aligned `go.mod` from unavailable Go `1.26.3` to installed local Go `1.24.3`.
+- Passed: pinned `github.com/jackc/pgx/v5` to compatible `v5.8.0`; newer `v5.9.2` requires Go `>=1.25`.
+- Passed: `GOTOOLCHAIN=local gofmt -w .`.
+- Passed: `GOTOOLCHAIN=local go mod tidy`.
+- Passed: `GOTOOLCHAIN=local go test ./...`.
+- Passed: `GOTOOLCHAIN=local go vet ./...`.
+- Passed: `GOTOOLCHAIN=local go build ./cmd/server`.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+
+Runtime validation:
+
+- Docker Desktop was started temporarily for validation.
+- Passed: started PostgreSQL with temporary host override `POSTGRES_PORT=55432`.
+- Passed: created clean validation database `ems_thermal_lstm_m2b_validation`.
+- Passed: `./scripts/run-migrations-docker.ps1 -DatabaseName ems_thermal_lstm_m2b_validation -DatabaseUser ems_user`.
+- Passed: launched backend with `APP_PORT=8081` because local port `8080` was occupied.
+- Passed: `GET /api/v1/health` returned `200` on port `8081`.
+- Passed: `GET /api/v1/dashboard/summary` safely returned empty readings, null model, null prediction, null metrics, and Telegram disabled before readings existed.
+- Passed: authenticated `POST /api/v1/readings` stored S1 and S2 and emitted SSE `reading.latest`.
+- Passed: populated `GET /api/v1/dashboard/summary` returned S1 and S2 latest readings while optional ML state remained null safely.
+- Passed: authenticated `POST /api/v1/gateway/status` emitted SSE `gateway.status`.
+- Passed: reported S2 trouble emitted SSE `sensor.trouble` and `system.log`.
+- Passed: offline checker marked one stale gateway offline and two stale sensors trouble.
+- Passed: offline checker wrote three timeout transition logs on the first cycle and remained at three logs after later cycles, confirming duplicate-log suppression.
+- Passed: SSE disconnect after the curl timeout did not crash backend.
+- Passed: admin/internal Bearer middleware unit tests accept configured `ADMIN_TOKEN` and `INTERNAL_API_TOKEN` values and reject missing tokens.
+
+Cleanup:
+
+- Passed: stopped temporary backend process.
+- Passed: dropped `ems_thermal_lstm_m2b_validation`.
+- Passed: removed validation Compose container/network with `docker compose down`.
+- Passed: stopped Docker Desktop after validation.
+- The named PostgreSQL volume remains available for later milestones.

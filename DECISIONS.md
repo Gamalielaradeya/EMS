@@ -18,6 +18,7 @@ Approved during Milestone `-1` Documentation Lock.
 | DEC-010 | Actual S2 temperature is matched to nearest reading around `predicted_for` with tolerance `+/-60 seconds`. If no reading exists, keep `actual_temperature = null`. |
 | DEC-011 | Canonical gateway CLI uses `python -m gateway.cli ...`. Canonical ML CLI uses `python -m ml_worker.cli train`, `infer`, and `evaluate`. |
 | DEC-012 | Simulator is development helper only. Thesis evidence prioritizes `source = 'hardware'` and `quality_status = 'valid'`. |
+| DEC-013 | Backend milestone is split into `M2A` Backend Core API and `M2B` Backend Realtime and System Core. Gateway work remains blocked until `M2B` is complete and explicitly approved. |
 
 ## Scope Guard
 

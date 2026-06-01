@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
 	"ems-thermal-lstm/backend-go/internal/repository"
+	"ems-thermal-lstm/backend-go/internal/sse"
 	"ems-thermal-lstm/backend-go/internal/validation"
 )
 
@@ -19,12 +21,18 @@ var ErrValidation = errors.New("validation failed")
 type Service struct {
 	repository        *repository.Repository
 	activeGatewayCode string
+	events            eventPublisher
 }
 
-func New(repository *repository.Repository, activeGatewayCode string) *Service {
+type eventPublisher interface {
+	Publish(eventType string, data any) error
+}
+
+func New(repository *repository.Repository, activeGatewayCode string, events eventPublisher) *Service {
 	return &Service{
 		repository:        repository,
 		activeGatewayCode: activeGatewayCode,
+		events:            events,
 	}
 }
 
@@ -65,6 +73,9 @@ func (s *Service) InsertReadings(ctx context.Context, input model.ReadingsInput)
 		})
 	}
 	storedCount, err := s.repository.InsertReadings(ctx, input.GatewayID, recordedAt, input.Source, readings, rawPayload)
+	if err == nil {
+		s.publish(sse.EventReadingLatest, readingLatestEvent(input, recordedAt))
+	}
 	return storedCount, nil, err
 }
 
@@ -73,7 +84,20 @@ func (s *Service) RecordGatewayStatus(ctx context.Context, input model.GatewaySt
 		return errs, ErrValidation
 	}
 	reportedAt, _ := time.Parse(time.RFC3339, input.ReportedAt)
-	return nil, s.repository.RecordGatewayStatus(ctx, input, reportedAt)
+	systemLogs, err := s.repository.RecordGatewayStatus(ctx, input, reportedAt)
+	if err != nil {
+		return nil, err
+	}
+	s.publish(sse.EventGatewayStatus, input)
+	for _, sensor := range input.Sensors {
+		if sensor.Status == "trouble" {
+			s.publish(sse.EventSensorTrouble, sensor)
+		}
+	}
+	for _, systemLog := range systemLogs {
+		s.publish(sse.EventSystemLog, systemLog)
+	}
+	return nil, nil
 }
 
 func (s *Service) ListSensors(ctx context.Context) ([]model.Sensor, error) {
@@ -103,6 +127,67 @@ func (s *Service) LatestReadings(ctx context.Context) (map[string]model.Reading,
 
 func (s *Service) ReadingHistory(ctx context.Context, filters model.ReadingFilters) ([]model.Reading, int64, error) {
 	return s.repository.ReadingHistory(ctx, filters)
+}
+
+func (s *Service) DashboardSummary(ctx context.Context) (model.DashboardSummary, error) {
+	return s.repository.DashboardSummary(ctx, s.activeGatewayCode)
+}
+
+func (s *Service) RunOfflineChecker(ctx context.Context, interval time.Duration) {
+	s.checkOfflineStatuses(ctx)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.checkOfflineStatuses(ctx)
+		}
+	}
+}
+
+func (s *Service) checkOfflineStatuses(ctx context.Context) {
+	changes, err := s.repository.MarkOfflineStatuses(ctx, time.Now(), 5)
+	if err != nil {
+		log.Printf("offline checker failed: %v", err)
+		return
+	}
+	for _, change := range changes {
+		s.publish(sse.EventSystemLog, change.Log)
+		switch change.Entity {
+		case "gateway":
+			s.publish(sse.EventGatewayStatus, change)
+		case "sensor":
+			s.publish(sse.EventSensorTrouble, change)
+		}
+	}
+}
+
+func (s *Service) publish(eventType string, data any) {
+	if s.events == nil {
+		return
+	}
+	if err := s.events.Publish(eventType, data); err != nil {
+		log.Printf("publish %s event: %v", eventType, err)
+	}
+}
+
+func readingLatestEvent(input model.ReadingsInput, recordedAt time.Time) map[string]any {
+	readings := make(map[string]any, len(input.Readings))
+	for _, reading := range input.Readings {
+		readings[reading.SensorCode] = map[string]any{
+			"temperature":          *reading.Temperature,
+			"humidity":             *reading.Humidity,
+			"sensor_health_status": "normal",
+			"recorded_at":          recordedAt,
+		}
+	}
+	return map[string]any{
+		"gateway_id":  input.GatewayID,
+		"recorded_at": recordedAt,
+		"readings":    readings,
+	}
 }
 
 func hashToken(token string) string {

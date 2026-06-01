@@ -16,6 +16,7 @@ import (
 	"ems-thermal-lstm/backend-go/internal/repository"
 	"ems-thermal-lstm/backend-go/internal/router"
 	"ems-thermal-lstm/backend-go/internal/service"
+	"ems-thermal-lstm/backend-go/internal/sse"
 )
 
 func main() {
@@ -34,12 +35,17 @@ func main() {
 	defer pool.Close()
 
 	repo := repository.New(pool)
-	svc := service.New(repo, cfg.ActiveGatewayCode)
+	eventHub := sse.NewHub()
+	svc := service.New(repo, cfg.ActiveGatewayCode, eventHub)
 	if err := svc.BootstrapGatewayToken(ctx, cfg.GatewayToken); err != nil {
 		log.Fatalf("bootstrap gateway token: %v", err)
 	}
 
-	apiHandler := handler.New(svc)
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+	go svc.RunOfflineChecker(appCtx, cfg.OfflineCheckEvery)
+
+	apiHandler := handler.New(svc, eventHub)
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.Port,
 		Handler:           router.New(apiHandler, svc, cfg.FrontendOrigin),
@@ -56,6 +62,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
+	appCancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()

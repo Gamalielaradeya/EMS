@@ -19,6 +19,8 @@ func New(handler *handler.Handler, tokenValidator interface {
 
 	router.Route("/api/v1", func(router chi.Router) {
 		router.Get("/health", handler.Health)
+		router.Get("/events", handler.Events)
+		router.Get("/dashboard/summary", handler.DashboardSummary)
 
 		router.Group(func(router chi.Router) {
 			router.Use(middleware.GatewayBearerAuth(tokenValidator))

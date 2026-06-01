@@ -44,7 +44,7 @@ Database-only work:
 - Added PowerShell and Bash migration helpers.
 - Did not implement backend API handlers or other application logic.
 
-## Milestone 2 - Backend Core API
+## Milestone 2A - Backend Core API
 
 Status: Done
 
@@ -66,3 +66,21 @@ Backend-only work:
 - Added last-seen updates for gateway and sensor readings.
 - Added focused validation tests and backend setup documentation.
 - Did not add frontend, gateway Python, ML Worker, Telegram, layout, prediction, dashboard-summary, or SSE implementation.
+
+## Milestone 2B - Backend Realtime and System Core
+
+Status: Done
+
+Backend-only work:
+
+- Added safe dashboard summary aggregation for gateway, latest readings, optional model/prediction/metrics state, Telegram enabled state, daily counts, and recent events.
+- Added SSE hub and public `GET /api/v1/events`.
+- Added SSE event delivery for successful readings ingestion, gateway status updates, sensor trouble reports, and system logs.
+- Added reserved SSE constants for future prediction, anomaly, and notification events without implementing prediction logic early.
+- Added configurable offline checker interval with a 30-second default.
+- Added timeout handling based on `sensor_timeout_minutes`, default 5 minutes.
+- Added transition-only gateway offline and sensor trouble updates so checker cycles do not write duplicate logs.
+- Added `system_logs` repository support and used it for timeout transitions and reported trouble transitions.
+- Added reusable admin/internal Bearer token middleware for future sensitive routes without adding those routes early.
+- Aligned `go.mod` to installed Go `1.24.3` and pinned compatible `pgx v5.8.0`.
+- Did not add gateway Python, frontend, ML prediction callback, Telegram, layout, or future sensitive endpoint implementation.

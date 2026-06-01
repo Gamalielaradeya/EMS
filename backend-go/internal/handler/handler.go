@@ -19,11 +19,12 @@ import (
 )
 
 type Handler struct {
-	service *service.Service
+	service     *service.Service
+	eventStream http.Handler
 }
 
-func New(service *service.Service) *Handler {
-	return &Handler{service: service}
+func New(service *service.Service, eventStream http.Handler) *Handler {
+	return &Handler{service: service, eventStream: eventStream}
 }
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +36,19 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		"database": "connected",
 		"time":     time.Now().UTC(),
 	})
+}
+
+func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
+	h.eventStream.ServeHTTP(w, r)
+}
+
+func (h *Handler) DashboardSummary(w http.ResponseWriter, r *http.Request) {
+	summary, err := h.service.DashboardSummary(r.Context())
+	if err != nil {
+		writeServiceError(w, err, nil)
+		return
+	}
+	apiresponse.Success(w, http.StatusOK, "dashboard summary retrieved", summary)
 }
 
 func (h *Handler) InsertReadings(w http.ResponseWriter, r *http.Request) {

@@ -3,7 +3,9 @@ package config
 import (
 	"errors"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -15,6 +17,9 @@ type Config struct {
 	DatabaseURL       string
 	GatewayToken      string
 	ActiveGatewayCode string
+	AdminToken        string
+	InternalAPIToken  string
+	OfflineCheckEvery time.Duration
 }
 
 func Load() (Config, error) {
@@ -27,6 +32,8 @@ func Load() (Config, error) {
 		DatabaseURL:       strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		GatewayToken:      strings.TrimSpace(os.Getenv("GATEWAY_TOKEN")),
 		ActiveGatewayCode: valueOrDefault("ACTIVE_GATEWAY_CODE", "raspi-gateway-01"),
+		AdminToken:        strings.TrimSpace(os.Getenv("ADMIN_TOKEN")),
+		InternalAPIToken:  internalAPIToken(),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -35,6 +42,11 @@ func Load() (Config, error) {
 	if cfg.GatewayToken == "" {
 		return Config{}, errors.New("GATEWAY_TOKEN is required")
 	}
+	offlineCheckSeconds, err := positiveIntegerOrDefault("BACKEND_OFFLINE_CHECK_INTERVAL_SECONDS", 30)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.OfflineCheckEvery = time.Duration(offlineCheckSeconds) * time.Second
 
 	return cfg, nil
 }
@@ -45,4 +57,23 @@ func valueOrDefault(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func internalAPIToken() string {
+	if token := strings.TrimSpace(os.Getenv("INTERNAL_API_TOKEN")); token != "" {
+		return token
+	}
+	return strings.TrimSpace(os.Getenv("INTERNAL_ML_TOKEN"))
+}
+
+func positiveIntegerOrDefault(key string, fallback int) (int, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return 0, errors.New(key + " must be a positive integer")
+	}
+	return parsed, nil
 }

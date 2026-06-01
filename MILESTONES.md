@@ -7,8 +7,9 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `-1` | Documentation Lock | Done |
 | `0` | Repository Foundation | Done |
 | `1` | Database Migrations and Seed | Done |
-| `2` | Backend Core API | Done |
-| `3` | Gateway Diagnostic and Delivery | Not started |
+| `2A` | Backend Core API | Done |
+| `2B` | Backend Realtime and System Core | Done |
+| `3` | Gateway Diagnostic and Delivery | Pending |
 | `4` | Frontend Foundation and Dashboard Shell | Not started |
 | `5` | Sensors and Readings Realtime Dashboard | Not started |
 | `6` | ML Worker Training Pipeline | Not started |
@@ -45,7 +46,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 - Validated migrations twice against a clean PostgreSQL validation database.
 - Confirmed no PUE, energy, or cooling tables exist.
 
-## Milestone 2 Completion
+## Milestone 2A Completion
 
 - Added Go module and layered backend structure for config, repository, service, handler, router, and middleware.
 - Added PostgreSQL connection and health check.
@@ -56,5 +57,17 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 - Added gateway heartbeat persistence and sensor health updates.
 - Added sensor listing, sensor detail, sensor metadata update, latest readings, and reading history endpoints.
 - Added focused validation tests and verified the approved API surface against PostgreSQL.
+
+## Milestone 2B Completion
+
+- Added safe `GET /api/v1/dashboard/summary` for empty and populated database states.
+- Added SSE hub and public `GET /api/v1/events`.
+- Added `reading.latest`, `gateway.status`, `sensor.trouble`, and `system.log` SSE delivery.
+- Reserved future SSE event constants for prediction, anomaly, and notification integration.
+- Added configurable backend offline checker with 30-second default interval.
+- Added transition-only gateway offline and sensor trouble updates with `system_logs`.
+- Added reusable admin/internal Bearer token middleware for future sensitive endpoints.
+- Aligned the Go module with local Go `1.24.3` and compatible `pgx v5.8.0`.
+- Validated runtime behavior against PostgreSQL on backend port `8081`.
 
 Milestone `3` requires explicit user approval.

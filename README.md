@@ -72,4 +72,4 @@ If port `5432` is already used locally, set `POSTGRES_PORT` in the local `.env` 
 
 ## Milestone Status
 
-Milestone `2` Backend Core API is complete. Milestone `3` must not start without explicit approval.
+Milestone `2A` Backend Core API and Milestone `2B` Backend Realtime and System Core are complete. Milestone `3` must not start without explicit approval.
