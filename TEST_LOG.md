@@ -149,3 +149,54 @@ Cleanup:
 - Passed: removed validation Compose container/network with `docker compose down`.
 - Passed: stopped Docker Desktop after validation.
 - The named PostgreSQL volume remains available for later milestones.
+
+## Milestone 3 - Gateway Diagnostic and Delivery
+
+Status: Done
+
+Environment setup:
+
+- Passed: created ignored `gateway-rpi/.venv` with local Python `3.10.11`.
+- Passed: installed gateway-only dependencies with
+  `./.venv/Scripts/python.exe -m pip install -r requirements.txt`.
+- Passed: `./.venv/Scripts/python.exe -m pip check`.
+
+Syntax and unit checks:
+
+- Passed: `./.venv/Scripts/python.exe -m compileall src tests`.
+- Passed: `./.venv/Scripts/python.exe -m unittest discover -s tests -v`.
+- Passed: 12 tests cover YAML/env configuration, backend payload shape, sensor
+  validation, Bearer authentication, one-retry limit, bounded JSONL storage,
+  throttled replay, replay retention while offline, heartbeat timing, throttled
+  offline heartbeat attempts, immediate sensor-status changes, and one-cycle
+  resilience when S2 plus backend fail.
+
+CLI and laptop diagnostics:
+
+- Passed: `./.venv/Scripts/python.exe -m gateway.cli --help`.
+- Passed: `./.venv/Scripts/python.exe -m gateway.cli diagnose --help`.
+- Passed: `./.venv/Scripts/python.exe -m gateway.cli diagnose ports`; reported
+  no serial ports without crashing because this laptop has no USB RS485 adapter.
+- Passed: `./.venv/Scripts/python.exe -m gateway.cli diagnose raw --config
+  ./config.example.yaml --slave-id 1 --address 1 --count 2`; returned exit `1`
+  with clear RS485 troubleshooting causes because `/dev/ttyUSB0` is absent.
+- Passed: `./.venv/Scripts/python.exe -m gateway.cli diagnose sensor --config
+  ./config.example.yaml --sensor-code S1`; returned a clear no-adapter error.
+- Passed: backend-offline `send-test` returned exit `1` after exactly two HTTP
+  attempts: the initial request and one configured retry.
+
+Security and packaging checks:
+
+- Passed: root `.gitignore` excludes `.env`, `config.yaml`, `.venv/`, `*.log`,
+  `failed_payloads.jsonl`, `__pycache__/`, and generated `*.egg-info/`.
+- Passed: `git check-ignore -v` confirmed local secret/runtime paths are ignored.
+- Passed: `systemd/ems-thermal-lstm-gateway.service.example` is documentation
+  only and points at the gateway virtual-environment Python executable.
+
+Environment note:
+
+- Physical XY-MD02 success remains deferred until Raspberry Pi wiring, serial
+  permissions, slave IDs, and register addresses are verified.
+- A live backend was not started for M3 laptop validation. Mocked HTTP tests
+  validated payload submission, Bearer token use, retry behavior, buffering, and
+  replay; the CLI offline path was also validated.

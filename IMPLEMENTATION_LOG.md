@@ -84,3 +84,30 @@ Backend-only work:
 - Added reusable admin/internal Bearer token middleware for future sensitive routes without adding those routes early.
 - Aligned `go.mod` to installed Go `1.24.3` and pinned compatible `pgx v5.8.0`.
 - Did not add gateway Python, frontend, ML prediction callback, Telegram, layout, or future sensitive endpoint implementation.
+
+## Milestone 3 - Gateway Diagnostic and Delivery
+
+Status: Done
+
+Gateway-only work:
+
+- Added the installable `gateway-rpi` Python package with a `src/gateway/`
+  layout and canonical `python -m gateway.cli ...` command surface.
+- Added YAML configuration, environment overrides, dummy-safe examples, and
+  validation for hardware mode, S1 ambient, S2 hotspot, retry limits, and runtime
+  paths.
+- Added USB serial-port discovery, Modbus RTU holding-register diagnostics,
+  configured sensor reads, and clear RS485 troubleshooting output.
+- Added sensor reading validation for temperature `0-80` and humidity `0-100`.
+- Added payload builders matching backend readings and gateway-status contracts.
+- Added Bearer-authenticated HTTP delivery with one retry only.
+- Added bounded JSONL failed-payload storage and throttled replay batches after
+  successful realtime delivery.
+- Added separate heartbeat/status reporting with trouble updates and a default
+  60-second heartbeat interval.
+- Added a basic periodic hardware run loop that continues when one sensor or the
+  backend is unavailable.
+- Added local file logging, Raspberry Pi setup documentation, and a
+  documentation-only systemd service example.
+- Added focused standard-library unit tests without adding frontend, ML Worker,
+  Telegram, or backend API changes.

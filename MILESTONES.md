@@ -9,7 +9,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `1` | Database Migrations and Seed | Done |
 | `2A` | Backend Core API | Done |
 | `2B` | Backend Realtime and System Core | Done |
-| `3` | Gateway Diagnostic and Delivery | Pending |
+| `3` | Gateway Diagnostic and Delivery | Done |
 | `4` | Frontend Foundation and Dashboard Shell | Not started |
 | `5` | Sensors and Readings Realtime Dashboard | Not started |
 | `6` | ML Worker Training Pipeline | Not started |
@@ -71,3 +71,23 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 - Validated runtime behavior against PostgreSQL on backend port `8081`.
 
 Milestone `3` requires explicit user approval.
+
+## Milestone 3 Completion
+
+- Added the installable Raspberry Pi Python gateway package under `gateway-rpi/`.
+- Added YAML configuration with environment overrides and dummy-safe examples.
+- Added canonical CLI commands for port discovery, raw Modbus reads, configured
+  sensor reads, backend `send-test`, and the periodic gateway loop.
+- Added XY-MD02 S1 ambient and S2 hotspot validation with temperature `0-80` and
+  humidity `0-100` limits.
+- Added Bearer-authenticated HTTP readings and gateway-status delivery with one
+  retry only.
+- Added bounded JSONL buffering and throttled replay that runs after successful
+  realtime delivery.
+- Added sensor trouble reporting, separate 60-second heartbeat delivery, and
+  local file logging.
+- Added Raspberry Pi setup documentation and a documentation-only systemd service
+  example.
+- Validated diagnostics safely without requiring a connected USB RS485 adapter.
+
+Milestone `4` requires explicit user approval.
