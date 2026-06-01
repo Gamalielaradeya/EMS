@@ -10,7 +10,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `2A` | Backend Core API | Done |
 | `2B` | Backend Realtime and System Core | Done |
 | `3` | Gateway Diagnostic and Delivery | Done |
-| `4` | Frontend Foundation and Dashboard Shell | Not started |
+| `4` | Frontend Foundation and Dashboard Shell | Done |
 | `5` | Sensors and Readings Realtime Dashboard | Not started |
 | `6` | ML Worker Training Pipeline | Not started |
 | `7` | ML Inference and Prediction Integration | Not started |
@@ -91,3 +91,20 @@ Milestone `3` requires explicit user approval.
 - Validated diagnostics safely without requiring a connected USB RS485 adapter.
 
 Milestone `4` requires explicit user approval.
+
+## Milestone 4 Completion
+
+- Added the React, Vite, and TypeScript frontend package under
+  `frontend-dashboard/`.
+- Added Tailwind CSS, shadcn/ui-compatible setup, and Chart.js dependencies.
+- Added the monitoring-first application layout with the locked six-menu
+  sidebar and responsive mobile menu.
+- Added compact topbar state for API, SSE, gateway, model, and last update.
+- Added environment-configurable API and SSE clients.
+- Added reusable status badges and loading, empty, and unavailable states.
+- Added intentional placeholder pages for the five post-Dashboard menus.
+- Added a Dashboard shell backed by `GET /api/v1/dashboard/summary` with
+  placeholder chart regions reserved for Milestone `5`.
+- Validated graceful behavior while the backend is unavailable.
+
+Milestone `5` requires explicit user approval.

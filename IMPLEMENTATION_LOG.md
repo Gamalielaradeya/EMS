@@ -111,3 +111,30 @@ Gateway-only work:
   documentation-only systemd service example.
 - Added focused standard-library unit tests without adding frontend, ML Worker,
   Telegram, or backend API changes.
+
+## Milestone 4 - Frontend Foundation and Dashboard Shell
+
+Status: Done
+
+Frontend-only work:
+
+- Initialized the React, Vite, and TypeScript application inside
+  `frontend-dashboard/`.
+- Added Tailwind CSS, shadcn/ui-compatible configuration and primitives, and
+  Chart.js dependencies for planned realtime dashboard charts.
+- Added a restrained monitoring-first layout with the locked six-menu sidebar,
+  responsive mobile menu, and compact system topbar.
+- Added API, SSE, gateway placeholder, model placeholder, and last-update
+  topbar status.
+- Added environment-configurable API and SSE clients with a finite API timeout
+  and safe connection cleanup.
+- Added typed dashboard-summary support for `GET /api/v1/dashboard/summary`.
+- Added SSE listeners for the backend realtime event contract and refreshes on
+  received events.
+- Added reusable status badges plus loading, empty, and unavailable states.
+- Added intentional placeholder pages for Sensors & Readings, Prediction &
+  LSTM, Layout, Events & Logs, and Settings.
+- Added Dashboard summary cards, sensor cards, chart placeholders, metric
+  placeholders, and recent-event regions without production dummy data.
+- Did not add full realtime tables/charts, frontend M5 detail, ML Worker,
+  Telegram, layout editing, gateway changes, or backend changes.

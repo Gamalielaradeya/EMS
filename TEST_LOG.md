@@ -200,3 +200,36 @@ Environment note:
 - A live backend was not started for M3 laptop validation. Mocked HTTP tests
   validated payload submission, Bearer token use, retry behavior, buffering, and
   replay; the CLI offline path was also validated.
+
+## Milestone 4 - Frontend Foundation and Dashboard Shell
+
+Status: Done
+
+Environment setup:
+
+- Passed: installed frontend-only dependencies with `npm install` inside
+  `frontend-dashboard/`.
+- Passed: confirmed `node_modules/`, `dist/`, and `.env.local` are ignored.
+
+Static checks:
+
+- Passed: `npm run typecheck`.
+- Passed: `npm run lint`.
+- Passed: `npm run build`.
+
+Runtime and browser checks:
+
+- Passed: launched the frontend temporarily with `npm run dev`.
+- Passed: opened `http://127.0.0.1:5173` in the in-app browser.
+- Passed: unavailable backend state renders safely after the API timeout.
+- Passed: Dashboard, Sensors & Readings, Prediction & LSTM, Layout, Events &
+  Logs, and Settings routes open without browser console errors.
+- Passed: responsive sweep at widths `320`, `375`, `414`, `768`, and `1280`
+  found no horizontal document overflow.
+- Passed: mobile menu expands at `320px` and exposes all six locked routes.
+
+Scope note:
+
+- Chart regions remain intentional placeholders until Milestone `5`.
+- Backend runtime integration was not required for M4 because unavailable-state
+  behavior is part of the shell contract.
