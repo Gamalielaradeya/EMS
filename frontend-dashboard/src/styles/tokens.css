@@ -21,6 +21,8 @@
   --color-accent-strong: oklch(42% 0.12 215);
   --color-accent-soft: oklch(91% 0.055 205);
   --color-accent-ink: oklch(18% 0.04 235);
+  --color-chart-s1: oklch(58% 0.14 210);
+  --color-chart-s2: oklch(57% 0.16 35);
   --color-success: oklch(51% 0.12 155);
   --color-success-soft: oklch(92% 0.055 155);
   --color-warning: oklch(63% 0.15 75);

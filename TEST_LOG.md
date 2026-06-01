@@ -233,3 +233,60 @@ Scope note:
 - Chart regions remain intentional placeholders until Milestone `5`.
 - Backend runtime integration was not required for M4 because unavailable-state
   behavior is part of the shell contract.
+
+## Milestone 5 - Sensors and Readings Realtime Dashboard
+
+Status: Done
+
+Static checks:
+
+- Passed: `npm run typecheck`.
+- Passed: `npm run lint`.
+- Passed: `npm run build`.
+
+Runtime setup:
+
+- Passed: launched Docker Desktop temporarily.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+- Passed: started PostgreSQL on host port `55432`.
+- Passed: created clean validation database
+  `ems_thermal_lstm_m5_validation`.
+- Passed: `./scripts/run-migrations-docker.ps1 -DatabaseName
+  ems_thermal_lstm_m5_validation -DatabaseUser ems_user`.
+- Passed: launched backend on `APP_PORT=8081` because local port `8080` was
+  occupied.
+- Passed: launched frontend on `127.0.0.1:5173` with API and SSE URLs pointed
+  at backend port `8081`.
+
+Browser and API validation:
+
+- Passed: guaranteed-offline frontend configuration showed safe API
+  unavailable, SSE disconnected, trouble assembly, and empty chart states.
+- Passed: online Dashboard loaded safely with empty sensor history.
+- Passed: Sensors & Readings displayed seeded S1 ambient and S2 hotspot
+  metadata with an empty history table before sample insertion.
+- Passed: authenticated `POST /api/v1/readings` inserted S1/S2 samples.
+- Passed: `reading.latest` updated cards and table without manual refresh.
+- Passed: populated Dashboard displayed S1/S2 values, gateway state, last
+  update, today count, and two Chart.js history canvases.
+- Passed: populated Sensors & Readings displayed two Chart.js history canvases
+  and a 12-row history result.
+- Passed: `sensor_code=S1` and `quality_status=valid` filter controls reduced
+  the visible history result from 12 rows to 6; reset restored 12 rows.
+- Passed: `from` and `to` datetime controls are present and serialize through
+  the typed API client; native datetime entry could not be driven by the
+  browser automation surface.
+- Passed: `gateway.status` and `sensor.trouble` changed gateway and S2 display
+  to trouble without manual refresh; a restore payload returned both to normal.
+- Passed: responsive sweep at widths `320`, `375`, `414`, `768`, and `1280`
+  found no horizontal document overflow.
+- Passed: narrow widths use reading cards instead of wide tables.
+- Passed: browser console remained free of warnings and errors.
+
+Cleanup:
+
+- Passed: stopped temporary frontend and backend processes.
+- Passed: dropped `ems_thermal_lstm_m5_validation`.
+- Passed: removed validation Compose container/network with
+  `docker compose down`.
+- Passed: stopped Docker Desktop after validation.

@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button"
 interface ErrorStateProps {
   message: string
   onRetry: () => void
+  title?: string
 }
 
-export function ErrorState({ message, onRetry }: ErrorStateProps) {
+export function ErrorState({ message, onRetry, title = "Dashboard API unavailable" }: ErrorStateProps) {
   return (
     <Alert className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex gap-3">
         <AlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
         <div>
-          <AlertTitle>Dashboard API unavailable</AlertTitle>
+          <AlertTitle>{title}</AlertTitle>
           <AlertDescription>{message}</AlertDescription>
         </div>
       </div>

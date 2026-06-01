@@ -1,4 +1,13 @@
-import type { ApiResponse, DashboardSummary, HealthSummary } from "@/types/api"
+import type {
+  ApiResponse,
+  DashboardSummary,
+  HealthSummary,
+  ReadingHistoryFilters,
+  ReadingHistoryMeta,
+  ReadingHistoryResult,
+  Sensor,
+  SensorReading,
+} from "@/types/api"
 
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 export const API_BASE_URL = (configuredApiUrl || "http://localhost:8080/api/v1").replace(/\/$/, "")
@@ -14,7 +23,10 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestEnvelope<T, TMeta = never>(
+  path: string,
+  init?: RequestInit,
+): Promise<ApiResponse<T, TMeta>> {
   let response: Response
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), 5000)
@@ -33,7 +45,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     window.clearTimeout(timeout)
   }
 
-  let body: ApiResponse<T>
+  let body: ApiResponse<T, TMeta>
   try {
     body = (await response.json()) as ApiResponse<T>
   } catch {
@@ -46,10 +58,37 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (body.data === undefined) {
     throw new ApiError("Backend response did not include expected data.", response.status)
   }
-  return body.data
+  return body
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const body = await requestEnvelope<T>(path, init)
+  return body.data as T
+}
+
+function readingHistoryQuery(filters: ReadingHistoryFilters) {
+  const query = new URLSearchParams()
+  if (filters.sensor_code) query.set("sensor_code", filters.sensor_code)
+  if (filters.from) query.set("from", filters.from)
+  if (filters.to) query.set("to", filters.to)
+  if (filters.quality_status) query.set("quality_status", filters.quality_status)
+  query.set("limit", String(filters.limit))
+  return query.toString()
 }
 
 export const api = {
   getHealth: () => request<HealthSummary>("/health"),
   getDashboardSummary: () => request<DashboardSummary>("/dashboard/summary"),
+  getSensors: () => request<Sensor[]>("/sensors"),
+  getLatestReadings: () =>
+    request<Partial<Record<"S1" | "S2", SensorReading>>>("/readings/latest"),
+  getReadingHistory: async (filters: ReadingHistoryFilters): Promise<ReadingHistoryResult> => {
+    const body = await requestEnvelope<SensorReading[], ReadingHistoryMeta>(
+      `/readings/history?${readingHistoryQuery(filters)}`,
+    )
+    return {
+      readings: body.data as SensorReading[],
+      meta: body.meta || { total: 0, limit: filters.limit, offset: 0 },
+    }
+  },
 }

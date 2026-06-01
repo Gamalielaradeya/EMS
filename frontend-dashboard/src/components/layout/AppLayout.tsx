@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import { Outlet } from "react-router-dom"
 
 import { Sidebar } from "@/components/layout/Sidebar"
@@ -9,7 +9,9 @@ import { useSSE } from "@/hooks/useSSE"
 export function AppLayout() {
   const dashboard = useDashboardSummary()
   const { refresh } = dashboard
+  const [eventRevision, setEventRevision] = useState(0)
   const handleSSEEvent = useCallback(() => {
+    setEventRevision((revision) => revision + 1)
     void refresh()
   }, [refresh])
   const sseStatus = useSSE(handleSSEEvent)
@@ -27,7 +29,7 @@ export function AppLayout() {
           summary={dashboard.summary}
         />
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet context={dashboard} />
+          <Outlet context={{ ...dashboard, eventRevision, sseStatus }} />
         </main>
       </div>
     </div>

@@ -30,7 +30,7 @@ npm run lint
 npm run build
 ```
 
-## Milestone 4 Surface
+## Implemented Surface
 
 The application shell uses the locked six-menu sidebar:
 
@@ -43,11 +43,27 @@ Events & Logs
 Settings
 ```
 
-The Dashboard page reads `GET /api/v1/dashboard/summary`, listens to
-`GET /api/v1/events`, and refreshes when backend SSE events arrive. It includes
-loading, empty, and unavailable states so a stopped backend does not break the
-shell.
+The Dashboard page reads `GET /api/v1/dashboard/summary` and bounded
+`GET /api/v1/readings/history` data. It shows current S1/S2 measurements,
+gateway state, last-update time, readings count, and temperature/humidity
+history charts.
 
-The remaining pages are intentional Milestone `4` placeholders. Realtime sensor
-tables and charts belong to Milestone `5`; prediction, layout, Telegram, and ML
-worker detail remain deferred to their planned milestones.
+The Sensors & Readings page reads `GET /api/v1/sensors`,
+`GET /api/v1/readings/latest`, and `GET /api/v1/readings/history`. It provides
+live sensor cards, metadata, Chart.js history charts, responsive history
+table/card views, manual refresh, and filters for:
+
+```text
+sensor_code
+from
+to
+quality_status
+limit
+```
+
+The frontend listens to `GET /api/v1/events` and refreshes active data when
+`reading.latest`, `gateway.status`, `sensor.trouble`, or `system.log` arrives.
+Loading, empty, unavailable, and SSE-disconnected states remain safe.
+
+Prediction, layout, Telegram, and ML worker detail remain deferred to their
+planned milestones.

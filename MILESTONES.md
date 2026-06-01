@@ -11,7 +11,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `2B` | Backend Realtime and System Core | Done |
 | `3` | Gateway Diagnostic and Delivery | Done |
 | `4` | Frontend Foundation and Dashboard Shell | Done |
-| `5` | Sensors and Readings Realtime Dashboard | Not started |
+| `5` | Sensors and Readings Realtime Dashboard | Done |
 | `6` | ML Worker Training Pipeline | Not started |
 | `7` | ML Inference and Prediction Integration | Not started |
 | `8` | Alert, Telegram, and Events Logs | Not started |
@@ -108,3 +108,21 @@ Milestone `4` requires explicit user approval.
 - Validated graceful behavior while the backend is unavailable.
 
 Milestone `5` requires explicit user approval.
+
+## Milestone 5 Completion
+
+- Connected Dashboard and Sensors & Readings pages to existing backend sensor
+  endpoints without backend API changes.
+- Added bounded S1/S2 temperature and humidity history charts using Chart.js.
+- Added live latest-reading cards, gateway state, sensor health state, and last
+  update timestamps.
+- Added sensor metadata display and responsive readings history table/card
+  views.
+- Added `sensor_code`, `from`, `to`, `quality_status`, and `limit` history
+  filters plus manual refresh.
+- Reused one SSE connection for `reading.latest`, `gateway.status`,
+  `sensor.trouble`, and `system.log` refreshes.
+- Validated offline, empty, populated, filtered, realtime, and responsive
+  frontend states against a temporary PostgreSQL-backed backend.
+
+Milestone `6` requires explicit user approval.

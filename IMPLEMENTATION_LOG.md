@@ -138,3 +138,28 @@ Frontend-only work:
   placeholders, and recent-event regions without production dummy data.
 - Did not add full realtime tables/charts, frontend M5 detail, ML Worker,
   Telegram, layout editing, gateway changes, or backend changes.
+
+## Milestone 5 - Sensors and Readings Realtime Dashboard
+
+Status: Done
+
+Frontend-only work:
+
+- Extended the typed frontend API client for `GET /api/v1/sensors`,
+  `GET /api/v1/readings/latest`, and bounded `GET /api/v1/readings/history`.
+- Reused the existing dashboard-summary endpoint for gateway state, S1/S2
+  summary cards, today count, and last-update display.
+- Added shared SSE event revision handling so `reading.latest`,
+  `gateway.status`, `sensor.trouble`, and `system.log` refresh active sensor
+  views without manual reload.
+- Replaced Dashboard chart placeholders with bounded Chart.js temperature and
+  humidity history charts.
+- Replaced the Sensors & Readings placeholder with live S1/S2 cards, gateway and
+  SSE state, sensor metadata, history filters, history charts, and responsive
+  history table/card views.
+- Added `sensor_code`, `from`, `to`, `quality_status`, and `limit` query filter
+  controls plus manual refresh.
+- Preserved loading, empty, unavailable, and disconnected states without
+  production dummy data.
+- Did not add prediction/model UI detail, layout editing, Telegram settings, ML
+  Worker code, gateway changes, or backend API changes.

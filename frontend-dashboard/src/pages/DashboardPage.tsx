@@ -1,14 +1,14 @@
 import {
   Activity,
-  BellRing,
   BrainCircuit,
   Database,
   Gauge,
   RefreshCw,
   ShieldCheck,
+  Wifi,
 } from "lucide-react"
 
-import { ChartPlaceholder } from "@/components/dashboard/ChartPlaceholder"
+import { ReadingsChart } from "@/components/charts/ReadingsChart"
 import { RecentEvents } from "@/components/dashboard/RecentEvents"
 import { SensorReadingCard } from "@/components/dashboard/SensorReadingCard"
 import { SummaryMetric } from "@/components/dashboard/SummaryMetric"
@@ -19,12 +19,16 @@ import { StatusBadge } from "@/components/status/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
+import { useReadingHistory } from "@/hooks/useReadingHistory"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
 import { resolveSystemStatus } from "@/lib/status"
-import type { SensorHealthStatus } from "@/types/api"
+import type { ReadingHistoryFilters, SensorHealthStatus } from "@/types/api"
+
+const dashboardHistoryFilters: ReadingHistoryFilters = { limit: 120 }
 
 export function DashboardPage() {
-  const { summary, error, isLoading, refresh } = useDashboardContext()
+  const { summary, error, isLoading, refresh, eventRevision } = useDashboardContext()
+  const history = useReadingHistory(dashboardHistoryFilters, eventRevision)
   const s1 = summary?.latest_readings.S1
   const s2 = summary?.latest_readings.S2
   const systemStatus = resolveSystemStatus(
@@ -78,6 +82,12 @@ export function DashboardPage() {
 
           <section aria-label="Dashboard summary metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <SummaryMetric
+              detail={summary?.gateway?.last_seen_at ? `Last seen ${formatDateTime(summary.gateway.last_seen_at)}` : "No heartbeat has arrived yet."}
+              icon={Wifi}
+              label="Gateway status"
+              value={summary?.gateway?.status || "Unavailable"}
+            />
+            <SummaryMetric
               detail={summary?.latest_prediction ? `For ${formatDateTime(summary.latest_prediction.predicted_for)}` : "Model inference has not produced a value."}
               icon={BrainCircuit}
               label="Predicted S2"
@@ -96,21 +106,23 @@ export function DashboardPage() {
               label="Readings today"
               value={String(summary?.today_summary.total_readings ?? 0)}
             />
-            <SummaryMetric
-              detail={summary?.telegram.enabled ? "Notification channel enabled." : "Notification channel remains disabled."}
-              icon={BellRing}
-              label="Notification channel"
-              value={summary?.telegram.enabled ? "Enabled" : "Disabled"}
-            />
           </section>
 
-          <section aria-label="History chart placeholders" className="grid gap-4 xl:grid-cols-2">
-            <ChartPlaceholder
-              description="S1 and S2 temperature history with bounded query limits."
+          <section aria-label="Sensor history charts" className="grid gap-4 xl:grid-cols-2">
+            <ReadingsChart
+              description="Latest bounded S1 ambient and S2 hotspot readings."
+              error={history.error}
+              isLoading={history.isLoading}
+              measurement="temperature"
+              readings={history.readings}
               title="Temperature history"
             />
-            <ChartPlaceholder
-              description="S1 and S2 humidity history with bounded query limits."
+            <ReadingsChart
+              description="Latest bounded S1 ambient and S2 hotspot readings."
+              error={history.error}
+              isLoading={history.isLoading}
+              measurement="humidity"
+              readings={history.readings}
               title="Humidity history"
             />
           </section>
