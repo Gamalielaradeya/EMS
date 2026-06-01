@@ -1,15 +1,10 @@
 # Backend Go
 
-Go REST API foundation for EMS Thermal LSTM.
+Go REST API for EMS Thermal LSTM.
 
-Planned responsibilities:
-
-- Receive validated gateway readings.
-- Store and query PostgreSQL data.
-- Provide REST API and SSE events.
-- Own final status classification, anomaly events, and Telegram decisions.
-
-Implementation begins in Milestone `2`. Database migrations begin in Milestone `1`.
+Milestone `2` implements the core gateway ingestion and reading query surface. Later
+milestones add SSE, prediction integration, final thermal classification, anomaly
+events, and Telegram notification.
 
 ## Database Migrations
 
@@ -31,7 +26,9 @@ The seed creates:
 - Sensor `S2` as hotspot/exhaust.
 - Default EMS settings.
 
-The seed does not store a plaintext gateway token. Backend token hashing and bootstrap begin in Milestone `2`.
+The seed does not store a plaintext gateway token. On backend startup,
+`GATEWAY_TOKEN` is hashed with SHA-256 and bootstrapped into `api_tokens` for
+gateway `raspi-gateway-01`. API responses and logs never expose the full token.
 
 ## Local Database Setup
 
@@ -57,3 +54,87 @@ $env:DATABASE_URL = "postgres://ems_user:change-postgres-password@localhost:5432
 ```
 
 TimescaleDB is optional only. These migrations target standard PostgreSQL.
+
+If port `5432` is occupied, set `POSTGRES_PORT=55432` for Docker and update the
+host port inside `DATABASE_URL`.
+
+## Run Backend
+
+From `backend-go/`:
+
+```powershell
+Copy-Item .env.example .env
+go run ./cmd/server
+```
+
+Required backend environment values:
+
+```text
+DATABASE_URL
+GATEWAY_TOKEN
+```
+
+Optional values have local defaults:
+
+```text
+APP_ENV=development
+APP_PORT=8080
+FRONTEND_ORIGIN=http://localhost:5173
+ACTIVE_GATEWAY_CODE=raspi-gateway-01
+```
+
+## Milestone 2 Endpoints
+
+```text
+GET  /api/v1/health
+POST /api/v1/readings
+POST /api/v1/gateway/status
+GET  /api/v1/sensors
+GET  /api/v1/sensors/{sensorCode}
+PUT  /api/v1/sensors/{sensorCode}
+GET  /api/v1/readings/latest
+GET  /api/v1/readings/history
+```
+
+Gateway write endpoints require `Authorization: Bearer <gateway-token>`.
+
+## Curl Examples
+
+Health:
+
+```bash
+curl http://localhost:8080/api/v1/health
+```
+
+Submit S1 and S2 hardware readings:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/readings \
+  -H "Authorization: Bearer change-gateway-token" \
+  -H "Content-Type: application/json" \
+  -d '{"gateway_id":"raspi-gateway-01","recorded_at":"2026-06-01T18:00:00+07:00","source":"hardware","readings":[{"sensor_code":"S1","sensor_role":"ambient","temperature":27.4,"humidity":63.2},{"sensor_code":"S2","sensor_role":"hotspot","temperature":30.8,"humidity":58.5}]}'
+```
+
+Submit a gateway heartbeat:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/gateway/status \
+  -H "Authorization: Bearer change-gateway-token" \
+  -H "Content-Type: application/json" \
+  -d '{"gateway_id":"raspi-gateway-01","status":"active","reported_at":"2026-06-01T18:01:00+07:00","message":"Gateway heartbeat","sensors":[{"sensor_code":"S1","status":"normal"},{"sensor_code":"S2","status":"normal"}]}'
+```
+
+Read latest values and filtered history:
+
+```bash
+curl http://localhost:8080/api/v1/readings/latest
+curl "http://localhost:8080/api/v1/readings/history?sensor_code=S2&limit=100"
+```
+
+## Verification
+
+```powershell
+gofmt -w .
+go test ./...
+go build ./cmd/server
+```

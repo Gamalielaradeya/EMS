@@ -7,7 +7,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `-1` | Documentation Lock | Done |
 | `0` | Repository Foundation | Done |
 | `1` | Database Migrations and Seed | Done |
-| `2` | Backend Core API | Not started |
+| `2` | Backend Core API | Done |
 | `3` | Gateway Diagnostic and Delivery | Not started |
 | `4` | Frontend Foundation and Dashboard Shell | Not started |
 | `5` | Sensors and Readings Realtime Dashboard | Not started |
@@ -45,4 +45,16 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 - Validated migrations twice against a clean PostgreSQL validation database.
 - Confirmed no PUE, energy, or cooling tables exist.
 
-Milestone `2` requires explicit user approval.
+## Milestone 2 Completion
+
+- Added Go module and layered backend structure for config, repository, service, handler, router, and middleware.
+- Added PostgreSQL connection and health check.
+- Added configured CORS and request logging middleware.
+- Added gateway Bearer token authentication backed by hashed `api_tokens`.
+- Added validated readings ingestion with S1 ambient and S2 hotspot enforcement.
+- Added duplicate-safe readings insert using the database dedupe constraint.
+- Added gateway heartbeat persistence and sensor health updates.
+- Added sensor listing, sensor detail, sensor metadata update, latest readings, and reading history endpoints.
+- Added focused validation tests and verified the approved API surface against PostgreSQL.
+
+Milestone `3` requires explicit user approval.

@@ -46,6 +46,23 @@ Database-only work:
 
 ## Milestone 2 - Backend Core API
 
-Status: Not started
+Status: Done
 
-Wait for explicit user approval.
+Backend-only work:
+
+- Initialized the Go module inside `backend-go/`.
+- Added environment configuration with safe local defaults and required database and gateway-token checks.
+- Added PostgreSQL connection pooling.
+- Added layered repository, service, handler, router, and middleware packages.
+- Added consistent JSON success and error responses.
+- Added configured CORS and request logging middleware.
+- Added gateway Bearer authentication using SHA-256 token hashes stored in `api_tokens`.
+- Added `GET /api/v1/health`.
+- Added protected `POST /api/v1/readings` with S1 ambient and S2 hotspot validation.
+- Added protected `POST /api/v1/gateway/status`.
+- Added sensor list, detail, and metadata update endpoints.
+- Added latest and history reading endpoints with bounded pagination.
+- Added duplicate-safe insert behavior for `(gateway_id, sensor_id, recorded_at)`.
+- Added last-seen updates for gateway and sensor readings.
+- Added focused validation tests and backend setup documentation.
+- Did not add frontend, gateway Python, ML Worker, Telegram, layout, prediction, dashboard-summary, or SSE implementation.

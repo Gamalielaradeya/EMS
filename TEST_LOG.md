@@ -64,3 +64,47 @@ Environment note:
 - TimescaleDB was not enabled; standard PostgreSQL remains the default.
 - Cleanup passed: dropped `ems_thermal_lstm_m1_validation`, stopped PostgreSQL, and removed the validation Compose container/network with `docker compose down`.
 - The named PostgreSQL volume remains available for later milestones.
+
+## Milestone 2 - Backend Core API
+
+Status: Done
+
+Build and unit checks:
+
+- Passed: `gofmt -w .` inside `backend-go/`.
+- Passed: `go mod tidy`.
+- Passed: `go test ./...`.
+- Passed: `go vet ./...`.
+- Initial `go build ./cmd/server` attempt was blocked because the system drive lacked free space.
+- Passed: cleared disposable Go compiler cache and temporary `go-build*` directories only.
+- Passed: `go build ./cmd/server`.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+- Passed: started PostgreSQL with temporary host override `POSTGRES_PORT=55432`.
+- Passed: `./scripts/run-migrations-docker.ps1`.
+
+API validation against PostgreSQL:
+
+- Passed: `GET /api/v1/health` returned `200`.
+- Passed: `POST /api/v1/readings` without token returned `401`.
+- Passed: authenticated `POST /api/v1/readings` stored S1 and S2 with `201`.
+- Passed: repeated reading payload returned `201` with `stored_count=0`.
+- Passed: temperature `81` returned validation error `422`.
+- Passed: authenticated `POST /api/v1/gateway/status` stored heartbeat with `201`.
+- Passed: `GET /api/v1/sensors` returned seeded S1 and S2.
+- Passed: `GET /api/v1/sensors/S1` returned ambient role.
+- Passed: `PUT /api/v1/sensors/S1` updated editable metadata.
+- Passed: `GET /api/v1/readings/latest` returned S1 and S2.
+- Passed: `GET /api/v1/readings/history?limit=10` returned stored rows.
+- Passed: configured frontend-origin CORS preflight returned `204`.
+
+Database assertions:
+
+- Passed: one gateway API token exists, token storage does not match plaintext, and usage timestamp is updated.
+- Passed: gateway `last_seen_at` and active status were updated.
+- Passed: both sensor `last_seen_at` values and health statuses were updated.
+- Passed: one gateway status log and two deduplicated sensor readings exist.
+
+Environment note:
+
+- Local port `5432` remained occupied, so runtime validation used host port `55432`.
+- TimescaleDB was not enabled; standard PostgreSQL remains the default.
