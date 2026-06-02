@@ -15,7 +15,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `6` | ML Worker Training Pipeline | Done |
 | `7` | Prediction Bridge and Alerts | Done |
 | `8` | Alert, Telegram, and Events Logs | Done |
-| `9` | Layout Upload and Sensor Marker | Not started |
+| `9` | Layout Upload and Sensor Marker | Done |
 | `10` | Final Integration, Testing, and Bab 4 Evidence | Not started |
 
 ## Milestone -1 Completion
@@ -188,3 +188,19 @@ Milestone `8` requires explicit user approval.
   canonical Milestone `9`.
 
 Milestone `9` requires explicit user approval.
+
+## Milestone 9 Completion
+
+- Added public active-layout reads and controlled uploaded-image serving.
+- Added protected layout image upload with PNG, JPG, JPEG, WebP, and 5 MB
+  validation.
+- Added protected S1/S2 marker create, update, and delete endpoints.
+- Stored marker coordinates as responsive ratios from `0` to `1`.
+- Added transition-safe backend system logs for layout image and marker changes.
+- Replaced Layout placeholder with one-layout upload, empty, unavailable,
+  telemetry, click-to-place, and drag-marker workspace.
+- Added lightweight read-only Dashboard layout preview when an active layout
+  exists.
+- Kept enterprise site, floor, and multi-layout management out of scope.
+
+Milestone `10` requires explicit user approval.

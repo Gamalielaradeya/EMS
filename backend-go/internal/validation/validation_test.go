@@ -1,10 +1,44 @@
 package validation
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/png"
 	"testing"
 
 	"ems-thermal-lstm/backend-go/internal/model"
 )
+
+func TestValidateLayoutDevice(t *testing.T) {
+	validX, validY := 0.25, 0.75
+	if errs := ValidateLayoutDevice("S1", model.LayoutDeviceInput{PositionX: &validX, PositionY: &validY}); len(errs) != 0 {
+		t.Fatalf("expected valid marker, got %#v", errs)
+	}
+	invalidX := 1.01
+	if errs := ValidateLayoutDevice("S2", model.LayoutDeviceInput{PositionX: &invalidX, PositionY: &validY}); len(errs) == 0 {
+		t.Fatal("expected out-of-range marker validation error")
+	}
+}
+
+func TestValidateLayoutImage(t *testing.T) {
+	imageData := image.NewRGBA(image.Rect(0, 0, 2, 3))
+	imageData.Set(0, 0, color.White)
+	var payload bytes.Buffer
+	if err := png.Encode(&payload, imageData); err != nil {
+		t.Fatalf("encode PNG: %v", err)
+	}
+	width, height, extension, errs := ValidateLayoutImage("Testbed", "testbed.png", payload.Bytes())
+	if len(errs) != 0 {
+		t.Fatalf("expected valid image, got %#v", errs)
+	}
+	if width != 2 || height != 3 || extension != ".png" {
+		t.Fatalf("unexpected decoded metadata: %dx%d %q", width, height, extension)
+	}
+	if _, _, _, errs := ValidateLayoutImage("Testbed", "testbed.jpg", payload.Bytes()); len(errs) == 0 {
+		t.Fatal("expected mismatched extension validation error")
+	}
+}
 
 func TestValidateReadingsAcceptsS1AndS2(t *testing.T) {
 	temperatureS1, humidityS1 := 27.4, 63.2

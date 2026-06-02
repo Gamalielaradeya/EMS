@@ -3,6 +3,9 @@ import type {
   AnomalyEvent,
   DashboardSummary,
   HealthSummary,
+  ActiveLayout,
+  LayoutDeviceInput,
+  LayoutRecord,
   ReadingHistoryFilters,
   ReadingHistoryMeta,
   ReadingHistoryResult,
@@ -23,6 +26,7 @@ import type {
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 export const API_BASE_URL = (configuredApiUrl || "http://localhost:8080/api/v1").replace(/\/$/, "")
 export const HAS_ADMIN_TOKEN = Boolean(import.meta.env.VITE_ADMIN_TOKEN?.trim())
+export const resolveApiAssetUrl = (path: string) => new URL(path, API_BASE_URL).toString()
 
 export class ApiError extends Error {
   constructor(
@@ -162,6 +166,28 @@ export const api = {
   testNotification: () =>
     request<NotificationLog>("/notifications/test", {
       method: "POST",
+      headers: adminHeaders(),
+    }),
+  getLayout: () => request<ActiveLayout | null>("/layout"),
+  uploadLayout: (image: File, name: string) => {
+    const body = new FormData()
+    body.set("image", image)
+    if (name.trim()) body.set("name", name.trim())
+    return request<LayoutRecord>("/layout/image", {
+      method: "POST",
+      headers: adminHeaders(),
+      body,
+    })
+  },
+  updateLayoutDevice: (sensorCode: string, input: LayoutDeviceInput) =>
+    request<ActiveLayout>(`/layout/devices/${sensorCode}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify(input),
+    }),
+  deleteLayoutDevice: (sensorCode: string) =>
+    request<ActiveLayout>(`/layout/devices/${sensorCode}`, {
+      method: "DELETE",
       headers: adminHeaders(),
     }),
 }

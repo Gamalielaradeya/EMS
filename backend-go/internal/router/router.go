@@ -43,6 +43,8 @@ func New(handler *handler.Handler, tokenValidator interface {
 		router.Get("/notification-logs", handler.NotificationLogs)
 		router.Get("/system-logs", handler.SystemLogs)
 		router.Get("/settings", handler.ListSettings)
+		router.Get("/layout", handler.ActiveLayout)
+		router.Get("/layout/images/{fileName}", handler.LayoutImage)
 
 		router.Group(func(router chi.Router) {
 			router.Use(middleware.AdminOrInternalBearerAuth(adminToken, internalAPIToken))
@@ -50,6 +52,9 @@ func New(handler *handler.Handler, tokenValidator interface {
 			router.Put("/model-versions/{id}/activate", handler.ActivateModelVersion)
 			router.Post("/notifications/test", handler.TestNotification)
 			router.Put("/settings/{key}", handler.UpdateSetting)
+			router.Post("/layout/image", handler.UploadLayout)
+			router.Put("/layout/devices/{sensorCode}", handler.UpdateLayoutDevice)
+			router.Delete("/layout/devices/{sensorCode}", handler.DeleteLayoutDevice)
 		})
 	})
 

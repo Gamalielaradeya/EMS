@@ -10,6 +10,7 @@ import {
 
 import { ReadingsChart } from "@/components/charts/ReadingsChart"
 import { RecentEvents } from "@/components/dashboard/RecentEvents"
+import { DashboardLayoutPreview } from "@/components/dashboard/DashboardLayoutPreview"
 import { SensorReadingCard } from "@/components/dashboard/SensorReadingCard"
 import { SummaryMetric } from "@/components/dashboard/SummaryMetric"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -126,6 +127,8 @@ export function DashboardPage() {
               title="Humidity history"
             />
           </section>
+
+          <DashboardLayoutPreview eventRevision={eventRevision} />
 
           <section aria-label="Model metric placeholders" className="grid gap-4 sm:grid-cols-3">
             <SummaryMetric

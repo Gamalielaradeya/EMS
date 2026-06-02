@@ -82,4 +82,9 @@ Telegram delivery controls, and read-only gateway, app, and ML parameters.
 Telegram secret fields stay blank unless a replacement is intentionally sent.
 Settings updates and Telegram testing require local `VITE_ADMIN_TOKEN`.
 
-Layout upload and sensor-marker editing remain deferred to Milestone `9`.
+The Layout page reads `GET /api/v1/layout` and provides one active
+server-testbed image workspace. With local `VITE_ADMIN_TOKEN`, users can upload
+PNG, JPG, JPEG, or WebP images up to 5 MB, place S1/S2 markers by clicking the
+map, drag existing markers, remove markers, and persist positions as `0-1`
+ratios. Markers display sensor role, status text, temperature, humidity, and
+last-seen state. Dashboard shows a small read-only preview when a layout exists.

@@ -448,3 +448,57 @@ Frontend validation note:
 - Blocked: in-app browser webview did not attach after a clean reconnect, so
   interactive rendered-state checks could not be completed in this run.
 - Deferred: Layout upload and markers remain Milestone `9`.
+
+## Milestone 9 - Layout Upload and Sensor Marker
+
+Status: Done
+
+Static checks:
+
+- Passed: backend `GOTOOLCHAIN=local gofmt -w .`, `go mod tidy`,
+  `go test ./...`, `go vet ./...`, and `go build ./cmd/server`.
+- Passed: pinned Go `1.24.3`-compatible `golang.org/x/image v0.36.0`; latest
+  releases require Go `1.25`.
+- Passed: frontend `npm run typecheck`, `npm run lint`, and `npm run build`.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+
+PostgreSQL-backed API validation:
+
+- Passed: migrated clean database `ems_thermal_lstm_m9_validation`, launched
+  backend on `APP_PORT=8081`, and confirmed health.
+- Passed: `GET /api/v1/layout` returned `data: null` before upload.
+- Passed: unauthenticated layout upload returned `401`.
+- Passed: non-image upload returned `422`.
+- Passed: valid small PNG upload returned `201`, recorded dimensions `48x32`,
+  and served safely as `image/png`.
+- Passed: missing controlled image URL returned `404`.
+- Passed: marker update outside ratio range returned `422`.
+- Passed: S1 and S2 ratio marker updates succeeded.
+- Passed: marker delete removed S1 and subsequent update restored both markers.
+- Passed: backend wrote layout and marker change system logs.
+
+Frontend browser validation:
+
+- Passed: Layout page rendered active image, S1/S2 marker labels, status text,
+  temperatures, humidity values, and last-seen timestamps from API data.
+- Passed: temporary no-layout state rendered upload prompt and safe empty state.
+- Passed: Dashboard omitted layout preview safely when no layout existed and
+  rendered a lightweight read-only preview when active layout existed.
+- Passed: responsive sweep at `320`, `375`, `414`, `768`, and `1280` found no
+  horizontal overflow; image and two markers remained present.
+- Passed: marker CSS positions remained ratio-based (`25%/40%` and
+  `72%/55%`) across resize checks.
+- Passed: stopped backend rendered explicit Layout API unavailable state.
+- Passed: browser console remained free of warnings and errors.
+- Blocked: automated pointer click retry collided with overlay markers, so
+  browser automation is not accepted as drag interaction evidence. Protected
+  API persistence and rendered drag/click wiring were validated.
+- Note: in-app browser screenshot capture timed out; DOM-state validation
+  completed successfully.
+
+Cleanup:
+
+- Passed: stopped temporary frontend and backend processes.
+- Passed: dropped `ems_thermal_lstm_m9_validation`.
+- Passed: removed validation Compose container/network, generated upload,
+  frontend `dist`, and backend executable.

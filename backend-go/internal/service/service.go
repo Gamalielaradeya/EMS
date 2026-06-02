@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
@@ -23,16 +24,18 @@ type Service struct {
 	activeGatewayCode string
 	events            eventPublisher
 	telegram          TelegramSender
+	layoutUploadDir   string
 }
 
 type eventPublisher interface {
 	Publish(eventType string, data any) error
 }
 
-func New(repository *repository.Repository, activeGatewayCode string, events eventPublisher, telegram TelegramSender) *Service {
+func New(repository *repository.Repository, activeGatewayCode, uploadDir string, events eventPublisher, telegram TelegramSender) *Service {
 	return &Service{
 		repository:        repository,
 		activeGatewayCode: activeGatewayCode,
+		layoutUploadDir:   filepath.Join(uploadDir, "layouts"),
 		events:            events,
 		telegram:          telegram,
 	}

@@ -250,3 +250,37 @@ export interface Setting {
   is_sensitive: boolean
   updated_at: string
 }
+
+export interface LayoutRecord {
+  id: number
+  name: string
+  image_url: string
+  image_width: number
+  image_height: number
+  created_at: string
+  updated_at: string
+}
+
+export interface LayoutDevice {
+  sensor_code: SensorCode
+  sensor_role: SensorRole
+  label: string
+  position_x: number
+  position_y: number
+  final_status: FinalStatus
+  temperature: number | null
+  humidity: number | null
+  last_seen_at: string | null
+  sensor_health_status: SensorHealthStatus
+}
+
+export interface ActiveLayout {
+  layout: LayoutRecord
+  devices: LayoutDevice[]
+}
+
+export interface LayoutDeviceInput {
+  label?: string
+  position_x: number
+  position_y: number
+}

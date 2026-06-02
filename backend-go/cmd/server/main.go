@@ -36,7 +36,7 @@ func main() {
 
 	repo := repository.New(pool)
 	eventHub := sse.NewHub()
-	svc := service.New(repo, cfg.ActiveGatewayCode, eventHub, service.NewTelegramClient(cfg.TelegramAPIBaseURL))
+	svc := service.New(repo, cfg.ActiveGatewayCode, cfg.UploadDir, eventHub, service.NewTelegramClient(cfg.TelegramAPIBaseURL))
 	if err := svc.BootstrapGatewayToken(ctx, cfg.GatewayToken); err != nil {
 		log.Fatalf("bootstrap gateway token: %v", err)
 	}

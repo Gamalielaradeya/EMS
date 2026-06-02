@@ -20,6 +20,7 @@ type Config struct {
 	AdminToken         string
 	InternalAPIToken   string
 	TelegramAPIBaseURL string
+	UploadDir          string
 	OfflineCheckEvery  time.Duration
 }
 
@@ -36,6 +37,7 @@ func Load() (Config, error) {
 		AdminToken:         strings.TrimSpace(os.Getenv("ADMIN_TOKEN")),
 		InternalAPIToken:   internalAPIToken(),
 		TelegramAPIBaseURL: valueOrDefault("TELEGRAM_API_BASE_URL", "https://api.telegram.org"),
+		UploadDir:          valueOrDefault("UPLOAD_DIR", "./uploads"),
 	}
 
 	if cfg.DatabaseURL == "" {

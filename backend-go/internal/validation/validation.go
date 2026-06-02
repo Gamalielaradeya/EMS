@@ -1,12 +1,19 @@
 package validation
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
+
+	_ "golang.org/x/image/webp"
 )
 
 type Errors map[string][]string
@@ -173,6 +180,60 @@ func ValidateSettingUpdate(key string, input model.SettingUpdateInput, current m
 		errs.Add("key", "setting is read-only or unsupported")
 	}
 	return errs
+}
+
+func ValidateLayoutImage(name, filename string, data []byte) (int, int, string, Errors) {
+	errs := Errors{}
+	if len(data) == 0 {
+		errs.Add("image", "layout image is required")
+		return 0, 0, "", errs
+	}
+	if len(data) > model.MaxLayoutImageBytes {
+		errs.Add("image", "layout image must be at most 5 MB")
+		return 0, 0, "", errs
+	}
+	if len(strings.TrimSpace(name)) > 150 {
+		errs.Add("name", "layout name must be at most 150 characters")
+	}
+	declaredExtension := strings.ToLower(filepath.Ext(filename))
+	if declaredExtension != ".png" && declaredExtension != ".jpg" && declaredExtension != ".jpeg" && declaredExtension != ".webp" {
+		errs.Add("image", "layout image must be PNG, JPG, JPEG, or WebP")
+		return 0, 0, "", errs
+	}
+	config, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		errs.Add("image", "layout image could not be decoded")
+		return 0, 0, "", errs
+	}
+	extension := map[string]string{"png": ".png", "jpeg": ".jpg", "webp": ".webp"}[format]
+	if extension == "" || (declaredExtension != extension && !(extension == ".jpg" && declaredExtension == ".jpeg")) {
+		errs.Add("image", "layout image type does not match its filename")
+		return 0, 0, "", errs
+	}
+	return config.Width, config.Height, extension, errs
+}
+
+func ValidateLayoutDevice(sensorCode string, input model.LayoutDeviceInput) Errors {
+	errs := Errors{}
+	if !SensorCodeValid(sensorCode) {
+		errs.Add("sensor_code", "sensor_code must be S1 or S2")
+	}
+	if len(strings.TrimSpace(input.Label)) > 150 {
+		errs.Add("label", "label must be at most 150 characters")
+	}
+	validateRatio(errs, "position_x", input.PositionX)
+	validateRatio(errs, "position_y", input.PositionY)
+	return errs
+}
+
+func validateRatio(errs Errors, field string, value *float64) {
+	if value == nil {
+		errs.Add(field, field+" is required")
+		return
+	}
+	if *value < 0 || *value > 1 {
+		errs.Add(field, field+" must be between 0 and 1")
+	}
 }
 
 func validatePositiveSetting(errs Errors, value, label string) {

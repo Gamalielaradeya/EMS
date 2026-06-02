@@ -7,7 +7,8 @@ Milestone `2B` adds dashboard summary, SSE delivery, timeout status checks, and
 system logs. Milestone `7` adds protected prediction integration, backend-owned
 final classification, anomaly events, model query APIs, and Telegram
 notification. Milestone `8` adds filtered system logs and masked settings
-management.
+management. Milestone `9` adds one active testbed layout image and ratio-based
+sensor markers.
 
 ## Database Migrations
 
@@ -88,6 +89,7 @@ ADMIN_TOKEN=change-admin-token
 INTERNAL_API_TOKEN=change-internal-api-token
 BACKEND_OFFLINE_CHECK_INTERVAL_SECONDS=30
 TELEGRAM_API_BASE_URL=https://api.telegram.org
+UPLOAD_DIR=./uploads
 ```
 
 `APP_PORT` is configurable. If local port `8080` is occupied, use another port:
@@ -124,6 +126,11 @@ GET  /api/v1/system-logs
 GET  /api/v1/settings
 PUT  /api/v1/settings/{key}
 POST /api/v1/notifications/test
+GET  /api/v1/layout
+GET  /api/v1/layout/images/{fileName}
+POST /api/v1/layout/image
+PUT  /api/v1/layout/devices/{sensorCode}
+DELETE /api/v1/layout/devices/{sensorCode}
 ```
 
 Gateway write endpoints require `Authorization: Bearer <gateway-token>`.
@@ -131,6 +138,25 @@ Prediction submission, model activation, settings updates, and notification
 testing accept
 `Authorization: Bearer <internal-or-admin-token>` using `INTERNAL_API_TOKEN` or
 `ADMIN_TOKEN`.
+
+Layout write endpoints use the same internal-or-admin token. Uploaded runtime
+files are written below ignored `UPLOAD_DIR`, default `./uploads`, with
+generated filenames. Supported image types are PNG, JPG, JPEG, and WebP up to
+5 MB.
+
+Upload one active layout and place S1:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/layout/image \
+  -H "Authorization: Bearer change-admin-token" \
+  -F "name=Server Testbed Layout" \
+  -F "image=@./testbed-layout.png"
+
+curl -X PUT http://localhost:8080/api/v1/layout/devices/S1 \
+  -H "Authorization: Bearer change-admin-token" \
+  -H "Content-Type: application/json" \
+  -d '{"label":"S1 Ambient","position_x":0.25,"position_y":0.40}'
+```
 
 Settings reads mask configured Telegram secrets. Send a new secret only when
 changing it; do not send the masked placeholder back to the update endpoint.

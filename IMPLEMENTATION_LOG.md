@@ -247,3 +247,27 @@ Backend and frontend work:
   notification testing, and read-only gateway, app, and ML configuration.
 - Kept Layout upload, sensor markers, and drag positioning deferred to
   canonical Milestone `9`.
+
+## Milestone 9 - Layout Upload and Sensor Marker
+
+Status: Done
+
+Backend and frontend work:
+
+- Added active-layout model, repository, service, handler, and route layers.
+- Added public `GET /api/v1/layout` plus controlled
+  `GET /api/v1/layout/images/{fileName}` serving without exposing filesystem
+  paths.
+- Added protected layout image upload with configurable ignored `UPLOAD_DIR`,
+  generated filenames, 5 MB limit, file-extension and decoded-image checks,
+  and PNG, JPG, JPEG, and WebP support.
+- Pinned `golang.org/x/image v0.36.0` for WebP decoding because newer releases
+  require Go `1.25`; local project toolchain remains Go `1.24.3`.
+- Added protected marker upsert and delete endpoints for S1/S2 only, with
+  required `0-1` ratio validation and backend system logs.
+- Replaced Layout placeholder with restrained upload, map, placement, telemetry,
+  no-layout, loading, and unavailable states.
+- Added click-to-place plus drag-save marker interactions and a lightweight
+  read-only Dashboard layout preview.
+- Kept layout scope to one active server-testbed image; no enterprise site,
+  floor, or multi-layout management was added.
