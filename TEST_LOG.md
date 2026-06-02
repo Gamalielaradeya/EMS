@@ -290,3 +290,60 @@ Cleanup:
 - Passed: removed validation Compose container/network with
   `docker compose down`.
 - Passed: stopped Docker Desktop after validation.
+
+## Milestone 6 - ML Worker Training Pipeline
+
+Status: Done
+
+Environment setup:
+
+- Passed: created ignored `ml-worker/.venv` with local Python `3.10.11`.
+- Passed: installed ML-worker-only lightweight dependencies from
+  `ml-worker/requirements.txt`.
+- Passed: confirmed `.venv`, `__pycache__`, generated `*.egg-info`, local logs,
+  model artifacts, metadata JSON, and training reports are ignored.
+- Deferred: TensorFlow installation is documented separately in
+  `requirements-tensorflow.txt`. The heavyweight runtime was not installed on
+  this laptop during M6 validation.
+
+Static and unit checks:
+
+- Passed: `./.venv/Scripts/python.exe -m compileall -q src tests`.
+- Passed: `./.venv/Scripts/python.exe -W error::FutureWarning -m unittest
+  discover -s tests -v`.
+- Passed: eight focused tests cover resampling/target construction, invalid
+  value handling, chronological split ordering, train-only scaler fitting,
+  ordered windowing, Celsius-unit metrics, Celsius-unit baselines, and portable
+  relative artifact-path persistence.
+- Passed: canonical `train`, `evaluate`, and `infer` CLI help surfaces.
+
+PostgreSQL development validation:
+
+- Passed: launched Docker Desktop temporarily.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+- Passed: started PostgreSQL on host port `55432`.
+- Passed: created and migrated clean validation database
+  `ems_thermal_lstm_m6_validation`.
+- Passed: empty database `train` exits safely with code `1`, inserts a failed
+  `prediction_runs` row, and writes an `ml-worker` error row to `system_logs`.
+- Passed: inserted `5,040` development-only simulator readings for S1/S2.
+- Passed: pipeline produced `420` one-minute rows, `415` labeled rows, safe
+  chronological split sizes `290/62/63`, train windows `(260, 30, 4)`,
+  validation windows `(32, 30, 4)`, and test windows `(33, 30, 4)`.
+- Passed: development-only Celsius baselines calculated without treating
+  simulator metrics as thesis results.
+- Passed: full `train` reaches the TensorFlow boundary, exits safely with code
+  `1` when TensorFlow is absent, and records the failed run plus system log with
+  the documented install command.
+- Passed: development-only stub-model success smoke exercised artifact writing
+  and inserted one `model_versions` row, one `model_metrics` row, two
+  `baseline_results` rows, a successful training run, and an info system log.
+  This verifies persistence wiring only and is not an LSTM or thesis result.
+- Passed: `evaluate` and local-only `infer` reach saved-model loading, exit
+  safely with code `1` when TensorFlow is absent, and record failed runs.
+
+Scope note:
+
+- Full TensorFlow LSTM artifact generation requires installing
+  `requirements-tensorflow.txt` on the intended development workstation.
+- Backend prediction submission remains deferred to Milestone `7`.

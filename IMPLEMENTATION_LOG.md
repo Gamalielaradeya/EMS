@@ -163,3 +163,32 @@ Frontend-only work:
   production dummy data.
 - Did not add prediction/model UI detail, layout editing, Telegram settings, ML
   Worker code, gateway changes, or backend API changes.
+
+## Milestone 6 - ML Worker Training Pipeline
+
+Status: Done
+
+ML-worker-only work:
+
+- Added the installable `ml-worker` Python package with canonical
+  `python -m ml_worker.cli train`, `evaluate`, and `infer` commands.
+- Added environment configuration, PostgreSQL connection handling, local file
+  logging, dummy-safe `.env.example`, and ignored artifact/report directories.
+- Added filtered `sensor_readings` loading for S1 ambient and S2 hotspot data
+  with hardware-plus-valid defaults and configurable development sources.
+- Added one-minute mean resampling, bounded interpolation/forward fill, range
+  validation, S1/S2 pivoting, and five-minute future S2 target generation.
+- Added chronological `70%` / `15%` / `15%` splitting with train-only feature
+  and target scaler fitting.
+- Added 30-point sequence windows, Celsius-unit persistence and moving-average
+  baselines, TensorFlow LSTM construction, early stopping, Celsius-unit LSTM
+  evaluation, and artifact persistence.
+- Added PostgreSQL writers for `model_versions`, `prediction_runs`,
+  `model_metrics`, `baseline_results`, and `system_logs`.
+- Added basic saved-model evaluation and local-only inference. Backend
+  prediction submission remains deferred to Milestone `7`.
+- Added lazy TensorFlow loading so lightweight development checks remain usable
+  without the large runtime dependency. TensorFlow setup is documented
+  separately in `requirements-tensorflow.txt`.
+- Did not add backend prediction integration, frontend prediction UI, Telegram,
+  layout changes, gateway changes, or Milestone `7` work.

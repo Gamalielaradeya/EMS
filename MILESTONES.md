@@ -12,7 +12,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `3` | Gateway Diagnostic and Delivery | Done |
 | `4` | Frontend Foundation and Dashboard Shell | Done |
 | `5` | Sensors and Readings Realtime Dashboard | Done |
-| `6` | ML Worker Training Pipeline | Not started |
+| `6` | ML Worker Training Pipeline | Done |
 | `7` | ML Inference and Prediction Integration | Not started |
 | `8` | Alert, Telegram, and Events Logs | Not started |
 | `9` | Layout Upload and Sensor Marker | Not started |
@@ -126,3 +126,25 @@ Milestone `5` requires explicit user approval.
   frontend states against a temporary PostgreSQL-backed backend.
 
 Milestone `6` requires explicit user approval.
+
+## Milestone 6 Completion
+
+- Added the installable Python ML worker package under `ml-worker/`.
+- Added canonical `train`, `evaluate`, and local-only `infer` CLI commands.
+- Added PostgreSQL dataset loading with configurable source and quality filters.
+- Added S1/S2 one-minute resampling, bounded missing-value handling, range
+  validation, and five-minute future S2 target construction.
+- Added chronological `70%` / `15%` / `15%` splitting and train-only feature
+  and target scaler fitting.
+- Added 30-point LSTM windows plus persistence and moving-average baselines
+  evaluated in Celsius.
+- Added lazy TensorFlow dependency handling and the documented two-step
+  lightweight/full dependency installation path.
+- Added LSTM artifact writing and PostgreSQL persistence for model versions,
+  prediction runs, model metrics, baseline results, and system logs.
+- Added focused tests for resampling, chronological splitting, scaler leakage
+  prevention, windowing, metric calculation, and baseline calculation.
+- Validated the preprocessing pipeline against development-only simulator data
+  without treating simulator metrics as thesis results.
+
+Milestone `7` requires explicit user approval.
