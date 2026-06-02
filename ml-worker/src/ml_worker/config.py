@@ -14,6 +14,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 @dataclass(frozen=True)
 class Settings:
     database_url: str
+    backend_base_url: str
+    internal_api_token: str
     model_name: str
     artifact_dir: Path
     report_dir: Path
@@ -43,6 +45,8 @@ def load_settings() -> Settings:
     load_dotenv()
     settings = Settings(
         database_url=os.getenv("DATABASE_URL", "").strip(),
+        backend_base_url=os.getenv("BACKEND_BASE_URL", "http://localhost:8080/api/v1").strip().rstrip("/"),
+        internal_api_token=_internal_api_token(),
         model_name=os.getenv("ML_MODEL_NAME", "ems_s2_lstm").strip(),
         artifact_dir=_path_env("ML_ARTIFACT_DIR", PROJECT_ROOT / "models"),
         report_dir=_path_env("ML_REPORT_DIR", PROJECT_ROOT / "reports"),
@@ -79,6 +83,8 @@ def require_database_url(settings: Settings) -> str:
 def _validate(settings: Settings) -> None:
     if not settings.model_name:
         raise ConfigError("ML_MODEL_NAME must not be empty")
+    if not settings.backend_base_url.startswith(("http://", "https://")):
+        raise ConfigError("BACKEND_BASE_URL must start with http:// or https://")
     if settings.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         raise ConfigError("ML_LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR, or CRITICAL")
     positive_ints = (
@@ -132,3 +138,7 @@ def _float_env(name: str, default: float) -> float:
 def _path_env(name: str, default: Path) -> Path:
     path = Path(os.getenv(name, str(default))).expanduser()
     return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
+
+
+def _internal_api_token() -> str:
+    return os.getenv("INTERNAL_API_TOKEN", "").strip() or os.getenv("INTERNAL_ML_TOKEN", "").strip()

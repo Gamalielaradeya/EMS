@@ -22,17 +22,19 @@ type Service struct {
 	repository        *repository.Repository
 	activeGatewayCode string
 	events            eventPublisher
+	telegram          TelegramSender
 }
 
 type eventPublisher interface {
 	Publish(eventType string, data any) error
 }
 
-func New(repository *repository.Repository, activeGatewayCode string, events eventPublisher) *Service {
+func New(repository *repository.Repository, activeGatewayCode string, events eventPublisher, telegram TelegramSender) *Service {
 	return &Service{
 		repository:        repository,
 		activeGatewayCode: activeGatewayCode,
 		events:            events,
+		telegram:          telegram,
 	}
 }
 

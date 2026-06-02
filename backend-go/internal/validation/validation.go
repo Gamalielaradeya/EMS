@@ -89,6 +89,43 @@ func ValidateSensorUpdate(input model.SensorUpdateInput) Errors {
 	return errs
 }
 
+func ValidatePrediction(input model.PredictionInput) Errors {
+	errs := Errors{}
+	if input.TargetSensorCode != "S2" {
+		errs.Add("target_sensor_code", "target_sensor_code must be S2")
+	}
+	validateMeasurement(errs, "predicted_temperature", input.PredictedTemperature, 0, 80)
+	for field, value := range map[string]string{
+		"input_window_start_at": input.InputWindowStartAt,
+		"input_window_end_at":   input.InputWindowEndAt,
+		"predicted_for":         input.PredictedFor,
+	} {
+		if _, err := time.Parse(time.RFC3339, value); err != nil {
+			errs.Add(field, field+" must use RFC3339 format")
+		}
+	}
+	if len(errs) == 0 {
+		startAt, _ := time.Parse(time.RFC3339, input.InputWindowStartAt)
+		endAt, _ := time.Parse(time.RFC3339, input.InputWindowEndAt)
+		predictedFor, _ := time.Parse(time.RFC3339, input.PredictedFor)
+		if !startAt.Before(endAt) {
+			errs.Add("input_window_start_at", "input_window_start_at must be before input_window_end_at")
+		}
+		if !endAt.Before(predictedFor) {
+			errs.Add("predicted_for", "predicted_for must be after input_window_end_at")
+		}
+	}
+	return errs
+}
+
+func FinalStatusValid(status string) bool {
+	return status == "" || status == "normal" || status == "waspada" || status == "anomali" || status == "trouble"
+}
+
+func NotificationStatusValid(status string) bool {
+	return status == "" || status == "pending" || status == "sent" || status == "failed" || status == "skipped"
+}
+
 func SensorCodeValid(sensorCode string) bool {
 	_, exists := sensorRoles[sensorCode]
 	return exists

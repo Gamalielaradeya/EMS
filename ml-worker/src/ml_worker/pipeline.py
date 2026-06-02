@@ -9,6 +9,7 @@ import joblib
 from psycopg import Connection
 
 from ml_worker.baselines import evaluate_baselines
+from ml_worker.backend_client import build_prediction_payload, submit_prediction
 from ml_worker.config import Settings
 from ml_worker.dataset import load_raw_readings
 from ml_worker.errors import InsufficientDataError, MLWorkerError
@@ -220,14 +221,25 @@ def infer(
             ).reshape(-1)[0]
         )
         predicted_for = features.index.max().to_pydatetime() + timedelta(minutes=settings.horizon_minutes)
+        payload = build_prediction_payload(
+            model_version_id=model_version["id"],
+            model_version=model_version["version"],
+            prediction_run_id=run_id,
+            predicted_temperature=prediction,
+            input_window_start_at=features.index[-settings.window_size].to_pydatetime().isoformat(),
+            input_window_end_at=features.index[-1].to_pydatetime().isoformat(),
+            predicted_for=predicted_for.isoformat(),
+        )
+        backend_prediction = submit_prediction(settings, payload)
         result = {
             "version": model_version["version"],
             "predicted_temperature_s2": prediction,
             "predicted_for": predicted_for.isoformat(),
-            "mode": "local_only",
+            "mode": "backend_submitted",
+            "backend_prediction": backend_prediction,
         }
-        finish_prediction_run(connection, run_id, "success", "Local inference completed.", result)
-        insert_system_log(connection, "info", "ML local inference completed.", result)
+        finish_prediction_run(connection, run_id, "success", "Inference submitted to backend.", result)
+        insert_system_log(connection, "info", "ML inference submitted to backend.", result)
         connection.commit()
         return result
     except Exception as exc:

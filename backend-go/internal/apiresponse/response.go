@@ -8,7 +8,7 @@ import (
 type response struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
+	Data    any    `json:"data"`
 	Meta    any    `json:"meta,omitempty"`
 	Errors  any    `json:"errors,omitempty"`
 }

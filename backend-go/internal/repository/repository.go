@@ -450,13 +450,20 @@ func (r *Repository) ReadingHistory(ctx context.Context, filters model.ReadingFi
 }
 
 func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (model.DashboardSummary, error) {
+	settings, err := r.PredictionSettings(ctx)
+	if err != nil {
+		return model.DashboardSummary{}, err
+	}
+	if err := r.RefreshPredictions(ctx, settings); err != nil {
+		return model.DashboardSummary{}, err
+	}
 	summary := model.DashboardSummary{
 		LatestReadings: make(map[string]model.DashboardReading),
 		RecentEvents:   make([]model.DashboardEvent, 0),
 	}
 
 	var gateway model.GatewaySummary
-	err := r.db.QueryRow(ctx, `
+	err = r.db.QueryRow(ctx, `
 		SELECT gateway_code, status, last_seen_at
 		FROM gateways
 		WHERE gateway_code = $1`,

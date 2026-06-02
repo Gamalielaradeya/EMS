@@ -62,8 +62,12 @@ limit
 ```
 
 The frontend listens to `GET /api/v1/events` and refreshes active data when
-`reading.latest`, `gateway.status`, `sensor.trouble`, or `system.log` arrives.
+`reading.latest`, `gateway.status`, `sensor.trouble`, `prediction.latest`,
+`anomaly.created`, `notification.sent`, or `system.log` arrives.
 Loading, empty, unavailable, and SSE-disconnected states remain safe.
 
-Prediction, layout, Telegram, and ML worker detail remain deferred to their
-planned milestones.
+The Prediction & LSTM page reads prediction history, model versions, active
+metrics, and baseline comparison APIs. It shows explicit model-not-ready and
+no-prediction states. Model activation is enabled only when a local
+`VITE_ADMIN_TOKEN` is configured. Layout and full settings pages remain
+deferred.

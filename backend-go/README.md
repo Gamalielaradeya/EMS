@@ -3,10 +3,9 @@
 Go REST API for EMS Thermal LSTM.
 
 Milestone `2A` implements the core gateway ingestion and reading query surface.
-Milestone `2B` adds dashboard summary, SSE delivery, timeout status checks, system
-logs, and reusable admin/internal authentication middleware. Later milestones add
-prediction integration, final thermal classification, anomaly events, and Telegram
-notification.
+Milestone `2B` adds dashboard summary, SSE delivery, timeout status checks, and
+system logs. Milestone `7` adds protected prediction integration, backend-owned
+final classification, anomaly events, model query APIs, and Telegram notification.
 
 ## Database Migrations
 
@@ -86,6 +85,7 @@ ACTIVE_GATEWAY_CODE=raspi-gateway-01
 ADMIN_TOKEN=change-admin-token
 INTERNAL_API_TOKEN=change-internal-api-token
 BACKEND_OFFLINE_CHECK_INTERVAL_SECONDS=30
+TELEGRAM_API_BASE_URL=https://api.telegram.org
 ```
 
 `APP_PORT` is configurable. If local port `8080` is occupied, use another port:
@@ -95,7 +95,7 @@ $env:APP_PORT = "8081"
 go run ./cmd/server
 ```
 
-## Milestone 2A and 2B Endpoints
+## Implemented Endpoints
 
 ```text
 GET  /api/v1/health
@@ -108,12 +108,23 @@ GET  /api/v1/sensors/{sensorCode}
 PUT  /api/v1/sensors/{sensorCode}
 GET  /api/v1/readings/latest
 GET  /api/v1/readings/history
+POST /api/v1/ml/predictions
+GET  /api/v1/predictions/latest
+GET  /api/v1/predictions/history
+GET  /api/v1/model-versions
+GET  /api/v1/model-versions/{id}
+PUT  /api/v1/model-versions/{id}/activate
+GET  /api/v1/model-metrics/latest
+GET  /api/v1/model-comparison/latest
+GET  /api/v1/anomaly-events
+GET  /api/v1/notification-logs
+POST /api/v1/notifications/test
 ```
 
 Gateway write endpoints require `Authorization: Bearer <gateway-token>`.
-The prepared `AdminOrInternalBearerAuth` middleware accepts `ADMIN_TOKEN` or
-`INTERNAL_API_TOKEN` for future sensitive write endpoints. Those future routes are
-not added during Milestone `2B`.
+Prediction submission, model activation, and notification testing accept
+`Authorization: Bearer <internal-or-admin-token>` using `INTERNAL_API_TOKEN` or
+`ADMIN_TOKEN`.
 
 ## Curl Examples
 
@@ -155,13 +166,28 @@ curl http://localhost:8080/api/v1/dashboard/summary
 curl -N http://localhost:8080/api/v1/events
 ```
 
-The backend emits these Milestone `2B` SSE event types:
+Submit a development-only prediction payload for API validation:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/ml/predictions \
+  -H "Authorization: Bearer change-internal-api-token" \
+  -H "Content-Type: application/json" \
+  -d '{"model_version":"dev-manual","target_sensor_code":"S2","predicted_temperature":31.4,"input_window_start_at":"2026-06-01T17:25:00+07:00","input_window_end_at":"2026-06-01T17:55:00+07:00","predicted_for":"2026-06-01T18:00:00+07:00"}'
+```
+
+Manual payloads validate API behavior only. Thesis evidence must come from a
+real trained model and hardware readings.
+
+The backend emits these SSE event types:
 
 ```text
 reading.latest
 gateway.status
 sensor.trouble
 system.log
+prediction.latest
+anomaly.created
+notification.sent
 ```
 
 The offline checker runs every `BACKEND_OFFLINE_CHECK_INTERVAL_SECONDS`, default

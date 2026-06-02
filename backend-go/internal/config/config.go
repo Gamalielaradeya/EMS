@@ -11,29 +11,31 @@ import (
 )
 
 type Config struct {
-	Environment       string
-	Port              string
-	FrontendOrigin    string
-	DatabaseURL       string
-	GatewayToken      string
-	ActiveGatewayCode string
-	AdminToken        string
-	InternalAPIToken  string
-	OfflineCheckEvery time.Duration
+	Environment        string
+	Port               string
+	FrontendOrigin     string
+	DatabaseURL        string
+	GatewayToken       string
+	ActiveGatewayCode  string
+	AdminToken         string
+	InternalAPIToken   string
+	TelegramAPIBaseURL string
+	OfflineCheckEvery  time.Duration
 }
 
 func Load() (Config, error) {
 	_ = godotenv.Load()
 
 	cfg := Config{
-		Environment:       valueOrDefault("APP_ENV", "development"),
-		Port:              valueOrDefault("APP_PORT", "8080"),
-		FrontendOrigin:    valueOrDefault("FRONTEND_ORIGIN", "http://localhost:5173"),
-		DatabaseURL:       strings.TrimSpace(os.Getenv("DATABASE_URL")),
-		GatewayToken:      strings.TrimSpace(os.Getenv("GATEWAY_TOKEN")),
-		ActiveGatewayCode: valueOrDefault("ACTIVE_GATEWAY_CODE", "raspi-gateway-01"),
-		AdminToken:        strings.TrimSpace(os.Getenv("ADMIN_TOKEN")),
-		InternalAPIToken:  internalAPIToken(),
+		Environment:        valueOrDefault("APP_ENV", "development"),
+		Port:               valueOrDefault("APP_PORT", "8080"),
+		FrontendOrigin:     valueOrDefault("FRONTEND_ORIGIN", "http://localhost:5173"),
+		DatabaseURL:        strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		GatewayToken:       strings.TrimSpace(os.Getenv("GATEWAY_TOKEN")),
+		ActiveGatewayCode:  valueOrDefault("ACTIVE_GATEWAY_CODE", "raspi-gateway-01"),
+		AdminToken:         strings.TrimSpace(os.Getenv("ADMIN_TOKEN")),
+		InternalAPIToken:   internalAPIToken(),
+		TelegramAPIBaseURL: valueOrDefault("TELEGRAM_API_BASE_URL", "https://api.telegram.org"),
 	}
 
 	if cfg.DatabaseURL == "" {

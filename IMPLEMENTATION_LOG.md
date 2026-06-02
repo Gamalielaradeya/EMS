@@ -192,3 +192,33 @@ ML-worker-only work:
   separately in `requirements-tensorflow.txt`.
 - Did not add backend prediction integration, frontend prediction UI, Telegram,
   layout changes, gateway changes, or Milestone `7` work.
+
+## Milestone 7 - Prediction Bridge and Alerts
+
+Status: Done
+
+Cross-component work:
+
+- Added protected backend `POST /api/v1/ml/predictions` using
+  `INTERNAL_API_TOKEN` or `ADMIN_TOKEN`.
+- Added backend-owned thermal classification from database thresholds and
+  trouble-priority final status assembly.
+- Added prediction persistence with optional model linkage, clearly logged
+  development-manual fallback, nearby actual S2 matching, and stale TTL
+  handling.
+- Added prediction/model/metric/comparison/anomaly/notification read APIs and
+  protected model activation.
+- Added anomaly creation for `waspada`, `anomali`, and `trouble` outcomes plus
+  `prediction.latest`, `anomaly.created`, and `notification.sent` SSE events.
+- Added Telegram settings loading, safe disabled/config-missing behavior,
+  sender integration, sensor-plus-status cooldown checks, notification logs,
+  and protected notification testing.
+- Extended ML-worker inference so loaded model output is submitted through the
+  backend bridge with the internal Bearer token.
+- Added mocked ML bridge tests without requiring TensorFlow.
+- Replaced the frontend Prediction & LSTM placeholder with live prediction,
+  model-version, activation, Celsius metric, baseline comparison, chart,
+  history, model-not-ready, no-prediction, and API-unavailable states.
+- Kept full Events & Logs frontend work, Layout work, and remaining Settings
+  work deferred. Telegram core was intentionally pulled forward by the approved
+  Milestone `7` scope.

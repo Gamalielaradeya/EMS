@@ -13,7 +13,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `4` | Frontend Foundation and Dashboard Shell | Done |
 | `5` | Sensors and Readings Realtime Dashboard | Done |
 | `6` | ML Worker Training Pipeline | Done |
-| `7` | ML Inference and Prediction Integration | Not started |
+| `7` | Prediction Bridge and Alerts | Done |
 | `8` | Alert, Telegram, and Events Logs | Not started |
 | `9` | Layout Upload and Sensor Marker | Not started |
 | `10` | Final Integration, Testing, and Bab 4 Evidence | Not started |
@@ -148,3 +148,26 @@ Milestone `6` requires explicit user approval.
   without treating simulator metrics as thesis results.
 
 Milestone `7` requires explicit user approval.
+
+## Milestone 7 Completion
+
+- Added protected `POST /api/v1/ml/predictions` using the configured internal or
+  admin Bearer token.
+- Added backend-owned threshold classification, trouble-priority final status,
+  stale-prediction handling, nearby actual S2 matching, and prediction
+  persistence.
+- Added prediction, anomaly, notification, model-version, model-metric, and
+  baseline-comparison read APIs plus protected model activation.
+- Added `prediction.latest`, `anomaly.created`, and `notification.sent` SSE
+  delivery.
+- Added Telegram settings loading, sender integration, cooldown checks,
+  transition-safe notification logging, and protected notification testing.
+- Added ML-worker inference submission to the protected backend bridge without
+  requiring TensorFlow during lightweight tests.
+- Replaced the Prediction & LSTM frontend placeholder with live model,
+  prediction, metric, comparison, chart, activation, empty, and unavailable
+  states.
+- Validated simulator/manual payloads as development-only API evidence, not
+  thesis results.
+
+Milestone `8` requires explicit user approval.

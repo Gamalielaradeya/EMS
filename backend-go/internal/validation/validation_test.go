@@ -68,3 +68,17 @@ func TestValidateGatewayStatusRejectsInvalidSensorHealth(t *testing.T) {
 		t.Fatalf("expected separated health-status validation error, got: %#v", errs)
 	}
 }
+
+func TestValidatePredictionRequiresS2AndOrderedWindow(t *testing.T) {
+	temperature := 31.2
+	input := model.PredictionInput{
+		TargetSensorCode:     "S1",
+		PredictedTemperature: &temperature,
+		InputWindowStartAt:   "2026-06-01T10:00:00Z",
+		InputWindowEndAt:     "2026-06-01T10:30:00Z",
+		PredictedFor:         "2026-06-01T10:35:00Z",
+	}
+	if errs := ValidatePrediction(input); len(errs["target_sensor_code"]) == 0 {
+		t.Fatalf("expected S2 target validation error, got %#v", errs)
+	}
+}

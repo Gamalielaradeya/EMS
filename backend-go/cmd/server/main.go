@@ -36,7 +36,7 @@ func main() {
 
 	repo := repository.New(pool)
 	eventHub := sse.NewHub()
-	svc := service.New(repo, cfg.ActiveGatewayCode, eventHub)
+	svc := service.New(repo, cfg.ActiveGatewayCode, eventHub, service.NewTelegramClient(cfg.TelegramAPIBaseURL))
 	if err := svc.BootstrapGatewayToken(ctx, cfg.GatewayToken); err != nil {
 		log.Fatalf("bootstrap gateway token: %v", err)
 	}
@@ -48,7 +48,7 @@ func main() {
 	apiHandler := handler.New(svc, eventHub)
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           router.New(apiHandler, svc, cfg.FrontendOrigin),
+		Handler:           router.New(apiHandler, svc, cfg.FrontendOrigin, cfg.AdminToken, cfg.InternalAPIToken),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

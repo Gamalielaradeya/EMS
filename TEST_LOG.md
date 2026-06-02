@@ -347,3 +347,65 @@ Scope note:
 - Full TensorFlow LSTM artifact generation requires installing
   `requirements-tensorflow.txt` on the intended development workstation.
 - Backend prediction submission remains deferred to Milestone `7`.
+
+## Milestone 7 - Prediction Bridge and Alerts
+
+Status: Done
+
+Static checks:
+
+- Passed: backend `gofmt -w .`, `go mod tidy`, `go test ./...`, `go vet ./...`,
+  and `go build ./cmd/server`.
+- Passed: frontend `npm run typecheck`, `npm run lint`, and `npm run build`.
+- Passed: ML worker `./.venv/Scripts/python.exe -m compileall -q src tests`.
+- Passed: ML worker `./.venv/Scripts/python.exe -W error::FutureWarning -m
+  unittest discover -s tests -v`; ten tests passed, including mocked backend
+  submission payload and Bearer-token checks.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+
+PostgreSQL-backed API and SSE validation:
+
+- Passed: migrated clean validation database
+  `ems_thermal_lstm_m7_validation`, launched backend on `APP_PORT=8081`, and
+  confirmed `GET /api/v1/health` returned `200`.
+- Passed: unauthenticated `POST /api/v1/ml/predictions` returned `401`.
+- Passed: internal-token manual prediction stored safely with missing model
+  linkage and wrote a clear development-manual system log.
+- Passed: nearby simulator S2 reading matched `actual_temperature` within the
+  configured tolerance.
+- Passed: backend classified `waspada` and `anomali` from thresholds and
+  upgraded a normal thermal prediction to final `trouble` while gateway/S2
+  trouble was active.
+- Passed: live SSE stream emitted `reading.latest`, `gateway.status`,
+  `sensor.trouble`, `prediction.latest`, `anomaly.created`, and
+  `notification.sent`.
+- Passed: stale prediction remained queryable but created no anomaly or
+  notification log and did not replace the dashboard active prediction.
+- Passed: Telegram-disabled prediction alerts and protected notification test
+  stored `skipped` notification logs without crashing backend.
+- Passed: seeded development-only model records validated model list, detail,
+  active metrics, baseline comparison, and protected activation APIs.
+- Passed: offline checker wrote one gateway and two sensor timeout transitions;
+  later cycles did not duplicate timeout logs.
+
+Frontend browser validation:
+
+- Passed: populated Prediction & LSTM page showed active model, forecast status,
+  Celsius metrics, actual-versus-predicted Chart.js canvas, model versions,
+  activation action, two baseline rows, and prediction history.
+- Passed: empty validation records showed explicit model-not-ready,
+  no-prediction, no-chart-data, no-model, no-comparison, and empty-history
+  states.
+- Passed: stopped backend showed safe Prediction API-unavailable state.
+- Passed: browser console remained free of errors.
+- Note: in-app browser screenshot capture timed out; DOM-state browser
+  validation completed successfully.
+
+Cleanup:
+
+- Passed: stopped temporary frontend and backend processes.
+- Passed: dropped `ems_thermal_lstm_m7_validation`.
+- Passed: removed validation Compose container/network with
+  `docker compose down`.
+- TensorFlow remains intentionally uninstalled on this laptop; manual/simulator
+  predictions are development-only API validation, not thesis evidence.

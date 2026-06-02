@@ -41,6 +41,17 @@ export interface PredictionSummary {
   is_stale: boolean
 }
 
+export interface Prediction extends PredictionSummary {
+  prediction_run_id: number | null
+  model_version_id: number | null
+  actual_temperature: number | null
+  input_window_start_at: string | null
+  input_window_end_at: string | null
+  threshold_normal_max: number
+  threshold_anomaly_min: number
+  created_at: string
+}
+
 export interface ActiveModelSummary {
   id: number
   version: string
@@ -133,5 +144,47 @@ export interface ReadingHistoryMeta {
 
 export interface ReadingHistoryResult {
   readings: SensorReading[]
+  meta: ReadingHistoryMeta
+}
+
+export interface ModelVersion {
+  id: number
+  model_name: string
+  model_type: string
+  version: string
+  algorithm: string
+  feature_columns: string[]
+  target_column: string
+  window_size: number
+  horizon_minutes: number
+  raw_sampling_interval_seconds: number
+  resample_interval_seconds: number
+  is_active: boolean
+  trained_at: string | null
+  created_at: string
+  metrics: MetricsSummary | null
+}
+
+export interface ModelMetrics extends MetricsSummary {
+  model_version: string
+  dataset_start_at: string | null
+  dataset_end_at: string | null
+  train_size: number | null
+  validation_size: number | null
+  test_size: number | null
+}
+
+export interface BaselineResult extends MetricsSummary {
+  baseline_type: "persistence" | "moving_average"
+}
+
+export interface ModelComparison {
+  model_version: string
+  lstm: MetricsSummary
+  baselines: BaselineResult[]
+}
+
+export interface PredictionHistoryResult {
+  predictions: Prediction[]
   meta: ReadingHistoryMeta
 }

@@ -5,8 +5,9 @@ inference. It reads PostgreSQL `sensor_readings`, produces leakage-safe
 time-series datasets, compares Celsius-unit baselines, trains an LSTM, and
 stores model metadata in the backend database.
 
-Milestone 6 local inference does not submit predictions to the backend. The
-protected backend prediction bridge belongs to Milestone 7.
+Inference submits final model output to the protected backend prediction
+bridge. Backend owns thermal classification, persistence, anomaly events, SSE,
+and Telegram decisions.
 
 ## Requirements
 
@@ -39,6 +40,8 @@ Important values:
 | Variable | Default | Purpose |
 |---|---:|---|
 | `DATABASE_URL` | local PostgreSQL URL | source data and training metadata |
+| `BACKEND_BASE_URL` | `http://localhost:8080/api/v1` | prediction submission target |
+| `INTERNAL_API_TOKEN` | none | protected backend prediction token |
 | `ML_ALLOWED_SOURCES` | `hardware` | comma-separated allowed reading sources |
 | `ML_ALLOWED_QUALITY_STATUSES` | `valid` | comma-separated quality filters |
 | `ML_MINIMUM_RESAMPLED_ROWS` | `300` | minimum minute rows before training |
@@ -62,7 +65,9 @@ metrics are not thesis results.
 All commands accept PostgreSQL settings through environment variables.
 `train` and `evaluate` also accept `--start` and `--end` ISO-8601 timestamps.
 `evaluate` and `infer` accept `--version`; otherwise the active model is
-preferred, then the latest model.
+preferred, then the latest model. `infer` submits its final S2 prediction to
+`POST /api/v1/ml/predictions`; it fails safely when backend or token is
+unavailable.
 
 ## Pipeline
 
