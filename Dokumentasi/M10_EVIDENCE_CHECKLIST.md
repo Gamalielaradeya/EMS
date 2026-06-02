@@ -104,7 +104,9 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 
 ## ML Training Evidence Checklist
 
-- [ ] Install documented TensorFlow dependency on the ML workstation.
+- [x] Install documented TensorFlow dependency on the ML workstation.
+- [x] Validate real TensorFlow train, evaluate, and infer runtime with a clearly
+  labeled generated development dataset.
 - [ ] Train from hardware readings with `source=hardware` and
   `quality_status=valid`.
 - [ ] Record one-minute resampling, chronological split sizes, and window count.
@@ -114,6 +116,10 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
   and metadata JSON.
 - [ ] Activate the selected model and capture active-model API evidence.
 - [ ] Submit real inference output through the backend bridge.
+
+Development-only TensorFlow runtime details are recorded in
+`Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md`. They prove runtime wiring, not
+final thesis model quality.
 
 ## Alert and Telegram Checklist
 
@@ -126,5 +132,5 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 
 ## Next Step
 
-Proceed with Milestone `10B`: Raspberry Pi hardware validation and final Bab 4
-evidence capture.
+Resume Milestone `10B` when Raspberry Pi hardware is available. After hardware
+data collection, run final TensorFlow training for Bab 4 evidence.

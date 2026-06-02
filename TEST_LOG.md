@@ -618,3 +618,69 @@ Cleanup:
 - Passed: removed validation Compose container/network with
   `docker compose down`.
 - Passed: removed generated backend executable and temporary local logs.
+
+## Milestone 10C - TensorFlow Setup and ML Training Runtime Validation
+
+Status: Done - development validation only
+
+Environment and dependency checks:
+
+- Passed: confirmed local ML-worker virtual environment uses Python `3.10.11`.
+- Passed: recorded free system-drive space before install: `9.92 GB`.
+- Passed: installed documented TensorFlow requirements with
+  `./.venv/Scripts/python.exe -m pip install --no-cache-dir -r
+  requirements-tensorflow.txt`.
+- Passed: `./.venv/Scripts/python.exe -m pip check`.
+- Passed: `./.venv/Scripts/python.exe -c "import tensorflow as tf;
+  print(tf.__version__)"` returned `2.20.0`.
+- Passed: TensorFlow detected CPU device. No GPU dependency was required.
+
+ML-worker checks:
+
+- Passed: `./.venv/Scripts/python.exe -m compileall -q src tests`.
+- Passed: `./.venv/Scripts/python.exe -W error::FutureWarning -m unittest
+  discover -s tests -v`; 10 tests passed.
+- Passed: canonical root, `train`, `evaluate`, and `infer` CLI help surfaces.
+
+Development-only training runtime:
+
+- Passed: created and migrated isolated database
+  `ems_thermal_lstm_m10c_validation`.
+- Passed: inserted `5,040` generated `source=simulator`,
+  `quality_status=valid` readings for S1/S2 at 10-second cadence.
+- Passed: preprocessing produced `420` usable one-minute rows and `415`
+  labeled rows after five-minute target shift.
+- Passed: chronological split sizes were `290/62/63`; train, validation, and
+  test windows were `260/32/33` with `window_size=30`.
+- Passed: real CPU TensorFlow training completed with `ML_EPOCHS=2`.
+- Passed: generated `model.keras`, `feature_scaler.pkl`, `target_scaler.pkl`,
+  `model_metadata.json`, and `training_report.json`.
+- Passed: training LSTM Celsius metrics were RMSE `1.2562`, MAE `1.2456`, and
+  MAPE `4.0552%`.
+- Passed: persistence baseline Celsius metrics were RMSE `0.2201`, MAE
+  `0.1818`, and MAPE `0.5925%`.
+- Passed: moving-average baseline Celsius metrics were RMSE `0.2585`, MAE
+  `0.2111`, and MAPE `0.6876%`.
+- Passed: saved-model `evaluate` completed with Celsius metrics.
+- Passed: backend-submitted `infer` predicted S2 `29.5286 C`; backend stored
+  final status `normal`.
+- Passed: database contained one active LSTM model, one model-metrics row, two
+  baseline rows, successful training/evaluation/inference runs, one backend
+  prediction, and ML-worker info logs.
+
+Limitations:
+
+- Development-only: generated simulator readings are not thesis evidence.
+- Development-only: two epochs validate runtime wiring, not final model
+  quality. Both required baselines outperformed this short LSTM smoke run.
+- Blocked separately: Milestone `10B` Raspberry Pi hardware validation remains
+  blocked until hardware is available.
+
+Cleanup:
+
+- Passed: stopped temporary backend process.
+- Passed: dropped isolated validation database and removed Compose
+  container/network with `docker compose down`.
+- Passed: removed generated model artifacts, report, backend executable, and
+  temporary local logs.
+- Retained: ignored ML-worker virtual environment with TensorFlow `2.20.0`.

@@ -18,6 +18,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
 | `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Blocked - waiting hardware access |
+| `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
 
@@ -229,3 +230,18 @@ Milestone `9` requires explicit user approval.
   run-loop validation were not run.
 - Resume from `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` when hardware
   access is available.
+
+## Milestone 10C Completion
+
+- Installed and imported TensorFlow `2.20.0` inside ignored ML-worker virtual
+  environment using Python `3.10.11`.
+- Re-ran ML-worker compile, unit, and CLI-help checks.
+- Trained, evaluated, and inferred with a real CPU TensorFlow LSTM runtime
+  against an isolated PostgreSQL validation database.
+- Used `5,040` generated simulator readings only for development validation.
+- Confirmed artifact creation, Celsius metrics, baselines, model metadata,
+  prediction runs, active model persistence, backend bridge submission, and ML
+  system logs.
+- Recorded results in `Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md`.
+- Did not treat generated-data metrics as thesis evidence and did not unblock
+  Milestone `10B`.

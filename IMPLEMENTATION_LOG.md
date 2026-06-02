@@ -316,3 +316,27 @@ Documentation-only blocker record:
 - Added `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` with exact continuation
   checklist.
 - Added no application code, dependency, or configuration-secret change.
+
+## Milestone 10C - TensorFlow Setup and ML Training Runtime Validation
+
+Status: Done - development validation only
+
+Runtime validation and documentation work:
+
+- Reused ignored `ml-worker/.venv` with Python `3.10.11`.
+- Installed documented TensorFlow requirements with
+  `python -m pip install --no-cache-dir -r requirements-tensorflow.txt`.
+- Confirmed TensorFlow `2.20.0` CPU runtime import and dependency health.
+- Created isolated PostgreSQL database `ems_thermal_lstm_m10c_validation`.
+- Inserted `5,040` generated simulator readings tagged as M10C
+  development-only data.
+- Ran real TensorFlow LSTM training with `2` epochs for bounded runtime
+  validation, then ran saved-model evaluation and backend-submitted inference.
+- Confirmed model artifacts, Celsius metrics, baseline metrics, active
+  `model_versions`, `model_metrics`, `baseline_results`, successful
+  `prediction_runs`, backend prediction persistence, and ML system logs.
+- Removed generated artifacts, report, isolated database, backend executable,
+  and temporary logs after recording evidence.
+- Added `Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md`.
+- Added no algorithm, application code, or final thesis model result.
+- Kept Milestone `10B` blocked until Raspberry Pi hardware is available.
