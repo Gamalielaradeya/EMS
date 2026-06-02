@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Not started |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Blocked - waiting hardware access |
 
 ## Milestone -1 Completion
 
@@ -220,4 +220,12 @@ Milestone `9` requires explicit user approval.
 - Kept simulator readings and manual predictions explicitly limited to local
   integration validation, not thesis evidence.
 
-Milestone `10B` requires explicit user approval.
+## Milestone 10B Blocker
+
+- Raspberry Pi hardware is not physically available.
+- Laptop EMS preparation passed: PostgreSQL migration and seed, backend health
+  on `APP_PORT=8081`, frontend startup, and ZeroTier backend reachability.
+- Raspberry Pi SSH, USB RS485, XY-MD02 diagnostics, gateway delivery, and live
+  run-loop validation were not run.
+- Resume from `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` when hardware
+  access is available.

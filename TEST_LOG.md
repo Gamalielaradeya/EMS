@@ -575,3 +575,46 @@ Manual/deferred boundary:
   thesis metrics.
 - Deferred: enabled Telegram delivery to a real chat.
 - Added: `Dokumentasi/M10_EVIDENCE_CHECKLIST.md`.
+
+## Milestone 10B - Raspberry Pi Hardware Validation and Evidence
+
+Status: Blocked - waiting hardware access
+
+Laptop preparation:
+
+- Passed: clean repository gate and confirmed Milestone `10A` is done.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+- Passed: started PostgreSQL on Docker host port `55432`.
+- Passed: applied migrations and seed data to `ems_thermal_lstm`.
+- Passed: built backend and launched it on overridden `APP_PORT=8081` while
+  local port `8080` was occupied.
+- Passed: `GET http://localhost:8081/api/v1/health`.
+- Passed: backend health was also reachable through laptop ZeroTier addresses
+  `http://10.147.17.201:8081/api/v1/health` and
+  `http://10.147.20.201:8081/api/v1/health`.
+- Passed: launched frontend locally on `http://localhost:5173`.
+
+Hardware blocker:
+
+- Blocked: Raspberry Pi hardware is not physically available.
+- Blocked: no reachable Raspberry Pi SSH target exists for this run.
+- Not run: Raspberry Pi OS info, Python version, git version, serial
+  permission, and `dialout` checks.
+- Not run: `ls /dev/ttyUSB*`.
+- Not run: gateway virtual environment creation or Raspberry Pi dependency
+  installation.
+- Not run: Raspberry Pi gateway `config.yaml` creation.
+- Not run: `diagnose ports`, raw register reads for slave IDs `1` and `2`, or
+  configured S1/S2 sensor diagnostics.
+- Not run: Raspberry Pi `send-test`.
+- Not run: Raspberry Pi gateway live loop, 3-5 minute hardware readings,
+  hardware SSE behavior, dashboard realtime update, or gateway log evidence.
+- Not run: RS485 polarity, power, slave-ID, baudrate, or register troubleshooting
+  because physical hardware is unavailable.
+
+Cleanup:
+
+- Passed: stopped temporary frontend and backend processes.
+- Passed: removed validation Compose container/network with
+  `docker compose down`.
+- Passed: removed generated backend executable and temporary local logs.

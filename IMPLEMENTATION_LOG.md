@@ -295,3 +295,24 @@ Validation and documentation only:
   integration smoke from the final Raspberry Pi, TensorFlow, Telegram, and
   Bab 4 evidence work.
 - Added no application feature, refactor, dependency, or runtime script.
+
+## Milestone 10B - Raspberry Pi Hardware Validation and Evidence
+
+Status: Blocked - waiting hardware access
+
+Documentation-only blocker record:
+
+- Started PostgreSQL on Docker host port `55432` and applied migrations plus
+  seed data.
+- Started backend on `APP_PORT=8081` because local port `8080` remained
+  occupied.
+- Confirmed backend health locally and through laptop ZeroTier addresses
+  `10.147.17.201:8081` and `10.147.20.201:8081`.
+- Started frontend locally on `5173`.
+- Could not continue Raspberry Pi preparation because hardware is not
+  physically available and no reachable Pi SSH target exists.
+- Did not run Raspberry Pi OS, Python, git, serial-permission, USB RS485,
+  Modbus, sensor, gateway delivery, or live-loop checks.
+- Added `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` with exact continuation
+  checklist.
+- Added no application code, dependency, or configuration-secret change.
