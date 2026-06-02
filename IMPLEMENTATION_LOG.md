@@ -271,3 +271,27 @@ Backend and frontend work:
   read-only Dashboard layout preview.
 - Kept layout scope to one active server-testbed image; no enterprise site,
   floor, or multi-layout management was added.
+
+## Milestone 10A - Local Full Integration Test and Evidence Checklist
+
+Status: Done
+
+Validation and documentation only:
+
+- Ran the complete local stack against an isolated PostgreSQL validation
+  database on Docker host port `55432`.
+- Applied all migrations and seed data, launched the backend with
+  `APP_PORT=8081`, and launched the frontend on `5173`.
+- Exercised gateway `send-test`, authenticated readings, latest/history reads,
+  gateway status transitions, and all seven SSE event types.
+- Submitted a development-manual ML-worker prediction through the protected
+  backend bridge without installing TensorFlow.
+- Exercised backend-owned anomaly classification, Telegram-disabled skipped
+  notification logging, layout image upload and serving, S1/S2 ratio markers,
+  settings persistence, sensitive-value masking, and filtered logs.
+- Validated the six frontend routes against populated local state with no
+  browser console errors.
+- Added `Dokumentasi/M10_EVIDENCE_CHECKLIST.md` to separate completed local
+  integration smoke from the final Raspberry Pi, TensorFlow, Telegram, and
+  Bab 4 evidence work.
+- Added no application feature, refactor, dependency, or runtime script.

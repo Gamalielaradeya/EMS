@@ -33,6 +33,7 @@ Project control:
 - `MILESTONES.md`
 - `IMPLEMENTATION_LOG.md`
 - `TEST_LOG.md`
+- `Dokumentasi/M10_EVIDENCE_CHECKLIST.md`
 
 Milestone `-1` Documentation Lock is complete.
 
@@ -72,4 +73,7 @@ If port `5432` is already used locally, set `POSTGRES_PORT` in the local `.env` 
 
 ## Milestone Status
 
-Milestone `2A` Backend Core API and Milestone `2B` Backend Realtime and System Core are complete. Milestone `3` must not start without explicit approval.
+Milestones `-1` through `9` and local integration Milestone `10A` are complete.
+Milestone `10B` remains pending for Raspberry Pi hardware validation, real
+TensorFlow training evidence, enabled Telegram evidence, and final Bab 4
+capture.

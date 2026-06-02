@@ -502,3 +502,76 @@ Cleanup:
 - Passed: dropped `ems_thermal_lstm_m9_validation`.
 - Passed: removed validation Compose container/network, generated upload,
   frontend `dist`, and backend executable.
+
+## Milestone 10A - Local Full Integration Test and Evidence Checklist
+
+Status: Done
+
+Static checks:
+
+- Passed: backend `GOTOOLCHAIN=local go test ./...`, `go vet ./...`, and
+  `go build ./cmd/server`.
+- Passed: frontend `npm run typecheck`, `npm run lint`, and `npm run build`.
+- Passed: gateway `./.venv/Scripts/python.exe -m compileall -q src tests` and
+  `./.venv/Scripts/python.exe -W error::FutureWarning -m unittest discover -s
+  tests -v`; 12 tests passed.
+- Passed: ML worker `./.venv/Scripts/python.exe -m compileall -q src tests` and
+  `./.venv/Scripts/python.exe -W error::FutureWarning -m unittest discover -s
+  tests -v`; 10 tests passed.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+
+Full local integration smoke:
+
+- Passed: created, migrated, and seeded isolated database
+  `ems_thermal_lstm_m10a_validation`.
+- Passed: launched backend on overridden `APP_PORT=8081` while local `8080`
+  was occupied; health returned `200`.
+- Passed: launched frontend on `5173`.
+- Passed: gateway `python -m gateway.cli send-test --config
+  ./config.example.yaml` stored two simulator readings.
+- Passed: readings flowed through latest/history reads, dashboard summary, and
+  `reading.latest` SSE.
+- Passed: gateway heartbeat plus S2 trouble and restore transitions emitted
+  `gateway.status`, `sensor.trouble`, and `system.log`.
+- Passed: unauthenticated ML prediction and settings updates returned `401`.
+- Passed: ML-worker `submit_prediction` sent a development-manual forecast
+  through the protected bridge without TensorFlow. Backend classified
+  `33.4 C` as `anomali`.
+- Passed: compact SSE capture received all seven event types:
+  `reading.latest`, `gateway.status`, `sensor.trouble`, `system.log`,
+  `prediction.latest`, `anomaly.created`, and `notification.sent`.
+- Passed: Telegram-disabled prediction and protected Telegram test stored
+  skipped notification logs without crashing backend.
+- Passed: invalid threshold ordering, masked-secret writeback, invalid layout
+  image, and out-of-range marker ratio each returned `422`.
+- Passed: database check confirmed rejected masked-secret writeback preserved
+  the configured development-only dummy token.
+- Passed: valid small PNG upload returned `201`, image serving returned `200`,
+  and S1/S2 marker ratios persisted.
+- Passed: filtered anomaly, notification, system-log, reading-history, and
+  prediction-history endpoints returned populated subsets.
+
+Frontend browser validation:
+
+- Passed: Dashboard rendered S1/S2 values, gateway active status, latest
+  `anomali` prediction, recent events, and layout preview.
+- Passed: Sensors & Readings rendered S1/S2 values, history controls, and
+  `SSE: CONNECTED`.
+- Passed: Prediction & LSTM rendered model-not-ready state plus
+  development-manual forecast history safely.
+- Passed: Layout rendered uploaded image, S1/S2 markers, telemetry, and
+  placement controls.
+- Passed: Events & Logs rendered populated anomaly records and all three tabs.
+- Passed: Settings rendered thermal, Telegram, masked-secret, and read-only
+  configuration panels.
+- Passed: browser console remained free of errors.
+- Note: in-app screenshot capture timed out; final Bab 4 screenshot collection
+  remains a manual Milestone `10B` checklist item.
+
+Manual/deferred boundary:
+
+- Deferred: physical Raspberry Pi, USB RS485, and XY-MD02 validation.
+- Deferred: TensorFlow installation, real LSTM artifact generation, and final
+  thesis metrics.
+- Deferred: enabled Telegram delivery to a real chat.
+- Added: `Dokumentasi/M10_EVIDENCE_CHECKLIST.md`.

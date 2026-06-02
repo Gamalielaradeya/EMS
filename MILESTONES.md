@@ -16,7 +16,8 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `7` | Prediction Bridge and Alerts | Done |
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
-| `10` | Final Integration, Testing, and Bab 4 Evidence | Not started |
+| `10A` | Local Full Integration Test and Evidence Checklist | Done |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Not started |
 
 ## Milestone -1 Completion
 
@@ -203,4 +204,20 @@ Milestone `9` requires explicit user approval.
   exists.
 - Kept enterprise site, floor, and multi-layout management out of scope.
 
-Milestone `10` requires explicit user approval.
+## Milestone 10A Completion
+
+- Validated the full local stack against an isolated PostgreSQL database on
+  Docker host port `55432`.
+- Validated migrations and seed, backend on overridden `APP_PORT=8081`,
+  frontend on `5173`, gateway `send-test`, and ML-worker development
+  prediction submission through the protected backend bridge.
+- Validated readings, SSE, gateway state, backend-owned prediction
+  classification, anomaly records, Telegram-disabled skipped logs, layout
+  upload and markers, settings persistence, and filtered logs.
+- Validated all six frontend routes against populated local API state with no
+  browser console errors.
+- Added `Dokumentasi/M10_EVIDENCE_CHECKLIST.md` for Bab 4 evidence capture.
+- Kept simulator readings and manual predictions explicitly limited to local
+  integration validation, not thesis evidence.
+
+Milestone `10B` requires explicit user approval.
