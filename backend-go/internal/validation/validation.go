@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -124,6 +125,67 @@ func FinalStatusValid(status string) bool {
 
 func NotificationStatusValid(status string) bool {
 	return status == "" || status == "pending" || status == "sent" || status == "failed" || status == "skipped"
+}
+
+func SystemLogSourceValid(source string) bool {
+	return source == "" || source == "backend" || source == "gateway" || source == "ml-worker" || source == "telegram" || source == "database"
+}
+
+func SystemLogLevelValid(level string) bool {
+	return level == "" || level == "info" || level == "warning" || level == "error" || level == "critical"
+}
+
+func ValidateSettingUpdate(key string, input model.SettingUpdateInput, current map[string]string) Errors {
+	errs := Errors{}
+	switch key {
+	case "threshold_normal_max", "threshold_anomaly_min":
+		value, err := strconv.ParseFloat(input.Value, 64)
+		if err != nil || value < 0 || value > 80 {
+			errs.Add("value", "threshold value must be a number between 0 and 80")
+			return errs
+		}
+		normalMax := floatValue(current["threshold_normal_max"])
+		anomalyMin := floatValue(current["threshold_anomaly_min"])
+		if key == "threshold_normal_max" {
+			normalMax = value
+		} else {
+			anomalyMin = value
+		}
+		if normalMax >= anomalyMin {
+			errs.Add("value", "threshold_normal_max must be less than threshold_anomaly_min")
+		}
+	case "sensor_timeout_minutes":
+		validatePositiveSetting(errs, input.Value, "sensor timeout")
+	case "telegram_cooldown_minutes":
+		value, err := strconv.Atoi(input.Value)
+		if err != nil || value < 0 {
+			errs.Add("value", "telegram cooldown must be a non-negative integer")
+		}
+	case "telegram_enabled":
+		if _, err := strconv.ParseBool(input.Value); err != nil {
+			errs.Add("value", "telegram_enabled must be true or false")
+		}
+	case "telegram_bot_token", "telegram_chat_id":
+		if input.Value == model.MaskedSettingValue {
+			errs.Add("value", "masked sensitive value cannot be saved")
+		}
+	default:
+		errs.Add("key", "setting is read-only or unsupported")
+	}
+	return errs
+}
+
+func validatePositiveSetting(errs Errors, value, label string) {
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		errs.Add("value", label+" must be a positive integer")
+	}
+}
+
+func floatValue(value string) float64 {
+	var parsed float64
+	_ = json.Unmarshal([]byte(value), &parsed)
+	return parsed
 }
 
 func SensorCodeValid(sensorCode string) bool {

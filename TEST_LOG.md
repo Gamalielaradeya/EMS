@@ -409,3 +409,42 @@ Cleanup:
   `docker compose down`.
 - TensorFlow remains intentionally uninstalled on this laptop; manual/simulator
   predictions are development-only API validation, not thesis evidence.
+
+## Milestone 8 - Alert, Telegram, and Events Logs
+
+Status: Done
+
+Static checks:
+
+- Passed: backend `gofmt -w .`, `go mod tidy`, `go test ./...`, `go vet ./...`,
+  and `go build ./cmd/server`.
+- Passed: frontend `npm run typecheck`, `npm run lint`, and `npm run build`.
+- Passed: `POSTGRES_PORT=55432 docker compose config --quiet`.
+
+PostgreSQL-backed API validation:
+
+- Passed: migrated clean validation database
+  `ems_thermal_lstm_m8_validation`, launched backend on `APP_PORT=8081`, and
+  confirmed `GET /api/v1/health` returned `200`.
+- Passed: anomaly events, notification logs, and system logs returned empty
+  states safely before validation records were created.
+- Passed: backend-info, backend-warning, anomaly-status, and
+  notification-status filters returned expected populated subsets.
+- Passed: public settings reads masked stored Telegram bot token and chat ID.
+- Passed: protected settings update rejected missing authorization with `401`.
+- Passed: invalid threshold ordering and masked-secret writeback both returned
+  `422`.
+- Passed: direct database check confirmed the rejected masked value did not
+  overwrite the stored Telegram bot token.
+- Passed: protected Telegram test returned skipped safely while Telegram was
+  disabled and stored the notification outcome.
+- Passed: frontend development server returned the Events & Logs route shell
+  and API-backed settings/system-log requests returned `200`.
+
+Frontend validation note:
+
+- Passed: frontend typed clients, state hooks, safe states, and production
+  build completed without TypeScript or lint errors.
+- Blocked: in-app browser webview did not attach after a clean reconnect, so
+  interactive rendered-state checks could not be completed in this run.
+- Deferred: Layout upload and markers remain Milestone `9`.

@@ -41,12 +41,15 @@ func New(handler *handler.Handler, tokenValidator interface {
 		router.Get("/model-comparison/latest", handler.LatestModelComparison)
 		router.Get("/anomaly-events", handler.AnomalyEvents)
 		router.Get("/notification-logs", handler.NotificationLogs)
+		router.Get("/system-logs", handler.SystemLogs)
+		router.Get("/settings", handler.ListSettings)
 
 		router.Group(func(router chi.Router) {
 			router.Use(middleware.AdminOrInternalBearerAuth(adminToken, internalAPIToken))
 			router.Post("/ml/predictions", handler.InsertPrediction)
 			router.Put("/model-versions/{id}/activate", handler.ActivateModelVersion)
 			router.Post("/notifications/test", handler.TestNotification)
+			router.Put("/settings/{key}", handler.UpdateSetting)
 		})
 	})
 

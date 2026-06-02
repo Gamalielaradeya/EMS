@@ -17,9 +17,11 @@ SSE URLs locally when the backend uses another port:
 ```dotenv
 VITE_API_BASE_URL=http://localhost:8081/api/v1
 VITE_SSE_URL=http://localhost:8081/api/v1/events
+VITE_ADMIN_TOKEN=change-admin-token
 ```
 
-Do not commit `.env.local`.
+`VITE_ADMIN_TOKEN` enables local prototype actions such as model activation and
+settings updates. Do not commit `.env.local`.
 
 ## Commands
 
@@ -69,5 +71,15 @@ Loading, empty, unavailable, and SSE-disconnected states remain safe.
 The Prediction & LSTM page reads prediction history, model versions, active
 metrics, and baseline comparison APIs. It shows explicit model-not-ready and
 no-prediction states. Model activation is enabled only when a local
-`VITE_ADMIN_TOKEN` is configured. Layout and full settings pages remain
-deferred.
+`VITE_ADMIN_TOKEN` is configured.
+
+The Events & Logs page reads anomaly events, notification logs, and system logs.
+It provides focused tabs, relevant filters, manual refresh, and safe loading,
+empty, and unavailable states.
+
+The Settings page reads masked backend settings and groups thermal thresholds,
+Telegram delivery controls, and read-only gateway, app, and ML parameters.
+Telegram secret fields stay blank unless a replacement is intentionally sent.
+Settings updates and Telegram testing require local `VITE_ADMIN_TOKEN`.
+
+Layout upload and sensor-marker editing remain deferred to Milestone `9`.

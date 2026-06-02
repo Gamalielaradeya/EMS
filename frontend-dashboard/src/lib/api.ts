@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  AnomalyEvent,
   DashboardSummary,
   HealthSummary,
   ReadingHistoryFilters,
@@ -8,10 +9,15 @@ import type {
   ModelComparison,
   ModelMetrics,
   ModelVersion,
+  NotificationLog,
+  OperationalLogFilters,
+  PagedResult,
   Prediction,
   PredictionHistoryResult,
   Sensor,
   SensorReading,
+  Setting,
+  SystemLog,
 } from "@/types/api"
 
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim()
@@ -84,8 +90,27 @@ function readingHistoryQuery(filters: ReadingHistoryFilters) {
 
 function adminHeaders() {
   const token = import.meta.env.VITE_ADMIN_TOKEN?.trim()
-  if (!token) throw new ApiError("Set VITE_ADMIN_TOKEN locally to activate a model.")
+  if (!token) throw new ApiError("Set VITE_ADMIN_TOKEN locally to perform this protected action.")
   return { Authorization: `Bearer ${token}` }
+}
+
+function operationalQuery(filters: OperationalLogFilters, type: "event" | "notification" | "system") {
+  const query = new URLSearchParams()
+  if (type !== "system" && filters.status) query.set("status", filters.status)
+  if (type === "system" && filters.source) query.set("source", filters.source)
+  if (type === "system" && filters.level) query.set("level", filters.level)
+  if (filters.from) query.set("from", filters.from)
+  if (filters.to) query.set("to", filters.to)
+  query.set("limit", String(filters.limit))
+  return query.toString()
+}
+
+async function pagedRequest<T>(path: string, filters: OperationalLogFilters, type: "event" | "notification" | "system"): Promise<PagedResult<T>> {
+  const body = await requestEnvelope<T[], ReadingHistoryMeta>(`${path}?${operationalQuery(filters, type)}`)
+  return {
+    items: body.data as T[],
+    meta: body.meta || { total: 0, limit: filters.limit, offset: 0 },
+  }
 }
 
 export const api = {
@@ -121,4 +146,22 @@ export const api = {
     }),
   getLatestModelMetrics: () => request<ModelMetrics | null>("/model-metrics/latest"),
   getLatestModelComparison: () => request<ModelComparison | null>("/model-comparison/latest"),
+  getAnomalyEvents: (filters: OperationalLogFilters) =>
+    pagedRequest<AnomalyEvent>("/anomaly-events", filters, "event"),
+  getNotificationLogs: (filters: OperationalLogFilters) =>
+    pagedRequest<NotificationLog>("/notification-logs", filters, "notification"),
+  getSystemLogs: (filters: OperationalLogFilters) =>
+    pagedRequest<SystemLog>("/system-logs", filters, "system"),
+  getSettings: () => request<Setting[]>("/settings"),
+  updateSetting: (key: string, value: string) =>
+    request<Setting>(`/settings/${key}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify({ value }),
+    }),
+  testNotification: () =>
+    request<NotificationLog>("/notifications/test", {
+      method: "POST",
+      headers: adminHeaders(),
+    }),
 }

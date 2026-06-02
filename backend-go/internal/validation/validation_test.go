@@ -82,3 +82,36 @@ func TestValidatePredictionRequiresS2AndOrderedWindow(t *testing.T) {
 		t.Fatalf("expected S2 target validation error, got %#v", errs)
 	}
 }
+
+func TestValidateSettingUpdateRejectsInvalidThresholdOrder(t *testing.T) {
+	errs := ValidateSettingUpdate(
+		"threshold_normal_max",
+		model.SettingUpdateInput{Value: "33"},
+		map[string]string{"threshold_normal_max": "30", "threshold_anomaly_min": "32"},
+	)
+	if len(errs["value"]) == 0 {
+		t.Fatalf("expected invalid threshold order, got %#v", errs)
+	}
+}
+
+func TestValidateSettingUpdateRejectsMaskedSensitiveValue(t *testing.T) {
+	errs := ValidateSettingUpdate(
+		"telegram_bot_token",
+		model.SettingUpdateInput{Value: model.MaskedSettingValue},
+		nil,
+	)
+	if len(errs["value"]) == 0 {
+		t.Fatalf("expected masked sensitive value rejection, got %#v", errs)
+	}
+}
+
+func TestValidateSettingUpdateRejectsReadOnlyKey(t *testing.T) {
+	errs := ValidateSettingUpdate(
+		"lstm_window_size",
+		model.SettingUpdateInput{Value: "60"},
+		nil,
+	)
+	if len(errs["key"]) == 0 {
+		t.Fatalf("expected read-only setting rejection, got %#v", errs)
+	}
+}

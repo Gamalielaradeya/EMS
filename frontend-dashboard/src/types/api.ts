@@ -188,3 +188,65 @@ export interface PredictionHistoryResult {
   predictions: Prediction[]
   meta: ReadingHistoryMeta
 }
+
+export type NotificationStatus = "pending" | "sent" | "failed" | "skipped"
+export type SystemLogLevel = "info" | "warning" | "error" | "critical"
+export type SystemLogSource = "backend" | "gateway" | "ml-worker" | "telegram" | "database"
+
+export interface AnomalyEvent {
+  id: number
+  prediction_id: number | null
+  sensor_code: string | null
+  event_type: string
+  status: FinalStatus
+  severity: string
+  predicted_temperature: number | null
+  actual_temperature: number | null
+  description: string | null
+  detected_at: string
+  created_at: string
+}
+
+export interface NotificationLog {
+  id: number
+  anomaly_event_id: number | null
+  channel: string
+  recipient: string | null
+  message: string
+  status: NotificationStatus
+  sent_at: string | null
+  error_message: string | null
+  created_at: string
+}
+
+export interface SystemLog {
+  id: number
+  source: SystemLogSource
+  level: SystemLogLevel
+  message: string
+  context?: Record<string, unknown>
+  created_at: string
+}
+
+export interface OperationalLogFilters {
+  status?: string
+  source?: SystemLogSource
+  level?: SystemLogLevel
+  from?: string
+  to?: string
+  limit: number
+}
+
+export interface PagedResult<T> {
+  items: T[]
+  meta: ReadingHistoryMeta
+}
+
+export interface Setting {
+  key: string
+  value: string
+  value_type: "string" | "number" | "boolean" | "json"
+  description: string | null
+  is_sensitive: boolean
+  updated_at: string
+}

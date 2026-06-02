@@ -5,7 +5,9 @@ Go REST API for EMS Thermal LSTM.
 Milestone `2A` implements the core gateway ingestion and reading query surface.
 Milestone `2B` adds dashboard summary, SSE delivery, timeout status checks, and
 system logs. Milestone `7` adds protected prediction integration, backend-owned
-final classification, anomaly events, model query APIs, and Telegram notification.
+final classification, anomaly events, model query APIs, and Telegram
+notification. Milestone `8` adds filtered system logs and masked settings
+management.
 
 ## Database Migrations
 
@@ -118,13 +120,29 @@ GET  /api/v1/model-metrics/latest
 GET  /api/v1/model-comparison/latest
 GET  /api/v1/anomaly-events
 GET  /api/v1/notification-logs
+GET  /api/v1/system-logs
+GET  /api/v1/settings
+PUT  /api/v1/settings/{key}
 POST /api/v1/notifications/test
 ```
 
 Gateway write endpoints require `Authorization: Bearer <gateway-token>`.
-Prediction submission, model activation, and notification testing accept
+Prediction submission, model activation, settings updates, and notification
+testing accept
 `Authorization: Bearer <internal-or-admin-token>` using `INTERNAL_API_TOKEN` or
 `ADMIN_TOKEN`.
+
+Settings reads mask configured Telegram secrets. Send a new secret only when
+changing it; do not send the masked placeholder back to the update endpoint.
+
+Operational APIs support bounded filtering:
+
+```bash
+curl "http://localhost:8080/api/v1/anomaly-events?status=anomali&limit=50"
+curl "http://localhost:8080/api/v1/notification-logs?status=skipped&limit=50"
+curl "http://localhost:8080/api/v1/system-logs?source=backend&level=warning&limit=50"
+curl http://localhost:8080/api/v1/settings
+```
 
 ## Curl Examples
 

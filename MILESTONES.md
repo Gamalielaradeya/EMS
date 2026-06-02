@@ -14,7 +14,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `5` | Sensors and Readings Realtime Dashboard | Done |
 | `6` | ML Worker Training Pipeline | Done |
 | `7` | Prediction Bridge and Alerts | Done |
-| `8` | Alert, Telegram, and Events Logs | Not started |
+| `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Not started |
 | `10` | Final Integration, Testing, and Bab 4 Evidence | Not started |
 
@@ -171,3 +171,20 @@ Milestone `7` requires explicit user approval.
   thesis results.
 
 Milestone `8` requires explicit user approval.
+
+## Milestone 8 Completion
+
+- Added public filtered `GET /api/v1/system-logs` alongside the existing
+  anomaly-event and notification-log read APIs.
+- Added public masked `GET /api/v1/settings` and protected
+  `PUT /api/v1/settings/{key}` with allowlisted validation.
+- Added masked-secret overwrite protection and threshold ordering validation.
+- Preserved Telegram-disabled notification testing as a safe skipped outcome.
+- Replaced the Events & Logs frontend placeholder with filtered anomaly,
+  notification, and system-log tabs.
+- Replaced the Settings frontend placeholder with grouped thermal, Telegram,
+  and read-only runtime configuration panels.
+- Kept layout upload, layout markers, and sensor drag positioning deferred to
+  canonical Milestone `9`.
+
+Milestone `9` requires explicit user approval.

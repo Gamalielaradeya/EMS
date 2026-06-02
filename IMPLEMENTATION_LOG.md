@@ -222,3 +222,28 @@ Cross-component work:
 - Kept full Events & Logs frontend work, Layout work, and remaining Settings
   work deferred. Telegram core was intentionally pulled forward by the approved
   Milestone `7` scope.
+
+## Milestone 8 - Alert, Telegram, and Events Logs
+
+Status: Done
+
+Backend and frontend work:
+
+- Added masked settings contracts, repository persistence, service validation,
+  and handlers for public reads plus protected allowlisted updates.
+- Added masked-secret overwrite protection so frontend placeholder values
+  cannot replace configured Telegram credentials.
+- Added cross-setting validation for
+  `threshold_normal_max < threshold_anomaly_min`.
+- Added public filtered `GET /api/v1/system-logs` with source, level, time,
+  limit, and offset filters.
+- Reused Milestone `7` anomaly-event, notification-log, Telegram sender, and
+  protected notification-test behavior instead of duplicating alert logic.
+- Replaced the Events & Logs placeholder with three focused operational tabs,
+  relevant filters, refresh, responsive tables, and safe loading, empty, and
+  unavailable states.
+- Replaced the Settings placeholder with grouped thermal thresholds, Telegram
+  settings, blank secret-update fields, masked configured-state indicators,
+  notification testing, and read-only gateway, app, and ML configuration.
+- Kept Layout upload, sensor markers, and drag positioning deferred to
+  canonical Milestone `9`.

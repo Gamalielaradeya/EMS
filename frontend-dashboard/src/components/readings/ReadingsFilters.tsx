@@ -3,6 +3,7 @@ import { useState, type FormEvent, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { controlClassName } from "@/lib/forms"
 import type { ReadingHistoryFilters, ReadingQualityStatus, SensorCode } from "@/types/api"
 
 interface ReadingsFiltersProps {
@@ -173,6 +174,3 @@ function toLocalInput(value?: string) {
   const timezoneOffset = date.getTimezoneOffset() * 60_000
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16)
 }
-
-const controlClassName =
-  "h-11 min-w-0 rounded-md border bg-card px-3 text-sm font-semibold normal-case tracking-normal text-foreground outline outline-2 outline-transparent transition-[border-color] duration-150 hover:border-input focus-visible:outline-ring focus-visible:outline-offset-2 active:border-ring disabled:cursor-not-allowed disabled:opacity-55"
