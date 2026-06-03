@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Blocked - stage-one hardware read and LAN backend blockers |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - S1 hardware validated, S2 pending |
 | `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
@@ -243,6 +243,30 @@ Milestone `9` requires explicit user approval.
   and the 3-5 minute gateway run-loop were not run or claimed.
 - Continue from `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` after fixing
   RS485/sensor response and laptop inbound backend access.
+
+## Milestone 10B Partial Hardware Validation
+
+- Added gateway compatibility for Modbus function `04` input registers while
+  preserving function `03` holding-register support.
+- Updated gateway configuration, diagnostics, sensor reader, README, and tests
+  for `register_type` / input-register operation.
+- Confirmed Pi-to-laptop backend connectivity:
+  `http://192.168.18.9:8081/api/v1/health` returned HTTP `200` from the
+  Raspberry Pi.
+- Confirmed S1 raw input-register diagnostic with slave ID `1`, address `1`,
+  count `2`: `raw=[352, 547]`.
+- Confirmed configured S1 diagnostic: temperature about `35.1 C`, humidity
+  about `54.6 %`.
+- Confirmed gateway `send-test` reached the backend; those rows remain
+  simulator transport evidence only.
+- Ran gateway loop for about 3 minutes with S2 disabled in ignored Pi local
+  config because only one sensor was connected.
+- Confirmed `19` S1 hardware rows stored, gateway active state, `reading.latest`
+  and `gateway.status` SSE events, and Dashboard summary API showing S1 hardware
+  data.
+- Kept M10B partial, not done, because S2 hotspot hardware was not connected or
+  validated.
+- Kept Raspberry Pi undervoltage warning as a hardware risk for final evidence.
 
 ## Milestone 10C Completion
 

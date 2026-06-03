@@ -24,6 +24,7 @@ modbus:
   parity: "N"
   stopbits: 1
   timeout_seconds: 3
+  register_type: "input" # XY-MD02 uses function 04 / input registers.
 
 sensors:
   - code: "S1"
@@ -36,10 +37,12 @@ sensors:
         address: 1
         count: 1
         scale: 0.1
+        register_type: "input"
       humidity:
         address: 2
         count: 1
         scale: 0.1
+        register_type: "input"
 
   - code: "S2"
     role: "hotspot"
@@ -51,10 +54,12 @@ sensors:
         address: 1
         count: 1
         scale: 0.1
+        register_type: "input"
       humidity:
         address: 2
         count: 1
         scale: 0.1
+        register_type: "input"
 
 validation:
   temperature_min: 0

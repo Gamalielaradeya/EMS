@@ -98,20 +98,28 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 - [x] Confirm USB RS485 adapter appears in `diagnose ports`.
 - [x] Record Raspberry Pi undervoltage warning as hardware risk.
 - [x] Attempt safe raw XY-MD02 reads for one connected sensor.
+- [x] Add and validate gateway support for XY-MD02 function `04` input
+  registers.
+- [x] Validate S1 raw input-register read with slave ID `1`, address `1`,
+  count `2`.
+- [x] Validate configured `diagnose sensor --sensor-code S1` for one connected
+  XY-MD02 sensor.
+- [x] Run gateway loop and capture backend S1 hardware readings.
+- [x] Verify `reading.latest` and `gateway.status` SSE during one-sensor run.
 - [ ] Read raw XY-MD02 registers for the configured slave IDs.
-- [ ] Validate configured `diagnose sensor --sensor-code S1`.
 - [ ] Validate configured `diagnose sensor --sensor-code S2`.
-- [ ] Run gateway loop and capture backend hardware readings.
+- [ ] Run gateway loop with both S1 and S2 connected and capture backend
+      hardware readings.
 - [ ] Disconnect one sensor and capture graceful trouble behavior.
 - [ ] Interrupt backend temporarily and verify bounded buffer plus replay.
 - [ ] Verify heartbeat and gateway recovery behavior.
 
-Stage-one result on 2026-06-03: blocked. `/dev/ttyUSB0` and FT232 were
-detected, but slave ID `1` raw reads at addresses `0` and `1` returned no
-response after retries. A documented slave ID `2` check also returned no
-response. Pi-to-laptop backend health at `192.168.18.9:8081` timed out while
-the laptop backend was healthy locally. Full evidence is recorded in
-`Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md`.
+Stage-two result on 2026-06-03: partial. `/dev/ttyUSB0` and FT232 were
+detected, Pi-to-laptop backend health passed, and one XY-MD02 sensor validated
+as S1 through function `04` input registers. The gateway loop stored `19` S1
+hardware readings and emitted `reading.latest` / `gateway.status` SSE events.
+S2 remains unvalidated because only one sensor was connected. Full evidence is
+recorded in `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md`.
 
 ## ML Training Evidence Checklist
 
@@ -143,6 +151,6 @@ final thesis model quality.
 
 ## Next Step
 
-Resume Milestone `10B` after fixing raw Modbus response and laptop inbound
-backend access. After hardware data collection, run final TensorFlow training
-for Bab 4 evidence.
+Resume Milestone `10B` by connecting the S2 hotspot sensor and repeating
+two-sensor hardware validation. After hardware data collection, run final
+TensorFlow training for Bab 4 evidence.

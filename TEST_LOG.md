@@ -749,3 +749,68 @@ Next validation fixes:
   XY-MD02 register map.
 - Allow inbound TCP `8081` to the laptop backend or document a temporary SSH
   tunnel workaround before gateway delivery validation.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stage Two
+
+Status: Partial - S1 hardware validated, S2 pending
+
+Code validation:
+
+- Passed: local gateway `python -m compileall -q src tests`.
+- Passed: local gateway `python -m unittest discover -s tests -v`; 13 tests
+  passed.
+- Passed: Raspberry Pi gateway `python -m compileall -q src tests`.
+- Passed: Raspberry Pi gateway `python -m unittest discover -s tests -v`; 13
+  tests passed.
+- Passed: backend `go build ./cmd/server` for runtime validation.
+
+Laptop backend validation:
+
+- Passed: Docker PostgreSQL running on host port `55432`.
+- Passed: migrations and seed applied to `ems_thermal_lstm`.
+- Passed: backend listening on `0.0.0.0:8081` and `[::]:8081`.
+- Passed: `GET http://localhost:8081/api/v1/health`.
+- Passed: Pi `curl http://192.168.18.9:8081/api/v1/health` returned HTTP
+  `200`.
+- Passed: frontend dev server responded with HTTP `200`.
+
+Modbus diagnostics:
+
+- Passed: `python -m gateway.cli diagnose ports` listed `/dev/ttyS0` and
+  `/dev/ttyUSB0`.
+- Passed: `python -m gateway.cli diagnose raw --slave-id 1 --address 1
+  --count 2` used `register_type=input` and returned `raw=[352, 547]`.
+- Passed: configured S1 diagnostic returned temperature `35.1` and humidity
+  `54.6`.
+
+Delivery and realtime validation:
+
+- Passed: `python -m gateway.cli send-test` returned backend success with
+  `received_count=2` and `stored_count=2`.
+- Passed: `timeout -s INT 190 python -m gateway.cli run` ran about 3 minutes
+  and stopped safely with `Gateway stopped`.
+- Passed: gateway loop posted repeated `/readings` requests with HTTP `201`.
+- Passed: gateway loop posted `/gateway/status` heartbeat requests with HTTP
+  `201`.
+- Passed: database source count showed `19` hardware rows and `2` simulator
+  rows.
+- Passed: latest hardware S1 rows ranged around `35.0-35.1 C` and
+  `54.5-54.6 %`.
+- Passed: gateway status was `active`.
+- Passed: sensor state showed S1 `normal`.
+- Passed: `GET /api/v1/readings/latest` showed S1 `source=hardware`.
+- Passed: `GET /api/v1/dashboard/summary` showed S1 hardware data and gateway
+  active status.
+- Passed: SSE capture contained repeated `reading.latest` and `gateway.status`
+  events.
+
+Limitations:
+
+- Partial only: S2 was disabled in ignored Pi local config because only one
+  XY-MD02 sensor was connected.
+- Partial only: latest S2 API value came from simulator `send-test`, not
+  hardware.
+- Manual remaining: final dashboard screenshot with real S1/S2 hardware values.
+- Risk: Raspberry Pi undervoltage still present with `throttled=0x50000`.
+- Risk: `pymodbus` logged receive-buffer cleanup warnings during the run loop,
+  although reads and backend delivery succeeded.

@@ -57,6 +57,7 @@ def _apply_environment_overrides(raw: dict[str, Any]) -> None:
         ("GATEWAY_TOKEN", ("backend", "token"), str),
         ("BACKEND_TOKEN", ("backend", "token"), str),
         ("MODBUS_PORT", ("modbus", "port"), str),
+        ("MODBUS_REGISTER_TYPE", ("modbus", "register_type"), str),
         ("SAMPLING_INTERVAL_SECONDS", ("sampling", "interval_seconds"), float),
         ("HEARTBEAT_INTERVAL_SECONDS", ("sampling", "heartbeat_interval_seconds"), float),
         ("BUFFER_FILE_PATH", ("buffer", "file_path"), str),
@@ -108,6 +109,7 @@ def _build_config(raw: dict[str, Any], base_dir: Path) -> AppConfig:
             parity=str(modbus["parity"]).strip().upper(),
             stopbits=int(modbus["stopbits"]),
             timeout_seconds=float(modbus["timeout_seconds"]),
+            register_type=_normalize_register_type(modbus.get("register_type", "holding")),
         ),
         sensors=sensors,
         validation=ValidationConfig(
@@ -147,7 +149,21 @@ def _build_sensor(raw: dict[str, Any]) -> SensorConfig:
 
 
 def _build_register(raw: dict[str, Any]) -> RegisterConfig:
-    return RegisterConfig(address=int(raw["address"]), count=int(raw["count"]), scale=float(raw["scale"]))
+    return RegisterConfig(
+        address=int(raw["address"]),
+        count=int(raw["count"]),
+        scale=float(raw["scale"]),
+        register_type=_normalize_register_type(raw.get("register_type", raw.get("function", "holding"))),
+    )
+
+
+def _normalize_register_type(value: Any) -> str:
+    normalized = str(value).strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {"3", "03", "function_03", "function03", "holding", "holding_registers"}:
+        return "holding"
+    if normalized in {"4", "04", "function_04", "function04", "input", "input_registers"}:
+        return "input"
+    raise ConfigError("register_type must be holding/function03 or input/function04")
 
 
 def _runtime_path(base_dir: Path, value: Any) -> Path:
@@ -179,6 +195,8 @@ def _validate_config(config: AppConfig) -> None:
         raise ConfigError("modbus.port must not be empty")
     if config.modbus.parity not in {"N", "E", "O"}:
         raise ConfigError("modbus.parity must be N, E, or O")
+    if config.modbus.register_type not in {"holding", "input"}:
+        raise ConfigError("modbus.register_type must be holding or input")
     if config.validation.temperature_min > config.validation.temperature_max:
         raise ConfigError("validation temperature range is invalid")
     if config.validation.humidity_min > config.validation.humidity_max:
@@ -200,3 +218,5 @@ def _validate_config(config: AppConfig) -> None:
         for register in (sensor.registers.temperature, sensor.registers.humidity):
             if register.address < 0 or register.count <= 0:
                 raise ConfigError(f"{sensor.code} register address/count is invalid")
+            if register.register_type not in {"holding", "input"}:
+                raise ConfigError(f"{sensor.code} register_type must be holding or input")

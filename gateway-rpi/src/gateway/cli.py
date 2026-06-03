@@ -25,6 +25,11 @@ def build_parser() -> argparse.ArgumentParser:
     raw_parser.add_argument("--slave-id", type=int, required=True)
     raw_parser.add_argument("--address", type=int, required=True)
     raw_parser.add_argument("--count", type=int, required=True)
+    raw_parser.add_argument(
+        "--register-type",
+        choices=("holding", "input"),
+        help="Modbus register type; defaults to modbus.register_type from config",
+    )
 
     sensor_parser = diagnose_subparsers.add_parser("sensor", help="read one configured sensor")
     _add_config_argument(sensor_parser)
@@ -50,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.command == "diagnose" and args.diagnose_command == "raw":
-        return diagnose_raw(config, args.slave_id, args.address, args.count)
+        return diagnose_raw(config, args.slave_id, args.address, args.count, args.register_type)
     if args.command == "diagnose" and args.diagnose_command == "sensor":
         return diagnose_sensor(config, args.sensor_code)
     if args.command == "send-test":

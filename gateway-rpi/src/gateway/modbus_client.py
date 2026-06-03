@@ -23,7 +23,21 @@ class GatewayModbusClient:
             timeout=config.timeout_seconds,
         )
 
+    def read_registers(self, slave_id: int, address: int, count: int, register_type: str) -> list[int]:
+        normalized = register_type.strip().lower()
+        if normalized == "holding":
+            return self._read_registers(slave_id, address, count, register_type="holding")
+        if normalized == "input":
+            return self._read_registers(slave_id, address, count, register_type="input")
+        raise ModbusReadError("register_type must be holding or input")
+
     def read_holding_registers(self, slave_id: int, address: int, count: int) -> list[int]:
+        return self._read_registers(slave_id, address, count, register_type="holding")
+
+    def read_input_registers(self, slave_id: int, address: int, count: int) -> list[int]:
+        return self._read_registers(slave_id, address, count, register_type="input")
+
+    def _read_registers(self, slave_id: int, address: int, count: int, *, register_type: str) -> list[int]:
         if slave_id <= 0:
             raise ModbusReadError("slave ID must be positive")
         if address < 0 or count <= 0:
@@ -31,17 +45,24 @@ class GatewayModbusClient:
         if not self._client.connect():
             raise ModbusReadError(f"cannot open Modbus serial port {self._config.port}")
         try:
+            method = (
+                self._client.read_input_registers
+                if register_type == "input"
+                else self._client.read_holding_registers
+            )
             try:
-                response = self._client.read_holding_registers(address, count=count, slave=slave_id)
+                response = method(address, count=count, slave=slave_id)
             except TypeError:
-                response = self._client.read_holding_registers(address, count=count, device_id=slave_id)
+                response = method(address, count=count, device_id=slave_id)
         except Exception as exc:
             raise ModbusReadError(
-                f"Modbus request failed for slave_id={slave_id} address={address} count={count}: {exc}"
+                "Modbus request failed for "
+                f"register_type={register_type} slave_id={slave_id} address={address} count={count}: {exc}"
             ) from exc
         if response.isError():
             raise ModbusReadError(
-                f"Modbus error for slave_id={slave_id} address={address} count={count}: {response}"
+                f"Modbus error for register_type={register_type} "
+                f"slave_id={slave_id} address={address} count={count}: {response}"
             )
         registers: Sequence[int] | None = getattr(response, "registers", None)
         if not registers or len(registers) < count:

@@ -374,3 +374,40 @@ Hardware validation attempt:
   Modbus reads did not succeed.
 - Added no application code, dependency, feature, or secret-bearing config to
   the repository.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stage Two
+
+Status: Partial - S1 hardware validated, S2 pending
+
+Gateway compatibility and hardware validation:
+
+- Implemented minimal gateway support for Modbus function `04` input registers.
+- Added `modbus.register_type`, per-register `register_type`, and
+  `MODBUS_REGISTER_TYPE` environment override support.
+- Added `diagnose raw --register-type holding|input` while keeping the
+  canonical raw command working through config defaults.
+- Kept function `03` holding-register support for older/alternate devices.
+- Updated `config.example.yaml` to use XY-MD02 function `04` input registers by
+  default.
+- Updated `gateway-rpi/README.md` with input-register configuration guidance.
+- Added gateway unit coverage proving configured input registers are used by the
+  sensor reader.
+- Deployed the gateway patch to the Raspberry Pi working tree for validation.
+- Confirmed Pi-to-laptop backend health over LAN after firewall access was
+  available.
+- Configured ignored Pi `config.yaml`/`.env` for S1 slave ID `1`, input
+  registers at addresses `1` and `2`, `/dev/ttyUSB0`, 9600 8N1, and the backend
+  URL without printing tokens.
+- Disabled S2 only in the ignored Pi local config for this validation because
+  only one XY-MD02 sensor was connected.
+- Confirmed raw S1 input-register read returned `raw=[352, 547]`.
+- Confirmed configured S1 diagnostic produced about `35.1 C` and `54.6 %`.
+- Confirmed gateway `send-test` reached the backend and stored simulator
+  transport rows.
+- Ran the gateway loop for about 3 minutes and stored `19` S1 hardware rows.
+- Confirmed backend latest readings, dashboard summary API, `reading.latest`
+  SSE events, and `gateway.status` SSE events.
+- Recorded Raspberry Pi undervoltage and `pymodbus` receive-buffer cleanup
+  warnings as hardware risks to revisit before final evidence.
+- Kept M10B Partial, not Done, because S2 hotspot hardware was not connected or
+  validated.

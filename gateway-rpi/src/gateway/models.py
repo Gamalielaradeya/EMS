@@ -11,6 +11,7 @@ class RegisterConfig:
     address: int
     count: int
     scale: float
+    register_type: str = "holding"
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class ModbusConfig:
     parity: str
     stopbits: int
     timeout_seconds: float
+    register_type: str = "holding"
 
 
 @dataclass(frozen=True)

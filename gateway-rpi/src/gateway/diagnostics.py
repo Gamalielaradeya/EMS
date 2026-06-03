@@ -32,13 +32,26 @@ def diagnose_ports() -> int:
     return 0
 
 
-def diagnose_raw(config: AppConfig, slave_id: int, address: int, count: int) -> int:
+def diagnose_raw(
+    config: AppConfig,
+    slave_id: int,
+    address: int,
+    count: int,
+    register_type: str | None = None,
+) -> int:
     client = GatewayModbusClient(config.modbus)
-    print(f"Reading raw register: slave_id={slave_id} address={address} count={count}")
+    register_type = register_type or config.modbus.register_type
+    print(
+        "Reading raw register: "
+        f"register_type={register_type} slave_id={slave_id} address={address} count={count}"
+    )
     try:
-        values = client.read_holding_registers(slave_id, address, count)
+        values = client.read_registers(slave_id, address, count, register_type)
     except ModbusReadError as exc:
-        _print_read_error(f"Failed to read slave_id={slave_id} address={address} count={count}: {exc}")
+        _print_read_error(
+            f"Failed to read register_type={register_type} slave_id={slave_id} "
+            f"address={address} count={count}: {exc}"
+        )
         return 1
     finally:
         client.close()

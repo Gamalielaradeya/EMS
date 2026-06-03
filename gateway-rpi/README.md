@@ -7,7 +7,7 @@ sends readings to the EMS backend, and reports gateway/sensor status.
 ## Features
 
 - YAML configuration with environment overrides for secrets and deployment paths.
-- Serial-port discovery and raw Modbus holding-register diagnostics.
+- Serial-port discovery and raw Modbus input/holding-register diagnostics.
 - Configured S1/S2 sensor diagnostics with clear RS485 troubleshooting output.
 - Bearer-authenticated readings and heartbeat/status delivery.
 - One retry only, then bounded local JSONL buffering.
@@ -29,8 +29,8 @@ cp config.example.yaml config.yaml
 cp .env.example .env
 ```
 
-Edit `config.yaml` for the actual RS485 adapter, XY-MD02 slave IDs, and register
-addresses. Put the real backend token in `.env`, not in YAML:
+Edit `config.yaml` for the actual RS485 adapter, XY-MD02 slave IDs, register
+addresses, and register type. Put the real backend token in `.env`, not in YAML:
 
 ```env
 GATEWAY_CONFIG=./config.yaml
@@ -66,6 +66,32 @@ python -m gateway.cli run
 
 Use `--config ./path/to/config.yaml` after `raw`, `sensor`, `send-test`, or `run`
 to override `GATEWAY_CONFIG`. Test S2 with `--slave-id 2` and `--sensor-code S2`.
+Use `--register-type input` or `--register-type holding` with `diagnose raw` to
+override the configured default for a single diagnostic read.
+
+The current XY-MD02 hardware validation uses function `04` / input registers.
+Set either the global Modbus default or each register to input:
+
+```yaml
+modbus:
+  register_type: "input"
+
+sensors:
+  - code: "S1"
+    registers:
+      temperature:
+        address: 1
+        count: 1
+        scale: 0.1
+        register_type: "input"
+      humidity:
+        address: 2
+        count: 1
+        scale: 0.1
+        register_type: "input"
+```
+
+For older devices that use function `03`, set `register_type: "holding"`.
 
 When an adapter or sensor is unavailable, diagnostics return a clear error with
 likely causes: serial port, slave ID, baudrate, wiring polarity, sensor power, or
@@ -82,6 +108,7 @@ BACKEND_BASE_URL
 BACKEND_TOKEN
 GATEWAY_TOKEN
 MODBUS_PORT
+MODBUS_REGISTER_TYPE
 SAMPLING_INTERVAL_SECONDS
 HEARTBEAT_INTERVAL_SECONDS
 BUFFER_FILE_PATH

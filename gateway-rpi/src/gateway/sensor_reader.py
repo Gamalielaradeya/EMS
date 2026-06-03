@@ -23,5 +23,10 @@ class SensorReader:
             raise SensorReadError(f"{sensor.code} read failed: {exc}") from exc
 
     def _read_scaled(self, sensor: SensorConfig, register: RegisterConfig) -> float:
-        values = self._client.read_holding_registers(sensor.slave_id, register.address, register.count)
+        values = self._client.read_registers(
+            sensor.slave_id,
+            register.address,
+            register.count,
+            register.register_type,
+        )
         return float(values[0]) * register.scale

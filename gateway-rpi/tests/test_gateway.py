@@ -23,7 +23,7 @@ from gateway.models import (
     ValidationConfig,
 )
 from gateway.payload_builder import build_readings_payload
-from gateway.sensor_reader import SensorReadError
+from gateway.sensor_reader import SensorReadError, SensorReader
 from gateway.status_reporter import StatusReporter
 from gateway.validator import SensorValidationError, validate_sensor_reading
 
@@ -70,7 +70,9 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.backend.base_url, "http://localhost:8081/api/v1")
         self.assertEqual(config.backend.token, "local-token")
         self.assertEqual(config.modbus.port, "COM99")
+        self.assertEqual(config.modbus.register_type, "input")
         self.assertEqual(config.sensor_by_code("s2").role, "hotspot")
+        self.assertEqual(config.sensor_by_code("s1").registers.temperature.register_type, "input")
 
     def test_load_config_reports_missing_file(self) -> None:
         with self.assertRaisesRegex(ConfigError, "configuration file not found"):
@@ -110,6 +112,29 @@ class ValidationAndPayloadTests(unittest.TestCase):
             validate_sensor_reading(sensor(role="hotspot"), 27.4, 63.2, self.rules)
         with self.assertRaisesRegex(SensorValidationError, "outside 0-80"):
             validate_sensor_reading(sensor(), 81, 63.2, self.rules)
+
+
+class SensorReaderTests(unittest.TestCase):
+    def test_sensor_reader_uses_configured_input_registers(self) -> None:
+        configured_sensor = SensorConfig(
+            code="S1",
+            role="ambient",
+            name="S1",
+            enabled=True,
+            slave_id=1,
+            registers=SensorRegisters(
+                temperature=RegisterConfig(address=1, count=1, scale=0.1, register_type="input"),
+                humidity=RegisterConfig(address=2, count=1, scale=0.1, register_type="input"),
+            ),
+        )
+        client = RecordingModbusClient({1: [377], 2: [502]})
+        reader = SensorReader(client, ValidationConfig(0, 80, 0, 100))  # type: ignore[arg-type]
+
+        reading = reader.read(configured_sensor)
+
+        self.assertEqual(reading.temperature, 37.7)
+        self.assertEqual(reading.humidity, 50.2)
+        self.assertEqual(client.calls, [(1, 1, 1, "input"), (1, 2, 1, "input")])
 
 
 class HTTPSenderTests(unittest.TestCase):
@@ -216,6 +241,22 @@ class RecordingSender:
     def send(self, _: str, payload: dict[str, object]) -> dict[str, str]:
         self.payloads.append(payload)
         return {"status": "success"}
+
+
+class RecordingModbusClient:
+    def __init__(self, values_by_address: dict[int, list[int]]) -> None:
+        self.values_by_address = values_by_address
+        self.calls: list[tuple[int, int, int, str]] = []
+
+    def read_registers(
+        self,
+        slave_id: int,
+        address: int,
+        count: int,
+        register_type: str,
+    ) -> list[int]:
+        self.calls.append((slave_id, address, count, register_type))
+        return self.values_by_address[address]
 
 
 class FailingSender:
