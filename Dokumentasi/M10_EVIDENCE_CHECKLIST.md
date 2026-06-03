@@ -184,3 +184,10 @@ not complete because the first raw diagnostic hung on the noisy serial stream.
 No 10-minute or 2-hour collection was started. Next step remains hardware/device
 configuration: power-cycle and isolate each XY-MD02, stop automatic reporting or
 set passive Modbus RTU mode, confirm idle bus silence, then rerun collection.
+
+Best-effort opportunistic collection on 2026-06-03 ran for about 1 hour 56
+minutes with the gateway process alive, but collected zero new hardware-valid
+rows. Counts stayed S1 `273` and S2 `253`; latest hardware timestamps stayed at
+`2026-06-03 07:42:26.761374+00`. Gateway logs continued to show `/readings` and
+`/gateway/status` HTTP timeouts plus ASCII receive-buffer cleanup. This evidence
+is preliminary/noisy only and is not final ML dataset evidence.

@@ -978,3 +978,47 @@ Result:
   UART/common-protocol automatic reporting on the RS485 bus.
 - No code was changed and no software ASCII-ignore mitigation was accepted as a
   final fix.
+
+## Milestone 10E - Best-Effort Hardware Collection
+
+Status: Completed - zero new rows
+
+Runtime checks:
+
+- Passed: Docker PostgreSQL was already running on host port `15432`.
+- Passed: backend was listening on `0.0.0.0:8081` and `[::]:8081`.
+- Passed: frontend was listening on `localhost:5173`.
+- Passed: `GET http://localhost:8081/api/v1/health`.
+- Passed: Raspberry Pi `curl http://192.168.18.9:8081/api/v1/health`.
+- Passed: Raspberry Pi gateway config check showed backend URL
+  `http://192.168.18.9:8081/api/v1`, `/dev/ttyUSB0`,
+  `register_type=input`, `inter_read_delay_ms=500`, S1 slave `1`, and S2 slave
+  `2`.
+
+Collection monitor:
+
+- Started gateway in background with Python PID `950` and log
+  `logs/best_effort_20260603T122434Z.log`.
+- Ran local monitor from `2026-06-03T19:27:05+07:00` to
+  `2026-06-03T21:22:51+07:00`.
+- Monitor samples: `24`.
+- Restart count: `0`; gateway process remained alive in all samples.
+- Start counts: S1 `273`, S2 `253`.
+- End counts: S1 `273`, S2 `253`.
+- New hardware-valid rows: S1 `0`, S2 `0`.
+- Latest hardware readings remained S1 id `528` and S2 id `527` at
+  `2026-06-03T14:42:26.761374+07:00`.
+
+Observed failures:
+
+- Repeated `POST /readings failed after 2 attempt(s): timed out`.
+- Repeated `POST /gateway/status failed after 2 attempt(s): timed out`.
+- Repeated `Cleanup recv buffer before send` containing ASCII
+  temperature/humidity bytes from the XY-MD02 auto-report issue.
+
+Result:
+
+- The best-effort run collected no additional valid hardware rows.
+- The data remains preliminary/noisy only and is not final thesis dataset
+  evidence.
+- Gateway was left running at the end by request.

@@ -1103,3 +1103,103 @@ Conclusion:
   valid authenticated readings payload.
 - This run is preliminary/noisy validation only and must not be used as final
   thesis dataset evidence.
+
+## Best-Effort Opportunistic Collection - Ran, Zero New Rows
+
+Status on 2026-06-03:
+
+```text
+Goal: keep best-effort collection running for about 2 hours while the known
+      XY-MD02 ASCII auto-report issue remains unresolved.
+Dataset status: preliminary/noisy only; not final thesis dataset.
+Code changed: no
+Final TensorFlow training: not run
+```
+
+Stack and network:
+
+```text
+Laptop IP: 192.168.18.9
+Raspberry Pi IP: 192.168.18.33
+Backend from Pi: http://192.168.18.9:8081/api/v1
+PostgreSQL: Docker container on host port 15432
+Backend: already listening on 0.0.0.0:8081 and [::]:8081
+Frontend: already listening on localhost:5173
+Local backend health: passed
+Pi-to-backend health: passed
+```
+
+Gateway start:
+
+```text
+Gateway Python PID: 950
+Wrapper shell PID: 947
+Gateway log: ~/EMS/gateway-rpi/logs/best_effort_20260603T122434Z.log
+Monitor log: %TEMP%\ems-best-effort-hardware\best_effort_20260603T192705.log
+```
+
+Monitor window:
+
+```text
+Monitor start: 2026-06-03T19:27:05+07:00
+Monitor end:   2026-06-03T21:22:51+07:00
+Duration: about 1 hour 56 minutes
+Samples: 24
+Restart count: 0
+Gateway process state during samples: alive
+Gateway process state at end: still running
+```
+
+Hardware-valid counts before and after:
+
+```text
+Start:
+S1|273|2026-06-03 07:42:26.761374+00
+S2|253|2026-06-03 07:42:26.761374+00
+
+End:
+S1|273|2026-06-03 07:42:26.761374+00
+S2|253|2026-06-03 07:42:26.761374+00
+
+New successful rows:
+S1: 0
+S2: 0
+```
+
+Latest readings at the end:
+
+```text
+S1 id=528 temperature=26.1 humidity=51.9
+   recorded_at=2026-06-03T14:42:26.761374+07:00
+   source=hardware quality_status=valid
+S2 id=527 temperature=27.3 humidity=43.4
+   recorded_at=2026-06-03T14:42:26.761374+07:00
+   source=hardware quality_status=valid
+```
+
+Main observed errors:
+
+```text
+POST /readings failed after 2 attempt(s): timed out
+POST /gateway/status failed after 2 attempt(s): timed out
+Cleanup recv buffer before send: ASCII temperature/humidity bytes
+```
+
+Monitor interpretation:
+
+- The gateway process remained alive, so watchdog did not restart it.
+- Row counts never advanced in any sample.
+- The gateway stayed stuck in the same failure pattern: HTTP delivery timeout
+  plus serial receive-buffer ASCII flood.
+- No simulator rows or artificial hardware rows were kept.
+- This attempt produced no additional usable hardware rows.
+- The gateway was intentionally left running at the end because this run was
+  requested as best-effort while the operator was away.
+
+Final state:
+
+```text
+Best-effort collection ran but collected 0 new rows.
+Gateway still running on Raspberry Pi.
+Data remains preliminary/noisy only, not final thesis evidence.
+```

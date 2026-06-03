@@ -503,3 +503,32 @@ Documentation and operator validation only:
 - Next required hardware action: power-cycle/isolate each XY-MD02, disable
   ordinary UART/common-protocol automatic reporting or set passive Modbus RTU
   mode, verify idle bus silence, then rerun raw reads and long collection.
+
+## Milestone 10E - Best-Effort Hardware Collection
+
+Status: Completed - zero new rows
+
+Documentation and operator validation only:
+
+- Kept the known XY-MD02 ASCII auto-report issue in scope as an unresolved
+  blocker and labeled the run as preliminary/noisy, not final thesis evidence.
+- Reused the running local EMS stack: PostgreSQL on Docker host port `15432`,
+  backend on `APP_PORT=8081`, and frontend on `localhost:5173`.
+- Confirmed local backend health and Raspberry Pi access to
+  `http://192.168.18.9:8081/api/v1/health`.
+- Confirmed Raspberry Pi gateway config pointed to laptop backend
+  `192.168.18.9`, `/dev/ttyUSB0`, input registers, S1 slave `1`, S2 slave `2`,
+  and `500 ms` inter-read delay.
+- Started `python -m gateway.cli run` on the Raspberry Pi in the background
+  with log `logs/best_effort_20260603T122434Z.log`.
+- Ran a simple local monitor for about `1 hour 56 minutes` with 24 samples.
+- Did not change application code, gateway config, secrets, or committed
+  runtime files.
+- Did not run final TensorFlow training.
+- The gateway process stayed alive, so no watchdog restarts were performed.
+- Hardware-valid row counts did not advance: S1 remained `273`, S2 remained
+  `253`.
+- Gateway logs repeatedly showed `/readings` and `/gateway/status` HTTP
+  timeouts plus XY-MD02 ASCII receive-buffer cleanup.
+- Left the gateway running at the end because the requested mode was
+  best-effort collection while the operator was away.
