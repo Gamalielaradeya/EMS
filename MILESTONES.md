@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - S1 hardware validated, S2 pending |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - two-sensor one-shot validated, loop blocked |
 | `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
@@ -267,6 +267,29 @@ Milestone `9` requires explicit user approval.
 - Kept M10B partial, not done, because S2 hotspot hardware was not connected or
   validated.
 - Kept Raspberry Pi undervoltage warning as a hardware risk for final evidence.
+
+## Milestone 10B Two-Sensor Retry
+
+- Updated network context to laptop `192.168.10.112` and Raspberry Pi
+  `192.168.10.108`; old `192.168.18.x` addresses are no longer current.
+- Docker could not bind PostgreSQL host ports `55432` or `55433` because
+  Windows excluded TCP range `55365-55464`; this validation run used host port
+  `15432` for PostgreSQL while backend still ran on `APP_PORT=8081`.
+- Confirmed Pi-to-laptop backend health:
+  `http://192.168.10.112:8081/api/v1/health` returned HTTP `200`.
+- Confirmed both raw input-register diagnostics:
+  S1 slave `1` returned `raw=[256, 425]`; S2 slave `2` returned
+  `raw=[253, 440]`.
+- Confirmed configured diagnostics:
+  S1 about `25.5 C` / `42.4 %`; S2 about `25.2 C` / `44.0 %`.
+- Confirmed one successful runtime cycle inserted S1 and S2 hardware rows:
+  S1 `25.6 C` / `42.9 %`, S2 `25.1 C` / `44.4 %`.
+- Confirmed `GET /api/v1/readings/latest` and Dashboard summary API returned
+  both S1 and S2 as `source=hardware`.
+- Full M10B remains not done because the canonical 3-5 minute
+  `python -m gateway.cli run` loop stalled on serial ASCII/junk receive-buffer
+  flooding before repeated two-sensor delivery could be captured.
+- Raspberry Pi undervoltage persisted with `throttled=0x50005`.
 
 ## Milestone 10C Completion
 

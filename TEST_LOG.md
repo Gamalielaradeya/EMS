@@ -814,3 +814,63 @@ Limitations:
 - Risk: Raspberry Pi undervoltage still present with `throttled=0x50000`.
 - Risk: `pymodbus` logged receive-buffer cleanup warnings during the run loop,
   although reads and backend delivery succeeded.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stage Three
+
+Status: Partial - two-sensor one-shot validated, loop blocked
+
+Network and backend:
+
+- Passed: laptop IP confirmed as `192.168.10.112`.
+- Passed: Raspberry Pi IP confirmed as `192.168.10.108`.
+- Passed: passwordless SSH to `gamaliel@192.168.10.108`.
+- Deviation: `POSTGRES_PORT=55432` and `55433` could not be used because
+  Windows excluded TCP range `55365-55464`; used `POSTGRES_PORT=15432` for this
+  run.
+- Passed: migrations and seed applied to `ems_thermal_lstm`.
+- Passed: backend built and launched on `APP_PORT=8081`.
+- Passed: backend listened on `0.0.0.0:8081` and `[::]:8081`.
+- Passed: `GET http://localhost:8081/api/v1/health`.
+- Passed: Pi `curl http://192.168.10.112:8081/api/v1/health` returned HTTP
+  `200`.
+
+Two-sensor diagnostics:
+
+- Passed: Pi serial port `/dev/ttyUSB0` detected.
+- Passed: `python -m gateway.cli diagnose ports` listed `/dev/ttyS0` and
+  `/dev/ttyUSB0`.
+- Passed: S1 raw input-register read returned `raw=[256, 425]`.
+- Passed: S2 raw input-register read returned `raw=[253, 440]`.
+- Passed: S1 configured diagnostic returned temperature `25.5` and humidity
+  `42.4`.
+- Passed: S2 configured diagnostic returned temperature `25.2` and humidity
+  `44`.
+
+Delivery:
+
+- Passed: one `GatewayRuntime.run_once()` sent `/readings` and
+  `/gateway/status` with HTTP `201`.
+- Passed: database contained one new S1 hardware row and one new S2 hardware
+  row at `2026-06-03 05:39:31+00`.
+- Passed: `GET /api/v1/readings/latest` returned S1 and S2 as
+  `source=hardware`.
+- Passed: `GET /api/v1/dashboard/summary` returned S1 and S2 hardware values.
+
+Loop blocker:
+
+- Failed: canonical `timeout -s INT 190 python -m gateway.cli run` stalled and
+  did not insert repeated two-sensor rows.
+- Failed: bounded retry diagnostics also stalled on raw S1 after serial buffer
+  cleanup.
+- Evidence: `pymodbus` logged large `Cleanup recv buffer before send` payloads
+  containing ASCII-like sensor text before hanging in RTU frame decoding.
+- Not committed: a defensive serial-buffer flush patch was tried, failed
+  hardware retry, and was reverted locally and on the Pi.
+- Risk persists: Raspberry Pi undervoltage now reports `throttled=0x50005`.
+
+Result:
+
+- M10B remains Partial, not Done.
+- Hardware/backend path is proven for one cycle with both sensors.
+- Final evidence still requires stable 3-5 minute loop with repeated S1 and S2
+  hardware rows.

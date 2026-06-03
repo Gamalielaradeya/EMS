@@ -2,17 +2,23 @@
 
 ## Status
 
-**Partial Hardware Validation - one XY-MD02 sensor validated**
+**Partial Hardware Validation - two-sensor one-shot validated, loop blocked**
 
 Stage-two validation on 2026-06-03 confirmed Raspberry Pi gateway delivery with
 one connected XY-MD02 sensor as S1. M10B is not complete because S2 was not
 physically connected and no two-sensor validation was performed.
 
+Stage-three validation on 2026-06-03 used a new Wi-Fi network and connected
+both sensors. S1 and S2 raw diagnostics, configured diagnostics, and one backend
+runtime cycle passed. M10B is still not Done because the canonical 3-5 minute
+gateway loop stalled on continuous ASCII/junk bytes in the serial receive
+buffer before repeated two-sensor delivery could be captured.
+
 ## Summary
 
 | Item | Result |
 |---|---|
-| Raspberry Pi SSH | Passed: `gamaliel@192.168.18.33` |
+| Raspberry Pi SSH | Passed: `gamaliel@192.168.10.108` |
 | Hostname | `lmnop` |
 | OS | Debian GNU/Linux 13 `trixie` |
 | Python | `3.13.5` |
@@ -20,16 +26,18 @@ physically connected and no two-sensor validation was performed.
 | Gateway path | `/home/gamaliel/EMS/gateway-rpi` |
 | USB RS485 | Passed: FT232 at `/dev/ttyUSB0` |
 | Serial permission | Passed: user is in `dialout` |
-| Laptop backend | Passed: `http://192.168.18.9:8081/api/v1/health` from Pi returned HTTP `200` |
+| Laptop backend | Passed: `http://192.168.10.112:8081/api/v1/health` from Pi returned HTTP `200` |
 | Modbus function | Fixed: gateway now supports function `04` input registers |
-| Raw S1 read | Passed: `raw=[352, 547]` |
-| S1 diagnostic | Passed: temperature `35.1 C`, humidity `54.6 %` |
+| Raw S1 read | Passed: `raw=[256, 425]` on current network |
+| Raw S2 read | Passed: `raw=[253, 440]` on current network |
+| S1 diagnostic | Passed: temperature `25.5 C`, humidity `42.4 %` |
+| S2 diagnostic | Passed: temperature `25.2 C`, humidity `44.0 %` |
 | Gateway send-test | Passed: backend accepted 2 simulator readings |
-| Gateway run loop | Passed: about 3 minutes, S1 hardware readings inserted |
-| Hardware rows | Passed: `19` hardware rows captured for S1 |
-| SSE | Passed: `reading.latest` and `gateway.status` observed |
-| Dashboard/API | Passed: dashboard summary and latest readings show S1 hardware data |
-| S2 | Not run: only one sensor connected |
+| Gateway run loop | Blocked: canonical 3-5 minute two-sensor loop stalls on serial ASCII/junk |
+| Hardware rows | Partial: both S1 and S2 inserted once; stable repeated loop not yet captured |
+| SSE | Passed historically for S1 loop; two-sensor loop SSE not complete |
+| Dashboard/API | Partial: latest readings and dashboard summary show both sensors as hardware after one runtime cycle |
+| S2 | Partial: raw, configured diagnostic, and one backend hardware row passed |
 
 ## Hardware Risk
 
@@ -46,6 +54,145 @@ Use a stronger/stabler Raspberry Pi power supply before final Bab 4 evidence.
 Gateway logs also showed repeated `pymodbus` receive-buffer cleanup warnings
 while reads still succeeded. This should be monitored after power and wiring are
 cleaned up.
+
+Stage-three retry showed those warnings are now blocking stable loop operation,
+not just noise.
+
+## Stage-Three Network Context
+
+Old addresses are no longer current:
+
+```text
+old laptop IP: 192.168.18.9
+old Pi IP: 192.168.18.33
+```
+
+Current addresses:
+
+```text
+laptop IP: 192.168.10.112
+Pi IP: 192.168.10.108
+Pi SSH: ssh gamaliel@192.168.10.108
+backend base URL from Pi: http://192.168.10.112:8081/api/v1
+```
+
+PostgreSQL host port note:
+
+```text
+Requested 55432 was unavailable because Windows excluded TCP range 55365-55464.
+Requested 55433 was also inside that excluded range.
+This validation used POSTGRES_PORT=15432.
+Backend still used APP_PORT=8081.
+```
+
+Pi backend health passed:
+
+```text
+curl http://192.168.10.112:8081/api/v1/health
+http_code=200
+```
+
+## Stage-Three Two-Sensor Diagnostics
+
+Pi local config was updated without printing secrets:
+
+```text
+backend.base_url = http://192.168.10.112:8081/api/v1
+modbus.port = /dev/ttyUSB0
+modbus.baudrate = 9600
+modbus.bytesize = 8
+modbus.parity = N
+modbus.stopbits = 1
+modbus.timeout_seconds = 1
+modbus.register_type = input
+S1.enabled = true
+S1.slave_id = 1
+S2.enabled = true
+S2.slave_id = 2
+S1/S2 temperature.address = 1
+S1/S2 humidity.address = 2
+S1/S2 register_type = input
+```
+
+Diagnostics:
+
+```text
+python -m gateway.cli diagnose ports
+Serial ports detected:
+- /dev/ttyS0
+- /dev/ttyUSB0
+
+python -m gateway.cli diagnose raw --slave-id 1 --address 1 --count 2
+Reading raw register: register_type=input slave_id=1 address=1 count=2
+raw=[256, 425]
+
+python -m gateway.cli diagnose raw --slave-id 2 --address 1 --count 2
+Reading raw register: register_type=input slave_id=2 address=1 count=2
+raw=[253, 440]
+
+python -m gateway.cli diagnose sensor --sensor-code S1
+temperature=25.5
+humidity=42.4
+
+python -m gateway.cli diagnose sensor --sensor-code S2
+temperature=25.2
+humidity=44
+```
+
+One runtime cycle passed:
+
+```text
+GatewayRuntime.run_once()
+POST /api/v1/readings 201
+POST /api/v1/gateway/status 201
+```
+
+Database hardware evidence from that runtime cycle:
+
+```text
+S1 | 25.60 | 42.90 | hardware | valid | 2026-06-03 05:39:31+00
+S2 | 25.10 | 44.40 | hardware | valid | 2026-06-03 05:39:31+00
+```
+
+Latest readings API later returned both sensors as hardware:
+
+```text
+S1 source=hardware temperature=25.6 humidity=42.9
+S2 source=hardware temperature=25.1 humidity=44.4
+```
+
+## Stage-Three Loop Blocker
+
+The canonical loop command was attempted:
+
+```bash
+timeout -s INT 190 python -m gateway.cli run
+```
+
+It did not produce repeated two-sensor deliveries. The loop printed
+`Gateway stopped` only after timeout/SIGINT and stalled after serial cleanup:
+
+```text
+pymodbus.logging Cleanup recv buffer before send: ...
+```
+
+Bounded retry diagnostics then also stalled on raw S1 read. The serial buffer
+contained repeated ASCII-like sensor text, for example bytes corresponding to
+temperature and humidity strings such as `25.0`, `45.4`, `25.4`, and `43.5`.
+The stack trace ended inside `pymodbus` RTU frame decoding after `KeyboardInterrupt`.
+
+Interpretation:
+
+- The sensors and wiring can answer function `04` input-register reads.
+- Backend delivery works.
+- One two-sensor runtime cycle works.
+- The bus is not stable for a 3-5 minute gateway loop because unsolicited
+  ASCII/junk bytes flood the RTU receive buffer.
+- Possible hardware/config causes to investigate: XY-MD02 active-upload mode,
+  wiring noise, undervoltage, RS485 adapter behavior, or sensor mode settings.
+
+M10B must remain Partial until the canonical loop stores repeated S1 and S2
+hardware rows.
 
 ## Laptop EMS Preparation
 

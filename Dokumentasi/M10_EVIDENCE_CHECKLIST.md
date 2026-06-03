@@ -94,6 +94,8 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 
 - [x] Stage-one SSH to Raspberry Pi validated at `gamaliel@192.168.18.33`
   (`lmnop`).
+- [x] Stage-three SSH to Raspberry Pi validated at `gamaliel@192.168.10.108`
+  (`lmnop`) after Wi-Fi change.
 - [x] Confirm Raspberry Pi Python environment and gateway config.
 - [x] Confirm USB RS485 adapter appears in `diagnose ports`.
 - [x] Record Raspberry Pi undervoltage warning as hardware risk.
@@ -106,19 +108,21 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
   XY-MD02 sensor.
 - [x] Run gateway loop and capture backend S1 hardware readings.
 - [x] Verify `reading.latest` and `gateway.status` SSE during one-sensor run.
-- [ ] Read raw XY-MD02 registers for the configured slave IDs.
-- [ ] Validate configured `diagnose sensor --sensor-code S2`.
-- [ ] Run gateway loop with both S1 and S2 connected and capture backend
+- [x] Read raw XY-MD02 registers for configured slave IDs `1` and `2` once.
+- [x] Validate configured `diagnose sensor --sensor-code S2` once.
+- [x] Capture one backend hardware row for S1 and one backend hardware row for
+  S2 through `GatewayRuntime.run_once()`.
+- [ ] Run gateway loop with both S1 and S2 connected for 3-5 minutes and capture backend
       hardware readings.
 - [ ] Disconnect one sensor and capture graceful trouble behavior.
 - [ ] Interrupt backend temporarily and verify bounded buffer plus replay.
 - [ ] Verify heartbeat and gateway recovery behavior.
 
-Stage-two result on 2026-06-03: partial. `/dev/ttyUSB0` and FT232 were
-detected, Pi-to-laptop backend health passed, and one XY-MD02 sensor validated
-as S1 through function `04` input registers. The gateway loop stored `19` S1
-hardware readings and emitted `reading.latest` / `gateway.status` SSE events.
-S2 remains unvalidated because only one sensor was connected. Full evidence is
+Stage-three result on 2026-06-03: partial. After Wi-Fi changed to laptop
+`192.168.10.112` and Pi `192.168.10.108`, both S1 and S2 passed raw and
+configured diagnostics, and one runtime cycle stored one hardware row for each
+sensor. The canonical 3-5 minute loop remains blocked by unsolicited
+ASCII/junk bytes flooding the Modbus RTU receive buffer. Full evidence is
 recorded in `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md`.
 
 ## ML Training Evidence Checklist
@@ -151,6 +155,6 @@ final thesis model quality.
 
 ## Next Step
 
-Resume Milestone `10B` by connecting the S2 hotspot sensor and repeating
-two-sensor hardware validation. After hardware data collection, run final
-TensorFlow training for Bab 4 evidence.
+Resume Milestone `10B` by fixing the serial ASCII/junk receive-buffer blocker
+and repeating a stable 3-5 minute two-sensor gateway loop. After hardware data
+collection, run final TensorFlow training for Bab 4 evidence.

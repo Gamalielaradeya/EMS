@@ -411,3 +411,35 @@ Gateway compatibility and hardware validation:
   warnings as hardware risks to revisit before final evidence.
 - Kept M10B Partial, not Done, because S2 hotspot hardware was not connected or
   validated.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stage Three
+
+Status: Partial - two-sensor one-shot validated, loop blocked
+
+Hardware validation retry:
+
+- Updated active network context to laptop `192.168.10.112` and Raspberry Pi
+  `192.168.10.108`; old `192.168.18.x` addresses are no longer current.
+- Started laptop backend on `APP_PORT=8081` and confirmed it listened on
+  `0.0.0.0:8081` / `[::]:8081`.
+- Used PostgreSQL host port `15432` because Windows excluded TCP range
+  `55365-55464`, which includes requested ports `55432` and `55433`.
+- Confirmed Pi-to-backend health at
+  `http://192.168.10.112:8081/api/v1/health`.
+- Updated ignored Pi `config.yaml`/`.env` for the new backend URL, both sensors
+  enabled, input-register function `04`, `/dev/ttyUSB0`, and 9600 8N1 without
+  printing tokens.
+- Confirmed raw diagnostics for both sensors:
+  S1 slave `1` `raw=[256, 425]`; S2 slave `2` `raw=[253, 440]`.
+- Confirmed configured diagnostics for both sensors:
+  S1 about `25.5 C` / `42.4 %`; S2 about `25.2 C` / `44.0 %`.
+- Confirmed one runtime cycle sent both S1 and S2 hardware readings to backend.
+- Confirmed `GET /api/v1/readings/latest` and Dashboard summary API returned
+  both sensors as `source=hardware`.
+- Attempted the canonical 3-5 minute gateway loop, but it stalled on serial
+  receive-buffer cleanup and did not insert repeated two-sensor rows.
+- Tried a defensive serial-buffer flush patch, but hardware retry still failed;
+  reverted the patch locally and on the Pi, so no unvalidated code fix was kept.
+- Recorded the likely hardware/config blocker as unsolicited ASCII/junk bytes
+  flooding the RTU receive buffer, plus persistent undervoltage
+  `throttled=0x50005`.
