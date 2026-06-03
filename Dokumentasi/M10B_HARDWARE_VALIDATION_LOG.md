@@ -2,7 +2,7 @@
 
 ## Status
 
-**Partial Hardware Validation - two-sensor one-shot validated, loop blocked**
+**Done - two-sensor gateway loop validated**
 
 Stage-two validation on 2026-06-03 confirmed Raspberry Pi gateway delivery with
 one connected XY-MD02 sensor as S1. M10B is not complete because S2 was not
@@ -10,9 +10,13 @@ physically connected and no two-sensor validation was performed.
 
 Stage-three validation on 2026-06-03 used a new Wi-Fi network and connected
 both sensors. S1 and S2 raw diagnostics, configured diagnostics, and one backend
-runtime cycle passed. M10B is still not Done because the canonical 3-5 minute
-gateway loop stalled on continuous ASCII/junk bytes in the serial receive
-buffer before repeated two-sensor delivery could be captured.
+runtime cycle passed, but the first full loop attempt stalled on continuous
+ASCII/junk bytes in the serial receive buffer.
+
+Stabilization on 2026-06-03 added a configurable `300 ms` inter-sensor Modbus
+delay. After deploying that patch to the Raspberry Pi, the canonical gateway
+loop ran for about `190` seconds with both sensors enabled and stored repeated
+hardware rows for both S1 and S2.
 
 ## Summary
 
@@ -33,11 +37,11 @@ buffer before repeated two-sensor delivery could be captured.
 | S1 diagnostic | Passed: temperature `25.5 C`, humidity `42.4 %` |
 | S2 diagnostic | Passed: temperature `25.2 C`, humidity `44.0 %` |
 | Gateway send-test | Passed: backend accepted 2 simulator readings |
-| Gateway run loop | Blocked: canonical 3-5 minute two-sensor loop stalls on serial ASCII/junk |
-| Hardware rows | Partial: both S1 and S2 inserted once; stable repeated loop not yet captured |
-| SSE | Passed historically for S1 loop; two-sensor loop SSE not complete |
-| Dashboard/API | Partial: latest readings and dashboard summary show both sensors as hardware after one runtime cycle |
-| S2 | Partial: raw, configured diagnostic, and one backend hardware row passed |
+| Gateway run loop | Passed: about `190` seconds with S1 and S2 enabled |
+| Hardware rows | Passed: repeated S1 and S2 hardware rows stored |
+| SSE | Passed historically for S1 loop; stabilization used HTTP/API/DB evidence |
+| Dashboard/API | Passed: latest readings and dashboard summary show both sensors as hardware |
+| S2 | Passed: raw, configured diagnostic, and repeated backend hardware rows |
 
 ## Hardware Risk
 
@@ -55,8 +59,9 @@ Gateway logs also showed repeated `pymodbus` receive-buffer cleanup warnings
 while reads still succeeded. This should be monitored after power and wiring are
 cleaned up.
 
-Stage-three retry showed those warnings are now blocking stable loop operation,
-not just noise.
+Stage-three retry showed those warnings could block stable loop operation before
+stabilization. After adding the inter-sensor delay, warnings still appeared but
+did not block repeated backend delivery during the 190-second validation run.
 
 ## Stage-Three Network Context
 
@@ -191,8 +196,163 @@ Interpretation:
 - Possible hardware/config causes to investigate: XY-MD02 active-upload mode,
   wiring noise, undervoltage, RS485 adapter behavior, or sensor mode settings.
 
-M10B must remain Partial until the canonical loop stores repeated S1 and S2
-hardware rows.
+This was the stage-three blocker. The stage-four stabilization below supersedes
+it with repeated S1 and S2 hardware rows.
+
+## Stage-Four Stabilization - Two-Sensor Loop Passed
+
+New manual evidence before code change:
+
+```text
+S1 raw repeated read: 15/15 success
+S1 values: around [253-255, 447-453]
+S2 raw repeated read: 15/15 success
+S2 values: around [253-255, 484-515]
+No timeout, CRC error, or no-response during repeated raw tests.
+```
+
+Interpretation:
+
+- RS485 wiring, slave IDs, function `04` input registers, and sensor power are
+  basically valid.
+- Remaining blocker was the run-loop timing/serial handling path, not basic
+  Modbus connectivity.
+- Diagnostics use short one-shot transactions, while the run loop reads S1 and
+  S2 back-to-back through a persistent client.
+
+Minimal stabilization implemented:
+
+```text
+modbus.inter_read_delay_ms: 300
+MODBUS_INTER_READ_DELAY_MS override
+GatewayRuntime reads enabled sensors sequentially.
+GatewayRuntime waits between sensor transactions.
+```
+
+No backend API, frontend, ML worker, Telegram, or out-of-scope feature was
+changed.
+
+Post-patch Pi config decisions without secrets:
+
+```text
+backend.base_url = http://192.168.10.112:8081/api/v1
+modbus.port = /dev/ttyUSB0
+modbus.baudrate = 9600
+modbus.bytesize = 8
+modbus.parity = N
+modbus.stopbits = 1
+modbus.timeout_seconds = 1
+modbus.register_type = input
+modbus.inter_read_delay_ms = 300
+S1.enabled = true
+S1.slave_id = 1
+S2.enabled = true
+S2.slave_id = 2
+S1/S2 temperature.address = 1
+S1/S2 humidity.address = 2
+S1/S2 register_type = input
+```
+
+Post-patch diagnostics:
+
+```text
+python -m gateway.cli diagnose ports
+Serial ports detected:
+- /dev/ttyS0
+- /dev/ttyUSB0
+
+python -m gateway.cli diagnose raw --slave-id 1 --address 1 --count 2
+Reading raw register: register_type=input slave_id=1 address=1 count=2
+raw=[255, 444]
+
+python -m gateway.cli diagnose raw --slave-id 2 --address 1 --count 2
+Reading raw register: register_type=input slave_id=2 address=1 count=2
+raw=[257, 449]
+
+python -m gateway.cli diagnose sensor --sensor-code S1
+temperature=25.6
+humidity=44.5
+
+python -m gateway.cli diagnose sensor --sensor-code S2
+temperature=25.7
+humidity=45
+```
+
+Canonical loop validation:
+
+```bash
+timeout -s INT 190 python -m gateway.cli run
+```
+
+Result:
+
+```text
+Gateway stopped.
+RUN_EXIT_CODE=124
+Repeated POST /api/v1/readings returned HTTP 201.
+Repeated POST /api/v1/gateway/status returned HTTP 201.
+```
+
+Exit code `124` is expected because Linux `timeout` stopped the intentionally
+long-running gateway loop after the validation window.
+
+Backend database evidence after the loop:
+
+```text
+sensor_code | hardware_rows | latest_recorded_at
+S1          | 36            | 2026-06-03 06:28:38.577324+00
+S2          | 17            | 2026-06-03 06:28:38.577324+00
+
+latest hardware rows:
+S1 | 25.60 | 44.30 | hardware | valid | 2026-06-03 06:28:38.577324+00
+S2 | 25.50 | 45.30 | hardware | valid | 2026-06-03 06:28:38.577324+00
+
+gateway:
+raspi-gateway-01 | active | 2026-06-03 06:28:38.577324+00
+
+sensors:
+S1 | normal | 2026-06-03 06:28:38.577324+00
+S2 | normal | 2026-06-03 06:28:38.577324+00
+```
+
+Latest readings API:
+
+```text
+GET /api/v1/readings/latest
+S1 source=hardware quality_status=valid temperature=25.6 humidity=44.3
+S2 source=hardware quality_status=valid temperature=25.5 humidity=45.3
+```
+
+Dashboard summary API:
+
+```text
+GET /api/v1/dashboard/summary
+gateway.status=active
+latest_readings.S1.temperature=25.6
+latest_readings.S1.humidity=44.3
+latest_readings.S1.sensor_health_status=normal
+latest_readings.S2.temperature=25.5
+latest_readings.S2.humidity=45.3
+latest_readings.S2.sensor_health_status=normal
+today_summary.total_readings=55
+telegram.enabled=false
+```
+
+Power risk:
+
+```text
+vcgencmd get_throttled
+throttled=0x50000
+```
+
+Treat `0x50000` as historical undervoltage/throttling since boot, not a
+stabilization blocker. Clean reboot and recheck before long final evidence run.
+
+M10B result:
+
+```text
+Done: two-sensor Raspberry Pi gateway hardware path validated.
+```
 
 ## Laptop EMS Preparation
 
@@ -446,13 +606,14 @@ GET /api/v1/health passed locally and from Pi
 Backend code was not changed, so full backend tests were not required for this
 gateway compatibility fix.
 
-## Remaining Work Before M10B Done
+## Remaining Bab 4 Evidence Work After M10B
 
-- Connect and validate S2 XY-MD02 as hotspot sensor.
-- Re-run raw diagnostics and configured diagnostics for both S1 and S2.
-- Run gateway loop with both sensors enabled for 3-5 minutes.
-- Capture dashboard screenshot with real S1 and S2 hardware readings.
-- Capture final database evidence with only hardware readings for thesis proof.
-- Fix or monitor Raspberry Pi undervoltage before final evidence.
-- Investigate `pymodbus` receive-buffer cleanup warnings if they continue after
-  power/wiring cleanup.
+- Capture final dashboard screenshot with real S1 and S2 hardware readings.
+- Capture final database evidence from a longer hardware collection run if
+  needed for thesis dataset quality.
+- Clean reboot Raspberry Pi and recheck `vcgencmd get_throttled` before long
+  evidence collection.
+- Continue monitoring `pymodbus` receive-buffer cleanup warnings during longer
+  runs; they did not block the stabilized 190-second M10B validation.
+- Run final TensorFlow training from hardware readings after enough data is
+  collected.

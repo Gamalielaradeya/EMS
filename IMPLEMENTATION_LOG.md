@@ -443,3 +443,37 @@ Hardware validation retry:
 - Recorded the likely hardware/config blocker as unsolicited ASCII/junk bytes
   flooding the RTU receive buffer, plus persistent undervoltage
   `throttled=0x50005`.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stabilization
+
+Status: Done
+
+Gateway stabilization and hardware validation:
+
+- Recorded new manual evidence that repeated raw Modbus reads were stable:
+  S1 succeeded `15/15` attempts with values around `[253-255, 447-453]`;
+  S2 succeeded `15/15` attempts with values around `[253-255, 484-515]`.
+- Identified the difference between stable diagnostics and the blocked run
+  loop: diagnostics open a client for one short transaction, while the run loop
+  reads both enabled sensors back-to-back through one persistent client.
+- Added `modbus.inter_read_delay_ms` with a default of `300` ms and
+  `MODBUS_INTER_READ_DELAY_MS` environment override.
+- Updated the run loop to read enabled sensors sequentially and wait between
+  sensor transactions, including after a sensor read failure, without changing
+  retry, buffer, heartbeat, or backend API behavior.
+- Updated `config.example.yaml`, gateway README, and gateway tests for the
+  inter-sensor delay.
+- Deployed the gateway patch to Raspberry Pi `lmnop` at `192.168.10.108`.
+- Configured ignored Pi local config for laptop backend
+  `http://192.168.10.112:8081/api/v1`, `/dev/ttyUSB0`, function `04` input
+  registers, 9600 8N1, both sensors enabled, and `300` ms inter-read delay
+  without printing or committing tokens.
+- Confirmed post-patch diagnostics for both sensors and ran the canonical
+  gateway loop for about `190` seconds.
+- Confirmed repeated backend inserts for both S1 and S2 hardware readings and
+  active gateway/sensor state.
+- Marked M10B Done because the hardware path S1/S2 -> Raspberry Pi gateway ->
+  backend -> PostgreSQL -> latest/dashboard summary is now validated.
+- Kept `vcgencmd get_throttled=0x50000` as historical undervoltage/throttling
+  risk and recommended clean reboot plus recheck before longer final evidence
+  capture.

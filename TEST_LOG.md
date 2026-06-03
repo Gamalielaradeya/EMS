@@ -874,3 +874,72 @@ Result:
 - Hardware/backend path is proven for one cycle with both sensors.
 - Final evidence still requires stable 3-5 minute loop with repeated S1 and S2
   hardware rows.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stabilization
+
+Status: Done
+
+Code validation:
+
+- Passed: local gateway `python -m compileall -q src tests`.
+- Passed: local gateway `python -m unittest discover -s tests -v`; 13 tests
+  passed.
+- Passed: Raspberry Pi gateway `python -m compileall -q src tests`.
+- Passed: Raspberry Pi gateway `python -m unittest discover -s tests -v`; 13
+  tests passed.
+
+Network and backend:
+
+- Passed: backend launched on `APP_PORT=8081` and listened on `0.0.0.0:8081`
+  and `[::]:8081`.
+- Passed: laptop `GET http://localhost:8081/api/v1/health`.
+- Passed: Pi `curl http://192.168.10.112:8081/api/v1/health`.
+- Note: PostgreSQL validation used host port `15432` because Windows excluded
+  the requested `55432` range on this laptop.
+
+Manual raw-read stability evidence:
+
+- Passed: S1 raw input-register read succeeded `15/15` repeated attempts with
+  values around `[253-255, 447-453]`.
+- Passed: S2 raw input-register read succeeded `15/15` repeated attempts with
+  values around `[253-255, 484-515]`.
+- Passed: no timeout, CRC error, or no-response occurred during those repeated
+  raw tests.
+
+Post-patch gateway diagnostics:
+
+- Passed: `python -m gateway.cli diagnose ports` listed `/dev/ttyS0` and
+  `/dev/ttyUSB0`.
+- Passed: S1 raw input-register read returned `raw=[255, 444]`.
+- Passed: S2 raw input-register read returned `raw=[257, 449]`.
+- Passed: configured S1 diagnostic returned temperature `25.6` and humidity
+  `44.5`.
+- Passed: configured S2 diagnostic returned temperature `25.7` and humidity
+  `45.0`.
+
+Gateway loop and backend evidence:
+
+- Passed: `timeout -s INT 190 python -m gateway.cli run` ran the canonical
+  loop with both S1 and S2 enabled until the timeout sent SIGINT.
+- Passed: gateway stopped cleanly and emitted repeated HTTP `201` readings
+  responses plus heartbeat/status responses.
+- Passed: PostgreSQL showed hardware row totals: S1 `36`, S2 `17`; latest
+  aligned two-sensor row was `2026-06-03 06:28:38.577324+00`.
+- Passed: latest hardware rows showed S1 `25.60 C / 44.30 %` and S2
+  `25.50 C / 45.30 %`.
+- Passed: gateway state was `active`.
+- Passed: sensors S1 and S2 were `normal`.
+- Passed: `GET /api/v1/readings/latest` returned S1 and S2 as
+  `source=hardware`, `quality_status=valid`.
+- Passed: `GET /api/v1/dashboard/summary` returned gateway active plus S1 and
+  S2 hardware values.
+
+Limitations and risks:
+
+- `pymodbus` receive-buffer cleanup warnings still appeared, but they no
+  longer blocked repeated two-sensor loop delivery during this run.
+- Raspberry Pi `vcgencmd get_throttled` returned `0x50000`; treat as
+  historical undervoltage/throttling risk since boot, not a blocker for this
+  stabilization. Reboot and recheck before long final evidence capture.
+- A separate one-shot SSE capture attempt timed out and was not used as M10B
+  pass evidence; backend inserts and latest/dashboard API evidence passed.

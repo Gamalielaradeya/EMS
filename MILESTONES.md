@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - two-sensor one-shot validated, loop blocked |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Done |
 | `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
@@ -305,3 +305,23 @@ Milestone `9` requires explicit user approval.
 - Recorded results in `Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md`.
 - Did not treat generated-data metrics as thesis evidence and did not unblock
   Milestone `10B`.
+
+## Milestone 10B Stabilization Completion
+
+- Added configurable gateway inter-sensor Modbus delay with a `300 ms` default.
+- Kept Modbus reads sequential and avoided overlapping serial transactions.
+- Confirmed manual repeated raw diagnostics were stable before the fix:
+  S1 `15/15` and S2 `15/15` successful raw reads.
+- Deployed the gateway stabilization patch to Raspberry Pi `lmnop`.
+- Confirmed Pi gateway compile and unit checks still pass.
+- Confirmed two-sensor diagnostics after the patch:
+  S1 `raw=[255, 444]`, S2 `raw=[257, 449]`, S1 about `25.6 C / 44.5 %`,
+  and S2 about `25.7 C / 45.0 %`.
+- Ran the canonical gateway loop for about `190` seconds with both sensors
+  enabled.
+- Confirmed repeated backend delivery with HTTP `201` readings and heartbeat
+  status responses.
+- Confirmed PostgreSQL hardware rows for both sensors, latest API readings,
+  gateway active state, and Dashboard summary returning S1/S2 hardware data.
+- Kept Raspberry Pi `throttled=0x50000` as historical undervoltage/throttling
+  risk; recommend a clean reboot and recheck before long final evidence runs.

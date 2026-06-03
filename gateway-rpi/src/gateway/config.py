@@ -58,6 +58,7 @@ def _apply_environment_overrides(raw: dict[str, Any]) -> None:
         ("BACKEND_TOKEN", ("backend", "token"), str),
         ("MODBUS_PORT", ("modbus", "port"), str),
         ("MODBUS_REGISTER_TYPE", ("modbus", "register_type"), str),
+        ("MODBUS_INTER_READ_DELAY_MS", ("modbus", "inter_read_delay_ms"), int),
         ("SAMPLING_INTERVAL_SECONDS", ("sampling", "interval_seconds"), float),
         ("HEARTBEAT_INTERVAL_SECONDS", ("sampling", "heartbeat_interval_seconds"), float),
         ("BUFFER_FILE_PATH", ("buffer", "file_path"), str),
@@ -110,6 +111,7 @@ def _build_config(raw: dict[str, Any], base_dir: Path) -> AppConfig:
             stopbits=int(modbus["stopbits"]),
             timeout_seconds=float(modbus["timeout_seconds"]),
             register_type=_normalize_register_type(modbus.get("register_type", "holding")),
+            inter_read_delay_ms=int(modbus.get("inter_read_delay_ms", 300)),
         ),
         sensors=sensors,
         validation=ValidationConfig(
@@ -197,6 +199,8 @@ def _validate_config(config: AppConfig) -> None:
         raise ConfigError("modbus.parity must be N, E, or O")
     if config.modbus.register_type not in {"holding", "input"}:
         raise ConfigError("modbus.register_type must be holding or input")
+    if config.modbus.inter_read_delay_ms < 0 or config.modbus.inter_read_delay_ms > 10000:
+        raise ConfigError("modbus.inter_read_delay_ms must be between 0 and 10000")
     if config.validation.temperature_min > config.validation.temperature_max:
         raise ConfigError("validation temperature range is invalid")
     if config.validation.humidity_min > config.validation.humidity_max:

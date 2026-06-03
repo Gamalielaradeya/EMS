@@ -49,10 +49,10 @@ Evidence rules:
 ## API Evidence Checklist
 
 - [ ] `GET /api/v1/health` returns healthy backend and database state.
-- [ ] `POST /api/v1/readings` accepts authenticated Raspberry Pi hardware data.
-- [ ] `GET /api/v1/readings/latest` returns S1 and S2 hardware readings.
+- [x] `POST /api/v1/readings` accepts authenticated Raspberry Pi hardware data.
+- [x] `GET /api/v1/readings/latest` returns S1 and S2 hardware readings.
 - [ ] `GET /api/v1/readings/history` returns bounded filtered history.
-- [ ] `POST /api/v1/gateway/status` updates gateway and sensor health state.
+- [x] `POST /api/v1/gateway/status` updates gateway and sensor health state.
 - [ ] `GET /api/v1/events` emits realtime reading and status events.
 - [ ] `POST /api/v1/ml/predictions` requires internal authentication.
 - [ ] Real inference submission creates backend-owned thermal classification.
@@ -85,7 +85,7 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 ```
 
 - [ ] Migration and seed evidence captured.
-- [ ] Hardware reading rows captured.
+- [x] Hardware reading rows captured.
 - [ ] Active model row captured.
 - [ ] Prediction, anomaly, notification, and system-log rows captured.
 - [ ] Layout marker ratio rows captured.
@@ -112,18 +112,17 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 - [x] Validate configured `diagnose sensor --sensor-code S2` once.
 - [x] Capture one backend hardware row for S1 and one backend hardware row for
   S2 through `GatewayRuntime.run_once()`.
-- [ ] Run gateway loop with both S1 and S2 connected for 3-5 minutes and capture backend
+- [x] Run gateway loop with both S1 and S2 connected for 3-5 minutes and capture backend
       hardware readings.
 - [ ] Disconnect one sensor and capture graceful trouble behavior.
 - [ ] Interrupt backend temporarily and verify bounded buffer plus replay.
 - [ ] Verify heartbeat and gateway recovery behavior.
 
-Stage-three result on 2026-06-03: partial. After Wi-Fi changed to laptop
-`192.168.10.112` and Pi `192.168.10.108`, both S1 and S2 passed raw and
-configured diagnostics, and one runtime cycle stored one hardware row for each
-sensor. The canonical 3-5 minute loop remains blocked by unsolicited
-ASCII/junk bytes flooding the Modbus RTU receive buffer. Full evidence is
-recorded in `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md`.
+Stabilization result on 2026-06-03: done. After adding a configurable
+`300 ms` inter-sensor Modbus delay, both S1 and S2 passed raw/configured
+diagnostics and the canonical loop ran for about `190` seconds with repeated
+hardware inserts for both sensors. Full evidence is recorded in
+`Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md`.
 
 ## ML Training Evidence Checklist
 
@@ -155,6 +154,6 @@ final thesis model quality.
 
 ## Next Step
 
-Resume Milestone `10B` by fixing the serial ASCII/junk receive-buffer blocker
-and repeating a stable 3-5 minute two-sensor gateway loop. After hardware data
-collection, run final TensorFlow training for Bab 4 evidence.
+Use the validated Raspberry Pi gateway path to collect a longer hardware
+dataset, then run final TensorFlow training from `source=hardware` and
+`quality_status=valid` rows for Bab 4 evidence.

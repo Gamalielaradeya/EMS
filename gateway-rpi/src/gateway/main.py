@@ -48,17 +48,18 @@ class GatewayRuntime:
 
     def run_once(self) -> None:
         readings = []
-        for sensor in self._config.sensors:
-            if not sensor.enabled:
-                continue
+        enabled_sensors = [sensor for sensor in self._config.sensors if sensor.enabled]
+        for index, sensor in enumerate(enabled_sensors):
             try:
                 reading = self._reader.read(sensor)
             except SensorReadError as exc:
                 self._logger.warning("%s", exc)
                 self._status.mark_trouble(sensor.code, str(exc))
-                continue
-            self._status.mark_normal(sensor.code)
-            readings.append(reading)
+            else:
+                self._status.mark_normal(sensor.code)
+                readings.append(reading)
+            if index < len(enabled_sensors) - 1 and self._config.modbus.inter_read_delay_ms > 0:
+                self._sleeper(self._config.modbus.inter_read_delay_ms / 1000)
 
         realtime_delivered = False
         if readings:

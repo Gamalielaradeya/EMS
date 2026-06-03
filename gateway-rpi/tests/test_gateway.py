@@ -63,6 +63,7 @@ class ConfigTests(unittest.TestCase):
                 "BACKEND_BASE_URL": "http://localhost:8081/api/v1",
                 "BACKEND_TOKEN": "local-token",
                 "MODBUS_PORT": "COM99",
+                "MODBUS_INTER_READ_DELAY_MS": "450",
             },
             clear=False,
         ):
@@ -71,6 +72,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.backend.token, "local-token")
         self.assertEqual(config.modbus.port, "COM99")
         self.assertEqual(config.modbus.register_type, "input")
+        self.assertEqual(config.modbus.inter_read_delay_ms, 450)
         self.assertEqual(config.sensor_by_code("s2").role, "hotspot")
         self.assertEqual(config.sensor_by_code("s1").registers.temperature.register_type, "input")
 
@@ -309,6 +311,7 @@ class RuntimeTests(unittest.TestCase):
         sender = OfflineSender()
         buffer = RecordingBuffer()
         status = RecordingRuntimeStatus()
+        sleeps: list[float] = []
         with (
             patch("gateway.main.GatewayModbusClient", return_value=Closable()),
             patch("gateway.main.SensorReader", return_value=reader),
@@ -317,7 +320,7 @@ class RuntimeTests(unittest.TestCase):
             patch("gateway.main.BufferReplayer", return_value=NoopReplayer()),
             patch("gateway.main.StatusReporter", return_value=status),
         ):
-            runtime = GatewayRuntime(config)
+            runtime = GatewayRuntime(config, sleeper=sleeps.append)
             runtime.run_once()
             runtime.close()
 
@@ -325,6 +328,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(buffer.items[0][1]["readings"][0]["sensor_code"], "S1")
         self.assertEqual(status.trouble_codes, ["S2"])
         self.assertEqual(status.report_calls, 1)
+        self.assertEqual(sleeps, [0.3])
 
 
 class RecordingStatusSender:

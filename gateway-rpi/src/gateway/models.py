@@ -64,6 +64,7 @@ class ModbusConfig:
     stopbits: int
     timeout_seconds: float
     register_type: str = "holding"
+    inter_read_delay_ms: int = 300
 
 
 @dataclass(frozen=True)

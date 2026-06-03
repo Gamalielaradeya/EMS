@@ -109,6 +109,7 @@ BACKEND_TOKEN
 GATEWAY_TOKEN
 MODBUS_PORT
 MODBUS_REGISTER_TYPE
+MODBUS_INTER_READ_DELAY_MS
 SAMPLING_INTERVAL_SECONDS
 HEARTBEAT_INTERVAL_SECONDS
 BUFFER_FILE_PATH
@@ -126,6 +127,9 @@ sensor is reported as trouble without stopping the other sensor. Current reading
 are always sent before replay work. A failed readings request is retried once; if
 the retry also fails, the payload is written to bounded JSONL storage. Replay sends
 small batches at the configured interval so old data does not block realtime data.
+Enabled sensors are read sequentially with `modbus.inter_read_delay_ms` between
+sensor transactions. The default is `300` ms, which gives shared RS485 devices a
+short settling gap while keeping the 10-second sampling cycle intact.
 
 Gateway heartbeat/status reports are separate from readings and default to every
 60 seconds. Failed status reports are logged and retried on later cycles.

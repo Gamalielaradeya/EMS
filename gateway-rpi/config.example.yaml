@@ -25,6 +25,7 @@ modbus:
   stopbits: 1
   timeout_seconds: 3
   register_type: "input" # XY-MD02 uses function 04 / input registers.
+  inter_read_delay_ms: 300
 
 sensors:
   - code: "S1"
