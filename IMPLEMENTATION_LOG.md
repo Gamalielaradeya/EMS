@@ -532,3 +532,32 @@ Documentation and operator validation only:
   timeouts plus XY-MD02 ASCII receive-buffer cleanup.
 - Left the gateway running at the end because the requested mode was
   best-effort collection while the operator was away.
+
+## Milestone 10F - Hardware LSTM Candidate Training
+
+Status: Completed - preliminary/final-candidate only
+
+Documentation and ML runtime validation only:
+
+- Did not stop the Raspberry Pi gateway, backend, frontend, or PostgreSQL.
+- Used only `source=hardware` and `quality_status=valid` rows.
+- Confirmed live hardware-valid counts before training: S1 `1,025`, S2
+  `1,005`, latest `2026-06-03 20:02:36.200559+00`.
+- Confirmed paired minute data was sufficient for a small candidate after
+  one-minute resampling: `218` usable minute rows and `213` labeled rows after
+  the five-minute target shift.
+- Used chronological split only with small-dataset overrides:
+  `ML_MINIMUM_RESAMPLED_ROWS=120`, train/validation/test ratio `0.60/0.20/0.20`,
+  `ML_EPOCHS=30`, and `ML_BATCH_SIZE=32`.
+- Trained and activated hardware candidate model `v20260603_200711`.
+- Generated local artifacts under `ml-worker/models/ems_s2_lstm_v20260603_200711`
+  and `ml-worker/reports/ems_s2_lstm_v20260603_200711`; these were not staged.
+- Ran evaluate and infer.
+- Submitted inference through the protected backend ML bridge; backend stored
+  prediction id `1` with predicted S2 `32.1194 C`, `thermal_status=anomali`,
+  and `final_status=anomali`.
+- Verified API/database state: one active model, one metrics row, persistence
+  and moving-average baseline rows, and a non-stale latest prediction.
+- Recorded limitations: short dataset, small validation/test windows, and
+  baselines outperforming the LSTM, so this is not final Bab 4 model quality
+  evidence.

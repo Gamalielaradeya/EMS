@@ -1203,3 +1203,88 @@ Best-effort collection ran but collected 0 new rows.
 Gateway still running on Raspberry Pi.
 Data remains preliminary/noisy only, not final thesis evidence.
 ```
+
+## M10E Token Alignment and Collection Retry
+
+Status: blocked after token fix.
+
+On 2026-06-03, the gateway token mismatch was confirmed and corrected on the
+Raspberry Pi local `~/EMS/gateway-rpi/config.yaml` without printing token
+values. The backend was reachable from the Pi before and after the change.
+
+Validation after token alignment:
+
+```text
+Pi health: HTTP 200, about 0.038 s
+Direct authenticated POST /api/v1/readings: HTTP 201, about 0.190 s
+Stored manual validation rows: 2
+Deleted manual validation rows after test: 2
+```
+
+The corrected direct POST proves the backend, LAN path, and gateway bearer
+token are aligned. No artificial validation rows were retained.
+
+A short gateway retry was then started as preliminary/noisy collection only:
+
+```text
+Gateway command: .venv/bin/python -m gateway.cli run
+Gateway log: ~/EMS/gateway-rpi/logs/manual_collection_M10E_20260603T223033Z.log
+Wait window before checking counts: 60 seconds
+```
+
+Hardware-valid counts before and after the retry:
+
+```text
+Before:
+S1|273|2026-06-03 07:42:26.761374+00
+S2|253|2026-06-03 07:42:26.761374+00
+
+After:
+S1|273|2026-06-03 07:42:26.761374+00
+S2|253|2026-06-03 07:42:26.761374+00
+```
+
+The gateway was stopped after counts did not increase. The collection log only
+showed startup followed by serial receive-buffer cleanup containing unsolicited
+ASCII temperature/humidity bytes, then `Gateway stopped`. No new HTTP delivery
+was reached during the retry window.
+
+Interpretation:
+
+- Token mismatch is fixed.
+- Backend/network POST path is valid.
+- Current blocker is back on the hardware serial/run-loop path before delivery.
+- This run is preliminary/noisy only and is not final thesis ML dataset
+  evidence.
+
+## M10F Hardware Candidate Data Availability
+
+Status: preliminary hardware data available for candidate LSTM training.
+
+On 2026-06-04, the Raspberry Pi gateway was left running and continued sending
+valid hardware rows to the local backend. The gateway, backend, frontend, and
+PostgreSQL were not stopped for the training run.
+
+Hardware-valid counts before training:
+
+```text
+S1: 1,025 rows, latest 2026-06-03 20:02:36.200559+00
+S2: 1,005 rows, latest 2026-06-03 20:02:36.200559+00
+Paired minute buckets observed before training: 176
+```
+
+ML-worker dry check loaded `2,070` raw hardware rows and produced `218` usable
+one-minute rows, `213` labeled rows after the five-minute target shift, and
+chronological window counts of train `97`, validation `12`, and test `14`.
+
+After model verification, hardware-valid row counts had continued increasing:
+
+```text
+S1: 1,052 rows, latest 2026-06-03 20:07:06.204237+00
+S2: 1,032 rows, latest 2026-06-03 20:07:06.204237+00
+```
+
+This proves the current local stack had enough hardware data for a small
+final-candidate training run, but it does not replace long passive Modbus RTU
+collection evidence. The dataset remains preliminary/noisy and limited until
+longer stable hardware collection is captured.

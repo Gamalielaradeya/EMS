@@ -135,19 +135,27 @@ hardware inserts for both sensors. Full evidence is recorded in
   disable ordinary UART/common-protocol automatic reporting.
 - [ ] Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
   sensors and rerun long passive Modbus RTU collection.
-- [ ] Train from hardware readings with `source=hardware` and
-  `quality_status=valid`.
-- [ ] Record one-minute resampling, chronological split sizes, and window count.
-- [ ] Capture persistence and moving-average baseline results in Celsius.
-- [ ] Capture LSTM RMSE, MAE, and MAPE in Celsius units.
-- [ ] Capture generated artifacts: `model.keras`, feature scaler, target scaler,
+- [x] Train from hardware readings with `source=hardware` and
+  `quality_status=valid` as a final-candidate/preliminary run.
+- [x] Record one-minute resampling, chronological split sizes, and window count
+  for the hardware candidate.
+- [x] Capture persistence and moving-average baseline results in Celsius.
+- [x] Capture LSTM RMSE, MAE, and MAPE in Celsius units.
+- [x] Capture generated artifacts: `model.keras`, feature scaler, target scaler,
   and metadata JSON.
-- [ ] Activate the selected model and capture active-model API evidence.
-- [ ] Submit real inference output through the backend bridge.
+- [x] Activate the selected model and capture active-model API evidence.
+- [x] Submit real inference output through the backend bridge.
 
 Development-only TensorFlow runtime details are recorded in
 `Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md`. They prove runtime wiring, not
 final thesis model quality.
+
+Hardware candidate training on 2026-06-04 produced active model
+`v20260603_200711` from hardware-only valid rows. It is recorded in
+`Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md` as preliminary/final-candidate
+evidence only: the dataset is short, validation/test windows are small, and
+both baselines outperform the LSTM. Do not present it as final Bab 4 model
+quality.
 
 ## Alert and Telegram Checklist
 
@@ -191,3 +199,13 @@ rows. Counts stayed S1 `273` and S2 `253`; latest hardware timestamps stayed at
 `2026-06-03 07:42:26.761374+00`. Gateway logs continued to show `/readings` and
 `/gateway/status` HTTP timeouts plus ASCII receive-buffer cleanup. This evidence
 is preliminary/noisy only and is not final ML dataset evidence.
+
+M10E token alignment on 2026-06-03 fixed the gateway bearer token mismatch.
+After updating Raspberry Pi `config.yaml`, Pi health returned HTTP `200` and a
+direct authenticated manual readings POST returned HTTP `201` in about `0.190`
+seconds. The two manual validation rows were deleted immediately afterward.
+However, a 60-second gateway retry collected zero new hardware-valid rows:
+counts stayed S1 `273` and S2 `253`, and the collection log showed serial
+receive-buffer cleanup from unsolicited ASCII temperature/humidity bytes before
+any new delivery. The token/backend path is now valid; the remaining blocker is
+the noisy serial/run-loop hardware path.

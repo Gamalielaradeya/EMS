@@ -1022,3 +1022,81 @@ Result:
 - The data remains preliminary/noisy only and is not final thesis dataset
   evidence.
 - Gateway was left running at the end by request.
+
+## Milestone 10F - Hardware LSTM Candidate Training
+
+Status: Passed as preliminary/final-candidate training evidence only
+
+Environment checks:
+
+- Passed: `GET http://localhost:8081/api/v1/health`.
+- Passed: ML Worker syntax check with `python -m compileall -q src tests`.
+- Passed: ML Worker unit tests with `python -m unittest discover -s tests -v`
+  (`10` tests).
+- Passed: TensorFlow import, version `2.20.0`.
+
+Hardware dataset checks:
+
+- Passed: hardware-valid counts before training were S1 `1,025` and S2
+  `1,005`, latest timestamp `2026-06-03 20:02:36.200559+00`.
+- Passed: paired minute buckets existed (`176` before training).
+- Passed: ML dry check loaded `2,070` raw hardware rows and produced `218`
+  usable one-minute rows.
+- Passed: chronological split produced train `127`, validation `42`, and test
+  `44` rows.
+- Passed: window counts were train `97`, validation `12`, and test `14`.
+
+Training command:
+
+```powershell
+$env:ML_ALLOWED_SOURCES = "hardware"
+$env:ML_ALLOWED_QUALITY_STATUSES = "valid"
+$env:ML_EPOCHS = "30"
+$env:ML_BATCH_SIZE = "32"
+$env:ML_MINIMUM_RESAMPLED_ROWS = "120"
+$env:ML_TRAIN_RATIO = "0.60"
+$env:ML_VALIDATION_RATIO = "0.20"
+$env:ML_TEST_RATIO = "0.20"
+./.venv/Scripts/python.exe -m ml_worker.cli train --activate
+```
+
+Training result:
+
+- Passed: model `v20260603_200711` trained and activated.
+- Passed: artifacts generated locally: Keras model, feature scaler, target
+  scaler, metadata, and training report.
+- Passed: LSTM training metrics were RMSE `0.1450`, MAE `0.1131`, MAPE
+  `0.3506%`.
+- Passed: persistence baseline metrics were RMSE `0.1390`, MAE `0.1095`, MAPE
+  `0.3397%`.
+- Passed: moving-average baseline metrics were RMSE `0.1346`, MAE `0.1088`,
+  MAPE `0.3374%`.
+
+Evaluate and infer:
+
+- Passed: `python -m ml_worker.cli evaluate`.
+- Evaluation LSTM metrics: RMSE `0.1887`, MAE `0.1430`, MAPE `0.4422%`.
+- Evaluation persistence baseline: RMSE `0.1712`, MAE `0.1256`, MAPE
+  `0.3887%`.
+- Evaluation moving-average baseline: RMSE `0.1696`, MAE `0.1277`, MAPE
+  `0.3951%`.
+- Passed: `python -m ml_worker.cli infer` submitted through the backend bridge.
+- Passed: backend stored prediction id `1`, predicted S2 `32.1194 C`,
+  `thermal_status=anomali`, `final_status=anomali`, `is_stale=false`.
+
+Backend verification:
+
+- Passed: `GET /api/v1/predictions/latest`.
+- Passed: `GET /api/v1/model-metrics/latest`.
+- Passed: `GET /api/v1/model-comparison/latest`.
+- Passed: `GET /api/v1/model-versions`.
+- Passed: PostgreSQL showed one active model, one model-metrics row, two
+  baseline rows, and one prediction row.
+
+Limitations:
+
+- Dataset is still short and preliminary.
+- Validation/test windows are small.
+- Baselines outperform the LSTM in both train-result and evaluate-result
+  metrics.
+- This is not final thesis model quality evidence.

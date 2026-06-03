@@ -191,3 +191,142 @@ After recording evidence:
 - Resume Milestone `10B` when hardware becomes available.
 - After collecting hardware readings, run final training and capture final
   metrics, artifacts, API results, and screenshots.
+
+## M10F Hardware Dataset Candidate Training
+
+Status: passed as final-candidate / preliminary hardware training only.
+
+Date: 2026-06-04 local time.
+
+Dataset source:
+
+```text
+Source filter: hardware
+Quality filter: valid
+Sensors: S1 ambient/reference and S2 hotspot/exhaust
+Target: future_temperature_s2, five minutes ahead
+Resample interval: 1 minute
+Window size: 30
+Horizon: 5 minutes
+Split: chronological only
+```
+
+Hardware-valid rows before training:
+
+| Sensor | Rows | Latest hardware timestamp |
+|---|---:|---|
+| S1 | `1,025` | `2026-06-03 20:02:36.200559+00` |
+| S2 | `1,005` | `2026-06-03 20:02:36.200559+00` |
+
+Dry dataset check:
+
+| Item | Count |
+|---|---:|
+| Raw S1/S2 rows loaded | `2,070` |
+| Usable one-minute resampled rows | `218` |
+| Labeled rows after five-minute target shift | `213` |
+| Chronological train rows | `127` |
+| Chronological validation rows | `42` |
+| Chronological test rows | `44` |
+| Train windows | `97` |
+| Validation windows | `12` |
+| Test windows | `14` |
+
+Because the hardware dataset was still small, the candidate run used explicit
+small-dataset runtime overrides while preserving chronological splitting:
+
+```powershell
+$env:ML_ALLOWED_SOURCES = "hardware"
+$env:ML_ALLOWED_QUALITY_STATUSES = "valid"
+$env:ML_EPOCHS = "30"
+$env:ML_BATCH_SIZE = "32"
+$env:ML_MINIMUM_RESAMPLED_ROWS = "120"
+$env:ML_TRAIN_RATIO = "0.60"
+$env:ML_VALIDATION_RATIO = "0.20"
+$env:ML_TEST_RATIO = "0.20"
+./.venv/Scripts/python.exe -m ml_worker.cli train --activate
+```
+
+Generated active model:
+
+```text
+v20260603_200711
+```
+
+Generated local artifacts, not committed:
+
+```text
+ml-worker/models/ems_s2_lstm_v20260603_200711/model.keras
+ml-worker/models/ems_s2_lstm_v20260603_200711/feature_scaler.pkl
+ml-worker/models/ems_s2_lstm_v20260603_200711/target_scaler.pkl
+ml-worker/models/ems_s2_lstm_v20260603_200711/model_metadata.json
+ml-worker/reports/ems_s2_lstm_v20260603_200711/training_report.json
+```
+
+Training metrics in Celsius:
+
+| Model | RMSE | MAE | MAPE |
+|---|---:|---:|---:|
+| LSTM | `0.1450` | `0.1131` | `0.3506%` |
+| Persistence baseline | `0.1390` | `0.1095` | `0.3397%` |
+| Moving-average baseline | `0.1346` | `0.1088` | `0.3374%` |
+
+Evaluation command:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli evaluate
+```
+
+Evaluation metrics in Celsius:
+
+| Model | RMSE | MAE | MAPE |
+|---|---:|---:|---:|
+| LSTM | `0.1887` | `0.1430` | `0.4422%` |
+| Persistence baseline | `0.1712` | `0.1256` | `0.3887%` |
+| Moving-average baseline | `0.1696` | `0.1277` | `0.3951%` |
+
+Inference command:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli infer
+```
+
+Backend bridge result:
+
+| Item | Value |
+|---|---|
+| Predicted S2 temperature | `32.1194 C` |
+| Predicted for | `2026-06-03T20:12:00Z` |
+| Backend submission | Passed |
+| Backend prediction id | `1` |
+| Thermal status | `anomali` |
+| Final status | `anomali` |
+| Stale | `false` |
+
+Backend/database verification:
+
+- `model_versions`: one active model, `v20260603_200711`.
+- `model_metrics`: one row for the active model.
+- `baseline_results`: persistence and moving-average rows exist.
+- `predictions/latest`: returned the submitted non-stale prediction.
+- Prediction and model APIs returned data usable by the dashboard Prediction &
+  LSTM page.
+
+Hardware-valid rows after the verification pass continued to increase while the
+gateway stayed running:
+
+| Sensor | Rows | Latest hardware timestamp |
+|---|---:|---|
+| S1 | `1,052` | `2026-06-03 20:07:06.204237+00` |
+| S2 | `1,032` | `2026-06-03 20:07:06.204237+00` |
+
+Limitations:
+
+- This is a final-candidate/preliminary hardware model, not a final thesis
+  claim.
+- The dataset is still short and has limited variation.
+- Validation and test windows are small (`12` and `14`).
+- Both baselines outperform the LSTM, so the model is not selected as final
+  evidence yet.
+- XY-MD02 automatic-report/noisy-bus risk remains part of the hardware evidence
+  context.
