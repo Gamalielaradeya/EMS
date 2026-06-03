@@ -129,6 +129,10 @@ hardware inserts for both sensors. Full evidence is recorded in
 - [x] Install documented TensorFlow dependency on the ML workstation.
 - [x] Validate real TensorFlow train, evaluate, and infer runtime with a clearly
   labeled generated development dataset.
+- [x] Attempt final hardware dataset collection with Raspberry Pi gateway,
+  backend, PostgreSQL, and dashboard running.
+- [ ] Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
+  sensors and rerun long passive Modbus RTU collection.
 - [ ] Train from hardware readings with `source=hardware` and
   `quality_status=valid`.
 - [ ] Record one-minute resampling, chronological split sizes, and window count.
@@ -154,6 +158,18 @@ final thesis model quality.
 
 ## Next Step
 
-Use the validated Raspberry Pi gateway path to collect a longer hardware
-dataset, then run final TensorFlow training from `source=hardware` and
-`quality_status=valid` rows for Bab 4 evidence.
+Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
+sensors, verify the RS485 bus is quiet when idle, then rerun long hardware
+collection before final TensorFlow training.
+
+The hardware dataset collection attempt started on 2026-06-03 with Pi gateway
+PID `1309` and was stopped after the long run became unstable. It reached S1
+`273` and S2 `253` hardware-valid rows, with latest values S1 `26.10 C` /
+`51.90 %` and S2 `27.30 C` / `43.40 %` at
+`2026-06-03 07:42:26.761374+00`. These rows prove short hardware delivery, but
+they are not accepted as the final thesis ML dataset because gateway logs showed
+ordinary ASCII temperature/humidity reports on the RS485 bus and Modbus RTU ID
+mismatch errors (`id=32`, `id=161`, `id=163`). Next hardware step: send the
+ordinary-protocol `STOP` command, or equivalent vendor configuration command, on
+both XY-MD02 sensors; confirm no automatic ASCII output while idle; then rerun
+the 2+ hour passive Modbus RTU collection.

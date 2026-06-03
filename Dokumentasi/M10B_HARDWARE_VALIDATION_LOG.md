@@ -617,3 +617,162 @@ gateway compatibility fix.
   runs; they did not block the stabilized 190-second M10B validation.
 - Run final TensorFlow training from hardware readings after enough data is
   collected.
+
+## Final Hardware Dataset Collection - Blocked
+
+Status on 2026-06-03:
+
+```text
+Goal: collect source=hardware, quality_status=valid rows for S1 and S2.
+Laptop IP: 192.168.10.112
+Raspberry Pi IP: 192.168.10.108
+Backend: http://192.168.10.112:8081/api/v1
+Frontend: http://localhost:5173
+PostgreSQL host port: 15432
+Gateway process: stopped on Raspberry Pi, PID 1309
+Gateway log: ~/EMS/gateway-rpi/logs/hardware_dataset_20260603T065015Z.log
+Temporary laptop monitor log: %TEMP%/ems-hardware-dataset/monitor.log
+```
+
+Collection config decisions:
+
+```text
+S2 is read before S1 in ignored Pi config.yaml for this collection run.
+modbus.inter_read_delay_ms is overridden to 500 ms in ignored Pi .env.
+No source code changed for this collection setup.
+No tokens were printed.
+```
+
+Baseline count before starting the final collection loop:
+
+```text
+S1 hardware valid rows: 36
+S2 hardware valid rows: 17
+latest_recorded_at: 2026-06-03 06:28:38.577324+00
+```
+
+First post-start validation after several cycles:
+
+```text
+S1 hardware valid rows: 43
+S2 hardware valid rows: 24
+latest_recorded_at: 2026-06-03 06:51:18.013053+00
+
+latest rows:
+S1 | 25.80 | 44.30 | hardware | valid | 2026-06-03 06:51:18.013053+00
+S2 | 25.50 | 45.30 | hardware | valid | 2026-06-03 06:51:18.013053+00
+```
+
+Dashboard summary after start:
+
+```text
+gateway.status=active
+latest_readings.S1.temperature=25.8
+latest_readings.S1.humidity=44.3
+latest_readings.S1.sensor_health_status=normal
+latest_readings.S2.temperature=25.5
+latest_readings.S2.humidity=45.3
+latest_readings.S2.sensor_health_status=normal
+today_summary.total_readings=69
+telegram.enabled=false
+```
+
+Temporary monitor sample 1:
+
+```text
+time: 2026-06-03T13:53:47+07:00
+backend_health=success
+gateway_status=active
+S1=25.9/44.1 at 2026-06-03T13:53:38.016247+07:00
+S2=25.5/45.2 at 2026-06-03T13:53:38.016247+07:00
+S1 hardware valid rows: 57
+S2 hardware valid rows: 38
+latest_recorded_at: 2026-06-03 06:53:38.016247+00
+```
+
+Power risk remains:
+
+```text
+vcgencmd get_throttled
+throttled=0x50000
+```
+
+Do not treat the final ML result as thesis evidence until training is run on the
+collected hardware rows.
+
+Collection stop result:
+
+```text
+Gateway loop stopped on Raspberry Pi.
+Last observed hardware-valid counts:
+S1 hardware valid rows: 273
+S2 hardware valid rows: 253
+latest_recorded_at: 2026-06-03 07:42:26.761374+00
+
+latest rows:
+S1 | 26.10 | 51.90 | hardware | valid | 2026-06-03 07:42:26.761374+00
+S2 | 27.30 | 43.40 | hardware | valid | 2026-06-03 07:42:26.761374+00
+```
+
+These rows prove continued delivery happened for a limited window, but this
+collection is not accepted as the final thesis ML dataset because the long run
+became unstable.
+
+Root cause evidence from gateway log:
+
+```text
+Serial receive buffer contained ordinary ASCII temperature/humidity strings,
+for example values like "26.1 ...,44.4 ...\r\n".
+pymodbus reported:
+ERROR: request ask for id=2 but got id=32, Skipping.
+ERROR: request ask for id=2 but got id=161, Skipping.
+ERROR: request ask for id=2 but got id=163, Skipping.
+```
+
+Interpretation:
+
+- S1/S2 raw Modbus reads remain valid.
+- S1/S2 configured diagnostics remain valid.
+- Short runtime inserts remain valid.
+- The long run is blocked because one or both XY-MD02 devices are emitting
+  ordinary UART/common-protocol automatic reports onto the shared RS485 bus.
+- Those ASCII bytes can be interpreted by `pymodbus` as wrong unit IDs such as
+  `32`, `161`, or `163` instead of the requested Modbus slave ID `2`.
+- A gateway patch that tries to ignore arbitrary ASCII bytes would only be a
+  temporary mitigation. It is not the root fix for final evidence.
+
+Documentation research:
+
+- The XY-MD02 manual states that the device integrates Modbus protocol and
+  ordinary/general UART protocol; the UART/common protocol supports automatic
+  reporting.
+- The same manual lists general-protocol commands:
+  `READ` to trigger one temperature/humidity report, `AUTO` to start automatic
+  reporting, and `STOP` to stop automatic reporting.
+- A vendor listing also describes the product as supporting both Modbus RTU and
+  custom/common protocol, with the common protocol automatically outputting
+  temperature and humidity.
+- Source checked:
+  `https://iot-kmutnb.github.io/blogs/sensors/xy-md02/xy-md02_manual-2.pdf`
+
+Recommended next hardware configuration step:
+
+```text
+1. Keep Raspberry Pi gateway stopped.
+2. Isolate one XY-MD02 sensor at a time on the RS485 adapter.
+3. Open a serial terminal/RS485 configuration tool at 9600 baud, 8 data bits,
+   no parity, 1 stop bit.
+4. Send ASCII command STOP, preferably with CR/LF if the tool requires line
+   ending.
+5. Wait and confirm the sensor no longer emits periodic ASCII temperature and
+   humidity strings while idle.
+6. Send PARAM to inspect settings if the tool supports it.
+7. Repeat for the second XY-MD02 sensor.
+8. Reconnect both sensors on the RS485 bus.
+9. Re-run repeated raw reads for S1 and S2.
+10. Re-run the gateway loop for at least 2 hours only after the bus is quiet
+    while idle.
+```
+
+Final dataset collection remains blocked until XY-MD02 automatic reporting is
+disabled and passive Modbus RTU polling is stable.
