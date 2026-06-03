@@ -876,3 +876,230 @@ Recommended next hardware step:
 ```
 
 M10B remains partial/blocked for final dataset collection.
+
+## Isolated S1 STOP Attempt - Still Auto-Reporting
+
+Status on 2026-06-03 `15:09 +07:00`:
+
+```text
+Goal: test S1 alone after disconnecting S2 from RS485 bus and power/data chain.
+Pi SSH: gamaliel@192.168.10.108
+Gateway path: ~/EMS/gateway-rpi
+Serial port: /dev/ttyUSB0
+Connected sensor: S1 only
+S1 slave ID: 1
+S1 register type: input/function 04
+Register address: 1
+Register count: 2
+Scale: 0.1
+Serial settings: 9600 baud, 8 data bits, no parity, 1 stop bit
+Gateway run loop: not running
+Secrets printed: no
+Code changed: no
+```
+
+STOP commands sent to isolated S1 from Raspberry Pi with `pyserial`:
+
+```text
+STOP\r\n
+STOP\n
+STOP
+Repeated STOP burst with STOP\r, STOP\r\n, STOP\n, STOP
+```
+
+Result:
+
+```text
+ASCII automatic reporting still appeared after each STOP command.
+Each immediate receive check returned 512 bytes of ASCII-like
+temperature/humidity text.
+After the repeated STOP burst and 10-second wait:
+idle_in_waiting_after_10s=3993
+idle_sample still contained repeated humidity/temperature text fragments such as
+"45.7 ...\r\n".
+```
+
+Raw Modbus diagnostic:
+
+```bash
+timeout -s INT 25 python -m gateway.cli diagnose raw --slave-id 1 --address 1 --count 2
+```
+
+Result:
+
+```text
+Reading raw register: register_type=input slave_id=1 address=1 count=2
+RAW_S1_EXIT=124
+```
+
+The timeout interrupted `pymodbus` RTU frame decoding while it was processing
+the noisy receive stream. This raw diagnostic is blocked, not passed.
+
+Configured S1 diagnostic:
+
+```bash
+timeout -s INT 25 python -m gateway.cli diagnose sensor --sensor-code S1
+```
+
+Result:
+
+```text
+Reading configured sensor: sensor_code=S1 slave_id=1
+temperature=26
+humidity=44.9
+SENSOR_S1_EXIT=0
+Cleanup recv buffer before send: 0xe6 0x2c 0x34 0x35 0x2e 0x37 ...
+```
+
+Interpretation:
+
+- Isolating S1 did not stop ordinary UART/common-protocol automatic reporting.
+- `STOP` did not disable automatic reporting for S1 in the current wiring/tool
+  state.
+- S1 can still answer a configured sensor diagnostic after buffer cleanup.
+- Raw one-shot diagnostics are unreliable while S1 continues flooding ASCII
+  reports.
+- No 10-minute gateway loop or 2-hour collection was started.
+- Do not proceed to final dataset collection until S1 idle bus output is quiet.
+
+Recommended next step before S2 isolated test:
+
+```text
+Power-cycle S1 while isolated, then check idle serial output before sending any
+command. If ASCII output resumes immediately after power-up, use a vendor serial
+configuration tool or documented ordinary-protocol parameter command to disable
+automatic reporting / set passive Modbus RTU mode. After S1 is quiet, repeat the
+same isolated test for S2.
+```
+
+## Opportunistic Two-Hour Collection Attempt - Aborted, No Data Growth
+
+Status on 2026-06-03:
+
+```text
+Goal: preliminary/opportunistic hardware collection while final auto-report
+      blocker is still unresolved.
+Dataset status: not final thesis dataset.
+Laptop IP: 192.168.18.9
+Raspberry Pi IP: 192.168.18.33
+Backend from Pi: http://192.168.18.9:8081/api/v1
+PostgreSQL host port: 15432
+Frontend: already listening on localhost:5173
+Code changed: no
+Secrets printed: no
+```
+
+Initial stack state:
+
+```text
+PostgreSQL container already running on host port 15432.
+Backend already listening on 0.0.0.0:8081 and [::]:8081.
+Frontend already listening on localhost:5173.
+Local backend health passed:
+GET http://localhost:8081/api/v1/health
+Pi backend health passed:
+curl http://192.168.18.9:8081/api/v1/health
+```
+
+Baseline hardware-valid counts:
+
+```text
+S1|273|2026-06-03 07:42:26.761374+00
+S2|253|2026-06-03 07:42:26.761374+00
+```
+
+Pi config was updated locally, without printing tokens:
+
+```text
+backend.base_url=http://192.168.18.9:8081/api/v1
+modbus.port=/dev/ttyUSB0
+modbus.register_type=input
+modbus.inter_read_delay_ms=500
+S1 enabled=true slave_id=1 role=ambient
+S2 enabled=true slave_id=2 role=hotspot
+```
+
+First gateway start:
+
+```text
+pid=1002
+log=logs/preliminary_hardware_20260603T115145Z.log
+```
+
+Result:
+
+```text
+No new hardware rows were inserted.
+Gateway log showed repeated HTTP timeouts:
+POST /readings failed after 2 attempt(s): timed out
+POST /gateway/status failed after 2 attempt(s): timed out
+Gateway log also showed repeated pymodbus receive-buffer cleanup with ASCII
+temperature/humidity bytes.
+The gateway was stopped with SIGINT.
+```
+
+Manual backend write sanity check:
+
+```text
+Pi curl health to backend passed.
+A valid manual Python urllib POST to /api/v1/readings returned HTTP 201.
+A direct httpx POST from the Pi also returned HTTP 201.
+The artificial test rows were deleted immediately afterward so the hardware
+dataset remained unpolluted.
+```
+
+Gateway restart attempt:
+
+```text
+pid=1303
+log=logs/preliminary_hardware_retry_20260603T115651Z.log
+```
+
+Result after the requested 30-second wait and later simple checks:
+
+```text
+S1|273|2026-06-03 07:42:26.761374+00
+S2|253|2026-06-03 07:42:26.761374+00
+advanced=false
+```
+
+Simple log tail showed the same failure pattern:
+
+```text
+POST /readings failed after 2 attempt(s): timed out
+POST /gateway/status failed after 2 attempt(s): timed out
+Cleanup recv buffer before send: 0x33 0x32 ... ASCII temperature/humidity bytes
+```
+
+Broken monitor correction:
+
+```text
+The first local monitor used an overly complex SSH status command with shell
+quoting/sed syntax that failed on the Pi side. That monitor was stopped.
+The corrected simple checks used:
+ssh gamaliel@192.168.18.33 "pgrep -af 'python -m gateway.cli run' || true"
+simple DB count queries
+simple latest endpoint calls
+simple tail command with the actual log path
+```
+
+Final stop:
+
+```text
+Gateway pid 1303 was stopped with SIGINT.
+Final process check with ps/grep showed no gateway.cli process.
+```
+
+Conclusion:
+
+- The opportunistic 2-hour collection was not started because row counts did not
+  increase after gateway start/restart.
+- No new valid hardware data was collected in this attempt.
+- The existing hardware-valid counts remained S1 `273` and S2 `253`.
+- The preliminary collection remains blocked by current runtime behavior:
+  gateway loop HTTP sends time out while ASCII auto-report noise continues on
+  the serial bus.
+- Direct Pi-to-backend write sanity checks prove the backend can still accept a
+  valid authenticated readings payload.
+- This run is preliminary/noisy validation only and must not be used as final
+  thesis dataset evidence.
