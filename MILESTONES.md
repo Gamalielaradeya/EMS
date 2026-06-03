@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Done |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - long collection blocked by XY-MD02 auto-report |
 | `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
@@ -325,3 +325,22 @@ Milestone `9` requires explicit user approval.
   gateway active state, and Dashboard summary returning S1/S2 hardware data.
 - Kept Raspberry Pi `throttled=0x50000` as historical undervoltage/throttling
   risk; recommend a clean reboot and recheck before long final evidence runs.
+
+## Milestone 10B Final Collection Blocker
+
+- Attempted to disable XY-MD02 ordinary UART/common-protocol automatic
+  reporting from the Raspberry Pi over `/dev/ttyUSB0`.
+- Sent safe ASCII variants `STOP\r\n`, `STOP\n`, `STOP`, plus a repeated
+  STOP burst at 9600 baud, 8 data bits, no parity, 1 stop bit.
+- The RS485 receive buffer remained noisy after the STOP attempts; after a
+  10-second quiet check, `4080` bytes were still queued with temperature and
+  humidity ASCII text.
+- A requested repeated raw-read validation could not complete because the first
+  raw diagnostic hung on the noisy serial stream; the leftover diagnostic
+  process was stopped.
+- No 10-minute or 2-hour collection was started, and no final ML dataset was
+  marked valid.
+- M10B remains partial: the two-sensor hardware path is validated for short
+  operation, but final long hardware collection is blocked until XY-MD02
+  automatic reporting is disabled, likely by isolating or power-cycling each
+  sensor and applying the vendor `STOP`/passive-mode configuration.

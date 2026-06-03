@@ -477,3 +477,29 @@ Gateway stabilization and hardware validation:
 - Kept `vcgencmd get_throttled=0x50000` as historical undervoltage/throttling
   risk and recommended clean reboot plus recheck before longer final evidence
   capture.
+
+## Milestone 10B - XY-MD02 Auto-Report Disable Attempt
+
+Status: Blocked - automatic reporting persists
+
+Documentation and operator validation only:
+
+- Stopped any Raspberry Pi gateway run-loop before serial tests.
+- Sent safe ASCII `STOP` variants to `/dev/ttyUSB0` using Raspberry Pi
+  `pyserial`: `STOP\r\n`, `STOP\n`, `STOP`, and a repeated burst including
+  `STOP\r`.
+- Did not print tokens or modify committed gateway configuration.
+- Confirmed the RS485 receive buffer remained noisy after STOP attempts; a
+  10-second quiet check still queued `4080` bytes containing ASCII
+  temperature/humidity reports.
+- Attempted the requested repeated raw-read validation, but the first S1 raw
+  diagnostic hung on the noisy serial stream before 20 attempts could complete.
+- Stopped the leftover diagnostic process and confirmed no intended gateway
+  collection loop was left running.
+- Did not start the 10-minute or 2-hour collection and did not mark the final
+  hardware dataset valid.
+- Added no source-code mitigation because ignoring ASCII bytes in software is
+  not the root fix for final thesis evidence.
+- Next required hardware action: power-cycle/isolate each XY-MD02, disable
+  ordinary UART/common-protocol automatic reporting or set passive Modbus RTU
+  mode, verify idle bus silence, then rerun raw reads and long collection.

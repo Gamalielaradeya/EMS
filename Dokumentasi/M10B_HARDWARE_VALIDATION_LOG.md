@@ -2,7 +2,7 @@
 
 ## Status
 
-**Done - two-sensor gateway loop validated**
+**Partial - two-sensor hardware path validated; long collection blocked**
 
 Stage-two validation on 2026-06-03 confirmed Raspberry Pi gateway delivery with
 one connected XY-MD02 sensor as S1. M10B is not complete because S2 was not
@@ -17,6 +17,11 @@ Stabilization on 2026-06-03 added a configurable `300 ms` inter-sensor Modbus
 delay. After deploying that patch to the Raspberry Pi, the canonical gateway
 loop ran for about `190` seconds with both sensors enabled and stored repeated
 hardware rows for both S1 and S2.
+
+Later final dataset collection was stopped because XY-MD02 ordinary
+UART/common-protocol ASCII temperature and humidity reports continued to enter
+the RS485 receive buffer. The two-sensor short hardware path remains valid, but
+the long dataset collection is not valid yet.
 
 ## Summary
 
@@ -776,3 +781,98 @@ Recommended next hardware configuration step:
 
 Final dataset collection remains blocked until XY-MD02 automatic reporting is
 disabled and passive Modbus RTU polling is stable.
+
+## XY-MD02 STOP Attempt - Still Blocked
+
+Status on 2026-06-03:
+
+```text
+Goal: disable ordinary UART/common-protocol automatic reporting.
+Pi SSH: gamaliel@192.168.10.108
+Gateway path: ~/EMS/gateway-rpi
+Serial port: /dev/ttyUSB0
+Serial settings: 9600 baud, 8 data bits, no parity, 1 stop bit
+Gateway run loop: stopped before test
+Secrets printed: no
+Code changed: no
+```
+
+STOP commands sent from Raspberry Pi with `pyserial`:
+
+```text
+STOP\r\n
+STOP\n
+STOP
+```
+
+Result after initial STOP variants:
+
+```text
+ASCII temperature/humidity text was still received immediately after each
+command.
+10-second quiet check still received 3,843,328 bytes while actively draining
+the serial stream.
+Sample bytes contained repeated temperature/humidity text such as:
+27.9 ...,41.6 ...\r\n
+26.0 ...,44.7 ...\r\n
+```
+
+A second safer burst attempt sent repeated variants:
+
+```text
+STOP\r
+STOP\r\n
+STOP\n
+STOP
+```
+
+Result after burst attempt:
+
+```text
+quiet_wait_10s_in_waiting=4080
+quiet_sample still contained repeated ASCII temperature/humidity reports.
+```
+
+Requested repeated raw reads:
+
+```text
+S1 20 attempts: not completed
+S2 20 attempts: not started
+```
+
+Reason:
+
+```text
+The first repeated S1 raw diagnostic did not return before the operator timeout.
+The diagnostic process was left running on the Raspberry Pi and was stopped with
+pkill against gateway.cli.
+```
+
+Conclusion:
+
+- The `STOP` command did not disable automatic reporting while both sensors were
+  connected on the shared RS485 bus.
+- No 10-minute gateway loop was started.
+- No 2-hour final collection was started.
+- The collected rows from the earlier short window remain hardware delivery
+  evidence only, not final ML dataset evidence.
+- Do not add a gateway ASCII-ignore patch as the final fix. The bus must be made
+  quiet in hardware/device configuration.
+
+Recommended next hardware step:
+
+```text
+1. Stop the gateway.
+2. Power-cycle the XY-MD02 sensors, because one checked guide notes cycling
+   power can stop automatic polling when STOP cannot be typed/sent fast enough.
+3. Isolate one XY-MD02 sensor at a time on the RS485 adapter.
+4. Check idle serial output for 10 seconds before sending any command.
+5. Send STOP with CR/LF through a serial terminal or vendor configuration tool.
+6. If STOP still fails, use the vendor/configuration tool to switch the device
+   from ordinary/common UART automatic report mode back to passive Modbus RTU.
+7. Repeat for the second sensor.
+8. Reconnect both sensors and confirm idle bus has zero ASCII reports.
+9. Only then run S1/S2 20-attempt raw reads and the 10-minute gateway loop.
+```
+
+M10B remains partial/blocked for final dataset collection.

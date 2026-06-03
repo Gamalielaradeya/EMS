@@ -943,3 +943,38 @@ Limitations and risks:
   stabilization. Reboot and recheck before long final evidence capture.
 - A separate one-shot SSE capture attempt timed out and was not used as M10B
   pass evidence; backend inserts and latest/dashboard API evidence passed.
+
+## Milestone 10B - XY-MD02 Auto-Report Disable Attempt
+
+Status: Blocked - automatic reporting persists
+
+Serial STOP attempts:
+
+- Passed: confirmed local backend health on `http://localhost:8081/api/v1/health`.
+- Passed: confirmed no intended `python -m gateway.cli run` process remained
+  active before starting the STOP attempt.
+- Ran from Raspberry Pi venv using `pyserial` on `/dev/ttyUSB0`, 9600 baud,
+  8 data bits, no parity, 1 stop bit.
+- Failed: sending `STOP\r\n`, `STOP\n`, and `STOP` did not stop automatic ASCII
+  temperature/humidity output.
+- Failed: a repeated STOP burst using `STOP\r`, `STOP\r\n`, `STOP\n`, and
+  `STOP` did not quiet the bus.
+- Evidence: after a 10-second quiet wait, `ser.in_waiting` still reported
+  `4080` bytes and the sample payload still contained repeated ASCII
+  temperature/humidity strings.
+
+Raw-read validation:
+
+- Blocked: requested S1 `20` raw-read attempts did not complete because the
+  first raw diagnostic hung on the noisy serial stream.
+- Not run: S2 `20` raw-read attempts, 10-minute gateway loop, 2-hour collection,
+  dashboard long-run validation, and final ML dataset validation.
+- Passed: leftover `gateway.cli` diagnostic process was stopped; no intended
+  gateway collection loop remained active.
+
+Result:
+
+- M10B final dataset collection remains blocked by XY-MD02 ordinary
+  UART/common-protocol automatic reporting on the RS485 bus.
+- No code was changed and no software ASCII-ignore mitigation was accepted as a
+  final fix.

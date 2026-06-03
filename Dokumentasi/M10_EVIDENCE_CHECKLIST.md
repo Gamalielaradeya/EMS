@@ -131,6 +131,8 @@ hardware inserts for both sensors. Full evidence is recorded in
   labeled generated development dataset.
 - [x] Attempt final hardware dataset collection with Raspberry Pi gateway,
   backend, PostgreSQL, and dashboard running.
+- [x] Attempt XY-MD02 `STOP` command over Raspberry Pi `/dev/ttyUSB0` to
+  disable ordinary UART/common-protocol automatic reporting.
 - [ ] Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
   sensors and rerun long passive Modbus RTU collection.
 - [ ] Train from hardware readings with `source=hardware` and
@@ -173,3 +175,12 @@ mismatch errors (`id=32`, `id=161`, `id=163`). Next hardware step: send the
 ordinary-protocol `STOP` command, or equivalent vendor configuration command, on
 both XY-MD02 sensors; confirm no automatic ASCII output while idle; then rerun
 the 2+ hour passive Modbus RTU collection.
+
+Follow-up STOP attempt on 2026-06-03 did not clear the bus. `STOP\r\n`,
+`STOP\n`, `STOP`, and a repeated STOP burst were sent over `/dev/ttyUSB0`, but a
+10-second quiet check still found `4080` queued bytes containing repeated ASCII
+temperature/humidity reports. The requested repeated raw-read validation could
+not complete because the first raw diagnostic hung on the noisy serial stream.
+No 10-minute or 2-hour collection was started. Next step remains hardware/device
+configuration: power-cycle and isolate each XY-MD02, stop automatic reporting or
+set passive Modbus RTU mode, confirm idle bus silence, then rerun collection.
