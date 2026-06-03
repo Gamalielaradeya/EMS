@@ -684,3 +684,68 @@ Cleanup:
 - Passed: removed generated model artifacts, report, backend executable, and
   temporary local logs.
 - Retained: ignored ML-worker virtual environment with TensorFlow `2.20.0`.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stage One
+
+Status: Blocked - raw Modbus and laptop inbound backend access
+
+Laptop EMS checks:
+
+- Passed: Docker PostgreSQL running on host port `55432`.
+- Passed: migrations and seed applied to `ems_thermal_lstm`.
+- Passed: backend built and launched on `APP_PORT=8081`.
+- Passed: `GET http://localhost:8081/api/v1/health` returned `success`.
+- Passed: laptop self-check `GET http://192.168.18.9:8081/api/v1/health`
+  returned `success`.
+- Passed: frontend dev server available on `http://localhost:5173`.
+- Blocked from Pi: `curl http://192.168.18.9:8081/api/v1/health` timed out.
+- Blocked: non-admin shell could not add a Windows Firewall inbound rule for
+  TCP `8081`.
+
+Raspberry Pi checks:
+
+- Passed: passwordless SSH to `gamaliel@192.168.18.33`.
+- Passed: hostname `lmnop`.
+- Passed: OS `Debian GNU/Linux 13 (trixie)`.
+- Passed: `python3 --version` returned `Python 3.13.5`.
+- Passed: `git --version` returned `git version 2.47.3`.
+- Passed: `/dev/ttyUSB0` exists with group `dialout`.
+- Passed: `gamaliel` belongs to `dialout`.
+- Passed: `lsusb` identified FT232 / FTDI USB Serial Device.
+- Passed with risk: `vcgencmd get_throttled` returned `throttled=0x50000`;
+  kernel log included repeated `Undervoltage detected!` messages.
+- Passed: gateway repo `/home/gamaliel/EMS/gateway-rpi` on commit `dfe966a`.
+- Passed: gateway virtual environment and `python -m gateway.cli --help`.
+
+Gateway diagnostics:
+
+- Passed: `python -m gateway.cli diagnose ports` listed `/dev/ttyS0` and
+  `/dev/ttyUSB0`.
+- Failed: `python -m gateway.cli diagnose raw --slave-id 1 --address 0
+  --count 2` returned `No response received after 3 retries`.
+- Failed: `python -m gateway.cli diagnose raw --slave-id 1 --address 1
+  --count 2` returned `No response received after 3 retries`.
+- Failed: documented slave-ID check `python -m gateway.cli diagnose raw
+  --slave-id 2 --address 0 --count 2` returned `No response received after 3
+  retries`.
+- Passed: no process was holding `/dev/ttyUSB0` after diagnostics.
+- Failed: `python -m gateway.cli send-test` timed out on both HTTP POST
+  attempts because Pi cannot reach laptop backend on `192.168.18.9:8081`.
+
+Not run:
+
+- Not run: `python -m gateway.cli diagnose sensor --sensor-code S1`; raw
+  Modbus reads did not succeed.
+- Not run: `python -m gateway.cli diagnose sensor --sensor-code S2`; only one
+  XY-MD02 was connected and raw reads did not succeed.
+- Not run: 3-5 minute gateway loop; prerequisites failed.
+- Not run: backend latest readings, hardware SSE, dashboard realtime update,
+  and database row-count evidence from real hardware.
+
+Next validation fixes:
+
+- Fix Raspberry Pi undervoltage before final evidence.
+- Confirm sensor power, RS485 A/B polarity, actual slave ID, baudrate, and
+  XY-MD02 register map.
+- Allow inbound TCP `8081` to the laptop backend or document a temporary SSH
+  tunnel workaround before gateway delivery validation.

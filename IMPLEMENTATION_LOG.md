@@ -340,3 +340,37 @@ Runtime validation and documentation work:
 - Added `Dokumentasi/M10C_TENSORFLOW_TRAINING_LOG.md`.
 - Added no algorithm, application code, or final thesis model result.
 - Kept Milestone `10B` blocked until Raspberry Pi hardware is available.
+
+## Milestone 10B - Raspberry Pi Hardware Validation Stage One
+
+Status: Blocked - raw Modbus and laptop inbound backend access
+
+Hardware validation attempt:
+
+- Confirmed passwordless SSH to Raspberry Pi at `gamaliel@192.168.18.33`.
+- Confirmed hostname `lmnop`, Debian GNU/Linux 13 `trixie`, Python `3.13.5`,
+  and git `2.47.3`.
+- Confirmed gateway repository at `/home/gamaliel/EMS/gateway-rpi` on commit
+  `dfe966a`.
+- Confirmed gateway virtual environment and CLI help are usable.
+- Confirmed FT232 USB RS485 adapter at `/dev/ttyUSB0` and `gamaliel` belongs
+  to the `dialout` group.
+- Created/updated ignored Raspberry Pi gateway `config.yaml` and `.env` with
+  the approved backend URL, serial settings, and S1 slave ID without printing
+  tokens.
+- Confirmed laptop PostgreSQL, migrations, backend on `APP_PORT=8081`, local
+  backend health, LAN self-health, and frontend startup.
+- Recorded Raspberry Pi undervoltage risk: `vcgencmd get_throttled` returned
+  `0x50000` and kernel logs showed repeated undervoltage messages.
+- Ran `diagnose ports`; it detected `/dev/ttyS0` and `/dev/ttyUSB0`.
+- Ran safe raw Modbus reads for slave ID `1` at addresses `0` and `1`; both
+  returned no response after retries.
+- Ran a documented slave ID `2` address `0` check; it also returned no
+  response.
+- Confirmed no process was holding `/dev/ttyUSB0` after diagnostics.
+- Pi-to-laptop backend health and gateway `send-test` timed out against
+  `192.168.18.9:8081`; non-admin firewall rule creation was denied.
+- Did not run configured S1 sensor diagnostic or live gateway loop because raw
+  Modbus reads did not succeed.
+- Added no application code, dependency, feature, or secret-bearing config to
+  the repository.

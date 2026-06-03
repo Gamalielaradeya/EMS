@@ -92,8 +92,12 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 
 ## Gateway Hardware Checklist - M10B
 
-- [ ] Confirm Raspberry Pi Python environment and gateway config.
-- [ ] Confirm USB RS485 adapter appears in `diagnose ports`.
+- [x] Stage-one SSH to Raspberry Pi validated at `gamaliel@192.168.18.33`
+  (`lmnop`).
+- [x] Confirm Raspberry Pi Python environment and gateway config.
+- [x] Confirm USB RS485 adapter appears in `diagnose ports`.
+- [x] Record Raspberry Pi undervoltage warning as hardware risk.
+- [x] Attempt safe raw XY-MD02 reads for one connected sensor.
 - [ ] Read raw XY-MD02 registers for the configured slave IDs.
 - [ ] Validate configured `diagnose sensor --sensor-code S1`.
 - [ ] Validate configured `diagnose sensor --sensor-code S2`.
@@ -101,6 +105,13 @@ SELECT sensor_id, position_x, position_y FROM layout_devices ORDER BY sensor_id;
 - [ ] Disconnect one sensor and capture graceful trouble behavior.
 - [ ] Interrupt backend temporarily and verify bounded buffer plus replay.
 - [ ] Verify heartbeat and gateway recovery behavior.
+
+Stage-one result on 2026-06-03: blocked. `/dev/ttyUSB0` and FT232 were
+detected, but slave ID `1` raw reads at addresses `0` and `1` returned no
+response after retries. A documented slave ID `2` check also returned no
+response. Pi-to-laptop backend health at `192.168.18.9:8081` timed out while
+the laptop backend was healthy locally. Full evidence is recorded in
+`Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md`.
 
 ## ML Training Evidence Checklist
 
@@ -132,5 +143,6 @@ final thesis model quality.
 
 ## Next Step
 
-Resume Milestone `10B` when Raspberry Pi hardware is available. After hardware
-data collection, run final TensorFlow training for Bab 4 evidence.
+Resume Milestone `10B` after fixing raw Modbus response and laptop inbound
+backend access. After hardware data collection, run final TensorFlow training
+for Bab 4 evidence.

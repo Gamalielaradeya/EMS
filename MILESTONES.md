@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Blocked - waiting hardware access |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Blocked - stage-one hardware read and LAN backend blockers |
 | `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
@@ -221,15 +221,28 @@ Milestone `9` requires explicit user approval.
 - Kept simulator readings and manual predictions explicitly limited to local
   integration validation, not thesis evidence.
 
-## Milestone 10B Blocker
+## Milestone 10B Stage-One Blocker
 
-- Raspberry Pi hardware is not physically available.
+- Raspberry Pi SSH access is now available at `gamaliel@192.168.18.33`
+  (`lmnop`).
 - Laptop EMS preparation passed: PostgreSQL migration and seed, backend health
-  on `APP_PORT=8081`, frontend startup, and ZeroTier backend reachability.
-- Raspberry Pi SSH, USB RS485, XY-MD02 diagnostics, gateway delivery, and live
-  run-loop validation were not run.
-- Resume from `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` when hardware
-  access is available.
+  on `APP_PORT=8081`, frontend startup, and laptop LAN self-health on
+  `192.168.18.9:8081`.
+- Raspberry Pi environment checks passed: Debian 13, Python `3.13.5`, git
+  `2.47.3`, FT232 USB RS485 adapter detected at `/dev/ttyUSB0`, and user is in
+  `dialout`.
+- Raspberry Pi undervoltage was recorded with `vcgencmd get_throttled`
+  returning `0x50000`; this is a hardware risk for final evidence.
+- M10B remains blocked because safe raw Modbus reads for slave ID `1` at
+  addresses `0` and `1` returned no response, and a slave ID `2` check also
+  returned no response.
+- M10B also remains blocked because the Pi cannot reach
+  `http://192.168.18.9:8081/api/v1/health`; laptop backend is healthy locally,
+  but Pi-side curl times out and non-admin firewall-rule creation was denied.
+- S1/S2 sensor diagnostics, hardware reading insert, dashboard realtime update,
+  and the 3-5 minute gateway run-loop were not run or claimed.
+- Continue from `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` after fixing
+  RS485/sensor response and laptop inbound backend access.
 
 ## Milestone 10C Completion
 
