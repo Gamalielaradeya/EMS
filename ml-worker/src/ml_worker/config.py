@@ -38,6 +38,7 @@ class Settings:
     learning_rate: float
     early_stopping_patience: int
     history_hours: int
+    infer_interval_seconds: int
 
 
 def load_settings() -> Settings:
@@ -69,6 +70,7 @@ def load_settings() -> Settings:
         learning_rate=_float_env("ML_LEARNING_RATE", 0.001),
         early_stopping_patience=_int_env("ML_EARLY_STOPPING_PATIENCE", 8),
         history_hours=_int_env("ML_HISTORY_HOURS", 168),
+        infer_interval_seconds=_int_env("ML_INFER_INTERVAL_SECONDS", 60),
     )
     _validate(settings)
     return settings
@@ -98,6 +100,7 @@ def _validate(settings: Settings) -> None:
         ("ML_BATCH_SIZE", settings.batch_size),
         ("ML_EARLY_STOPPING_PATIENCE", settings.early_stopping_patience),
         ("ML_HISTORY_HOURS", settings.history_hours),
+        ("ML_INFER_INTERVAL_SECONDS", settings.infer_interval_seconds),
     )
     for name, value in positive_ints:
         if value <= 0:

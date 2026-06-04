@@ -465,3 +465,72 @@ Interpretation:
   not yet strong final thesis model evidence.
 - Keep collecting hardware data and investigate feature/target behavior before
   final model claim.
+
+## M10I Periodic Active-Model Inference Loop
+
+Status: passed.
+
+Date: 2026-06-04 local time.
+
+Purpose:
+
+```text
+Keep backend predictions fresh without retraining.
+Use active model only.
+Use source=hardware and quality_status=valid readings only.
+Submit each result to POST /api/v1/ml/predictions.
+```
+
+Implemented command:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli infer-loop
+```
+
+Runtime configuration:
+
+| Variable | Value |
+|---|---|
+| `ML_ALLOWED_SOURCES` | `hardware` |
+| `ML_ALLOWED_QUALITY_STATUSES` | `valid` |
+| `ML_INFER_INTERVAL_SECONDS` | `60` |
+| Active model | `v20260604_010335` |
+
+Validation process:
+
+- Started `infer-loop` in background without printing token values.
+- Left Raspberry Pi gateway, PostgreSQL, backend, and frontend running.
+- Waited more than two minutes.
+- Confirmed repeated backend prediction inserts.
+- Confirmed dashboard summary exposed latest non-stale `prediction_thermal_status`.
+- Confirmed gateway hardware row counts continued increasing.
+
+Observed prediction updates:
+
+| Prediction id | Predicted for | Predicted S2 | Backend thermal status | Final status |
+|---:|---|---:|---|---|
+| `3` | `2026-06-04T01:42:00+00:00` | `31.6347 C` | `waspada` | `waspada` |
+| `4` | `2026-06-04T01:43:00+00:00` | `31.6157 C` | `waspada` | `waspada` |
+| `5` | `2026-06-04T01:44:00+00:00` | `31.5987 C` | `waspada` | `waspada` |
+| `6` | `2026-06-04T01:45:00+00:00` | `31.5839 C` | `waspada` | `waspada` |
+
+Dashboard summary after loop validation:
+
+```text
+prediction_thermal_status=waspada
+latest_prediction_id=6
+latest_prediction_stale=false
+overall_current_thermal_status=anomali
+```
+
+Gateway continuity:
+
+- Raspberry Pi gateway process remained alive.
+- Gateway log continued showing `POST /api/v1/readings` HTTP `201 Created`.
+- Hardware-valid row counts increased during inference-loop validation.
+
+Limitations:
+
+- This task adds continuous inference only; it does not retrain the model.
+- The active model still inherits M10H limitations: LSTM underperforms
+  persistence and moving-average baselines.

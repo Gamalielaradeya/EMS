@@ -616,3 +616,36 @@ Backend and frontend integration:
   prediction status are visually and textually distinct.
 - Restarted backend on `APP_PORT=8081` after the build and confirmed the
   Raspberry Pi gateway continued posting readings successfully.
+
+## Milestone 10I - Periodic ML Inference Loop
+
+Status: Completed
+
+ML Worker integration:
+
+- Added canonical CLI command `python -m ml_worker.cli infer-loop`.
+- Added `ML_INFER_INTERVAL_SECONDS` with default `60`.
+- Reused existing active-model loading, hardware/valid reading filters,
+  backend base URL, and internal token configuration.
+- Kept single-shot `infer` behavior unchanged.
+- Implemented loop behavior that opens a fresh database connection each cycle,
+  runs inference, submits to protected backend prediction endpoint, logs
+  predicted timestamp, predicted S2, backend thermal status, final status, and
+  backend prediction id.
+- Added failure handling so missing model, insufficient data, backend errors,
+  and unexpected cycle failures are logged and retried on the next interval
+  without crashing the loop.
+- Added config unit tests for default, override, and invalid interval values.
+- Updated ML Worker README and M10 evidence logs.
+
+Runtime validation:
+
+- Started `infer-loop` in the background with `ML_INFER_INTERVAL_SECONDS=60`
+  and active model `v20260604_010335`.
+- Did not stop Raspberry Pi gateway, backend, frontend, or PostgreSQL.
+- Observed backend prediction ids `3`, `4`, `5`, and `6` submitted over more
+  than two minutes.
+- Observed predicted S2 values around `31.58-31.63 C`, classified `waspada`.
+- Confirmed dashboard summary exposed non-stale `prediction_thermal_status`.
+- Confirmed gateway process stayed alive and continued posting hardware
+  readings with HTTP `201 Created`.

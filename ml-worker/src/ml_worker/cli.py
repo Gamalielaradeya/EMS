@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from ml_worker.config import Settings, load_settings
 from ml_worker.database import connect
@@ -27,6 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
     infer_parser = subparsers.add_parser("infer", help="produce one local prediction from the active/latest model")
     infer_parser.add_argument("--version", help="specific model version; defaults to active or latest")
     infer_parser.add_argument("--end", help="ISO-8601 end timestamp; defaults to now")
+
+    infer_loop_parser = subparsers.add_parser(
+        "infer-loop",
+        help="run periodic active-model inference and submit each prediction to the backend",
+    )
+    infer_loop_parser.add_argument("--version", help="specific model version; defaults to active or latest")
     return parser
 
 
@@ -35,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         settings = load_settings()
         configure_logging(settings)
+        if args.command == "infer-loop":
+            return run_infer_loop(settings, version=args.version)
         with connect(settings) as connection:
             if args.command == "train":
                 start_at, end_at = _time_range(args, settings)
@@ -50,6 +59,47 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(json.dumps(result, indent=2, default=str))
     return 0
+
+
+def run_infer_loop(settings: Settings, version: str | None = None) -> int:
+    logger = logging.getLogger(__name__)
+    logger.info("Starting ML infer-loop interval_seconds=%s", settings.infer_interval_seconds)
+    print(f"infer-loop started interval_seconds={settings.infer_interval_seconds}", flush=True)
+    try:
+        while True:
+            started_at = _now()
+            try:
+                with connect(settings) as connection:
+                    result = infer(connection, settings, started_at, version=version)
+                backend_prediction = result.get("backend_prediction") or {}
+                cycle = {
+                    "predicted_at": started_at.isoformat(),
+                    "predicted_for": result.get("predicted_for"),
+                    "predicted_temperature_s2": result.get("predicted_temperature_s2"),
+                    "backend_prediction_id": backend_prediction.get("id"),
+                    "backend_thermal_status": backend_prediction.get("thermal_status"),
+                    "backend_final_status": backend_prediction.get("final_status"),
+                    "submit_result": result.get("mode"),
+                }
+                logger.info(
+                    "Inference submitted predicted_for=%s predicted_s2=%.4f thermal_status=%s final_status=%s",
+                    cycle["predicted_for"],
+                    cycle["predicted_temperature_s2"],
+                    cycle["backend_thermal_status"],
+                    cycle["backend_final_status"],
+                )
+                print(json.dumps(cycle, default=str), flush=True)
+            except (MLWorkerError, OSError, ValueError) as exc:
+                logger.warning("Inference cycle failed: %s", exc)
+                print(f"WARN: inference cycle failed: {exc}", file=sys.stderr, flush=True)
+            except Exception as exc:  # Defensive loop guard: one bad cycle must not stop future inference.
+                logger.exception("Unexpected inference cycle failure")
+                print(f"ERROR: unexpected inference cycle failure: {exc}", file=sys.stderr, flush=True)
+            time.sleep(settings.infer_interval_seconds)
+    except KeyboardInterrupt:
+        logger.info("ML infer-loop stopped by operator")
+        print("infer-loop stopped", flush=True)
+        return 0
 
 
 def _add_time_range_arguments(parser: argparse.ArgumentParser) -> None:

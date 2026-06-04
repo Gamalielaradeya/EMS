@@ -173,6 +173,14 @@ validation showed both S1 and S2 health `normal`, both current thermal statuses
 `anomali`, overall current source `S2`, and gateway POST `/readings` continuing
 with HTTP `201` after backend restart.
 
+Periodic active-model inference was added on 2026-06-04 with
+`python -m ml_worker.cli infer-loop`. Validation used hardware-only valid
+readings, interval `60` seconds, and active model `v20260604_010335`.
+Prediction ids `3`, `4`, `5`, and `6` were submitted through the backend bridge,
+all non-stale and classified `waspada`. Dashboard summary showed
+`prediction_thermal_status=waspada` while gateway hardware collection continued
+with HTTP `201` readings posts.
+
 ## Alert and Telegram Checklist
 
 - [ ] Keep Telegram disabled during dry runs and confirm safe skipped logs.

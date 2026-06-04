@@ -1223,3 +1223,52 @@ Frontend UI validation:
   explicit labels for `Sensor Health`, `Current Thermal`, and
   `Prediction status`.
 - Browser visual inspection was not available in this tool session.
+
+## Milestone 10I - Periodic ML Inference Loop
+
+Status: Passed
+
+ML Worker checks:
+
+- Passed: `python -m compileall -q src tests`.
+- Passed: `python -m unittest discover -s tests -v` (`13` tests).
+- Passed: `python -m ml_worker.cli --help` includes `infer-loop`.
+- Passed: `python -m ml_worker.cli infer-loop --help`.
+
+Runtime validation:
+
+- Started `infer-loop` in the background with interval `60` seconds.
+- Used active model `v20260604_010335`.
+- Used only `ML_ALLOWED_SOURCES=hardware` and
+  `ML_ALLOWED_QUALITY_STATUSES=valid`.
+- Did not retrain.
+- Did not stop Raspberry Pi gateway, backend, frontend, or PostgreSQL.
+
+Observed backend prediction updates:
+
+| Sample | Prediction id | Predicted S2 | Thermal status | Final status | Stale |
+|---:|---:|---:|---|---|---|
+| 1 | `3` | `31.6347 C` | `waspada` | `waspada` | `false` |
+| 2 | `4` | `31.6157 C` | `waspada` | `waspada` | `false` |
+| 3 | `5` | `31.5987 C` | `waspada` | `waspada` | `false` |
+| 4 | `6` | `31.5839 C` | `waspada` | `waspada` | `false` |
+
+Dashboard/API validation:
+
+- Passed: `GET /api/v1/dashboard/summary` returned
+  `prediction_thermal_status=waspada`.
+- Passed: latest prediction id was `6` and `is_stale=false`.
+- Passed: current thermal status remained separate from prediction status.
+
+Gateway continuity:
+
+- Passed: Raspberry Pi gateway process remained alive.
+- Passed: gateway log showed repeated `POST /api/v1/readings` HTTP
+  `201 Created`.
+- Passed: hardware-valid row counts increased while infer-loop was running.
+
+Limitations:
+
+- The loop was left running for continued fresh predictions.
+- No periodic retraining was implemented.
+- Active model quality limitations from M10H still apply.

@@ -48,6 +48,7 @@ Important values:
 | `ML_WINDOW_SIZE` | `30` | input sequence length |
 | `ML_HORIZON_MINUTES` | `5` | future S2 prediction horizon |
 | `ML_EPOCHS` | `50` | maximum LSTM epochs |
+| `ML_INFER_INTERVAL_SECONDS` | `60` | periodic inference loop interval |
 | `ML_LOG_FILE` | `./ml-worker.log` | ignored local worker log |
 
 For development validation only, set `ML_ALLOWED_SOURCES=simulator`. Simulator
@@ -60,6 +61,7 @@ metrics are not thesis results.
 ./.venv/Scripts/python.exe -m ml_worker.cli train --activate
 ./.venv/Scripts/python.exe -m ml_worker.cli evaluate
 ./.venv/Scripts/python.exe -m ml_worker.cli infer
+./.venv/Scripts/python.exe -m ml_worker.cli infer-loop
 ```
 
 All commands accept PostgreSQL settings through environment variables.
@@ -68,6 +70,24 @@ All commands accept PostgreSQL settings through environment variables.
 preferred, then the latest model. `infer` submits its final S2 prediction to
 `POST /api/v1/ml/predictions`; it fails safely when backend or token is
 unavailable.
+
+`infer-loop` uses the same active-model and backend bridge behavior, but repeats
+inference every `ML_INFER_INTERVAL_SECONDS` seconds until stopped. Each cycle
+loads latest valid hardware readings, submits a prediction, logs the predicted
+timestamp, predicted S2 value, backend thermal status, and continues on the next
+cycle if one inference fails. Stop it with `Ctrl+C`.
+
+Example runtime validation:
+
+```powershell
+$env:ML_ALLOWED_SOURCES = "hardware"
+$env:ML_ALLOWED_QUALITY_STATUSES = "valid"
+$env:ML_INFER_INTERVAL_SECONDS = "60"
+./.venv/Scripts/python.exe -m ml_worker.cli infer-loop
+```
+
+Keep this process running alongside the backend when the dashboard needs a
+fresh non-stale prediction stream. It uses the active model; it does not retrain.
 
 ## Pipeline
 
