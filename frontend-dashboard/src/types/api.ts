@@ -26,6 +26,7 @@ export interface DashboardReading {
   temperature: number
   humidity: number
   sensor_health_status: SensorHealthStatus
+  current_thermal_status: ThermalStatus
   quality_status: string
   recorded_at: string
 }
@@ -88,6 +89,9 @@ export interface DashboardEvent {
 export interface DashboardSummary {
   gateway: GatewaySummary | null
   latest_readings: Partial<Record<"S1" | "S2", DashboardReading>>
+  overall_current_thermal_status: ThermalStatus
+  overall_current_thermal_source_sensor: SensorCode | null
+  prediction_thermal_status: ThermalStatus | null
   latest_prediction: PredictionSummary | null
   active_model: ActiveModelSummary | null
   latest_metrics: MetricsSummary | null

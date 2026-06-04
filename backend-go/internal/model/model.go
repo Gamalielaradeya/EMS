@@ -86,13 +86,14 @@ type GatewaySummary struct {
 }
 
 type DashboardReading struct {
-	SensorCode         string    `json:"sensor_code"`
-	SensorRole         string    `json:"sensor_role"`
-	Temperature        float64   `json:"temperature"`
-	Humidity           float64   `json:"humidity"`
-	SensorHealthStatus string    `json:"sensor_health_status"`
-	QualityStatus      string    `json:"quality_status"`
-	RecordedAt         time.Time `json:"recorded_at"`
+	SensorCode           string    `json:"sensor_code"`
+	SensorRole           string    `json:"sensor_role"`
+	Temperature          float64   `json:"temperature"`
+	Humidity             float64   `json:"humidity"`
+	SensorHealthStatus   string    `json:"sensor_health_status"`
+	CurrentThermalStatus string    `json:"current_thermal_status"`
+	QualityStatus        string    `json:"quality_status"`
+	RecordedAt           time.Time `json:"recorded_at"`
 }
 
 type PredictionSummary struct {
@@ -140,14 +141,17 @@ type DashboardEvent struct {
 }
 
 type DashboardSummary struct {
-	Gateway          *GatewaySummary             `json:"gateway"`
-	LatestReadings   map[string]DashboardReading `json:"latest_readings"`
-	LatestPrediction *PredictionSummary          `json:"latest_prediction"`
-	ActiveModel      *ActiveModelSummary         `json:"active_model"`
-	LatestMetrics    *MetricsSummary             `json:"latest_metrics"`
-	TodaySummary     TodaySummary                `json:"today_summary"`
-	Telegram         TelegramSummary             `json:"telegram"`
-	RecentEvents     []DashboardEvent            `json:"recent_events"`
+	Gateway                           *GatewaySummary             `json:"gateway"`
+	LatestReadings                    map[string]DashboardReading `json:"latest_readings"`
+	OverallCurrentThermalStatus       string                      `json:"overall_current_thermal_status"`
+	OverallCurrentThermalSourceSensor *string                     `json:"overall_current_thermal_source_sensor"`
+	PredictionThermalStatus           *string                     `json:"prediction_thermal_status"`
+	LatestPrediction                  *PredictionSummary          `json:"latest_prediction"`
+	ActiveModel                       *ActiveModelSummary         `json:"active_model"`
+	LatestMetrics                     *MetricsSummary             `json:"latest_metrics"`
+	TodaySummary                      TodaySummary                `json:"today_summary"`
+	Telegram                          TelegramSummary             `json:"telegram"`
+	RecentEvents                      []DashboardEvent            `json:"recent_events"`
 }
 
 type SystemLog struct {

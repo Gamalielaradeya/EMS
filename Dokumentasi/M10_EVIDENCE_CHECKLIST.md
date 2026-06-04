@@ -165,6 +165,14 @@ with predicted S2 `32.7849 C` and `final_status=anomali`. This is better
 dataset coverage than M10F, but it is still not final model-quality evidence
 because persistence and moving-average baselines still outperform the LSTM.
 
+Current-reading thermal classification was added on 2026-06-04 before periodic
+ML inference. `GET /api/v1/dashboard/summary` now separates
+`sensor_health_status`, per-sensor `current_thermal_status`,
+`overall_current_thermal_status`, and `prediction_thermal_status`. Runtime
+validation showed both S1 and S2 health `normal`, both current thermal statuses
+`anomali`, overall current source `S2`, and gateway POST `/readings` continuing
+with HTTP `201` after backend restart.
+
 ## Alert and Telegram Checklist
 
 - [ ] Keep Telegram disabled during dry runs and confirm safe skipped logs.

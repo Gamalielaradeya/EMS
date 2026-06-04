@@ -12,7 +12,8 @@ interface SensorReadingCardProps {
 }
 
 export function SensorReadingCard({ sensorCode, sensorRole, reading }: SensorReadingCardProps) {
-  const status = reading?.sensor_health_status || "inactive"
+  const healthStatus = reading?.sensor_health_status || "inactive"
+  const currentThermalStatus = reading?.current_thermal_status || "normal"
 
   return (
     <Card>
@@ -23,7 +24,10 @@ export function SensorReadingCard({ sensorCode, sensorRole, reading }: SensorRea
           </p>
           <CardTitle className="mt-1">{sensorRole} sensor</CardTitle>
         </div>
-        <StatusBadge status={status} />
+        <div className="flex flex-col items-end gap-2">
+          <StatusBadge label={`Sensor Health: ${healthStatus}`} status={healthStatus} />
+          <StatusBadge label={`Current Thermal: ${currentThermalStatus}`} status={currentThermalStatus} />
+        </div>
       </CardHeader>
       <CardContent className="pt-5">
         <div className="grid grid-cols-2 gap-3">

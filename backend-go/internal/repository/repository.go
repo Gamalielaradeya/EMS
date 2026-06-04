@@ -458,8 +458,9 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 		return model.DashboardSummary{}, err
 	}
 	summary := model.DashboardSummary{
-		LatestReadings: make(map[string]model.DashboardReading),
-		RecentEvents:   make([]model.DashboardEvent, 0),
+		LatestReadings:              make(map[string]model.DashboardReading),
+		OverallCurrentThermalStatus: "normal",
+		RecentEvents:                make([]model.DashboardEvent, 0),
 	}
 
 	var gateway model.GatewaySummary
@@ -508,7 +509,17 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 			rows.Close()
 			return model.DashboardSummary{}, fmt.Errorf("scan dashboard reading: %w", err)
 		}
+		reading.CurrentThermalStatus = classifyCurrentThermalStatus(reading.Temperature, settings)
 		summary.LatestReadings[reading.SensorCode] = reading
+		readingSeverity := currentThermalSeverity(reading.CurrentThermalStatus)
+		overallSeverity := currentThermalSeverity(summary.OverallCurrentThermalStatus)
+		if summary.OverallCurrentThermalSourceSensor == nil ||
+			readingSeverity > overallSeverity ||
+			(readingSeverity == overallSeverity && reading.SensorCode == "S2") {
+			summary.OverallCurrentThermalStatus = reading.CurrentThermalStatus
+			sourceSensor := reading.SensorCode
+			summary.OverallCurrentThermalSourceSensor = &sourceSensor
+		}
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -545,6 +556,7 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 	)
 	if err == nil {
 		summary.LatestPrediction = &prediction
+		summary.PredictionThermalStatus = &prediction.ThermalStatus
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return model.DashboardSummary{}, fmt.Errorf("get dashboard latest prediction: %w", err)
 	}
@@ -643,6 +655,27 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 
 func (r *Repository) InsertSystemLog(ctx context.Context, source, level, message string, context map[string]any) (model.SystemLog, error) {
 	return insertSystemLog(ctx, r.db, source, level, message, context)
+}
+
+func classifyCurrentThermalStatus(temperature float64, settings model.PredictionSettings) string {
+	if temperature < settings.ThresholdNormalMax {
+		return "normal"
+	}
+	if temperature <= settings.ThresholdAnomalyMin {
+		return "waspada"
+	}
+	return "anomali"
+}
+
+func currentThermalSeverity(status string) int {
+	switch status {
+	case "anomali":
+		return 2
+	case "waspada":
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (r *Repository) MarkOfflineStatuses(ctx context.Context, now time.Time, fallbackTimeoutMinutes int) ([]model.StatusChange, error) {

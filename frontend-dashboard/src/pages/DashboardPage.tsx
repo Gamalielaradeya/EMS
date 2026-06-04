@@ -2,7 +2,6 @@ import {
   Activity,
   BrainCircuit,
   Database,
-  Gauge,
   RefreshCw,
   ShieldCheck,
   Wifi,
@@ -21,9 +20,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useReadingHistory } from "@/hooks/useReadingHistory"
-import { formatDateTime, formatMeasurement } from "@/lib/format"
-import { resolveSystemStatus } from "@/lib/status"
-import type { ReadingHistoryFilters, SensorHealthStatus } from "@/types/api"
+import { formatDateTime } from "@/lib/format"
+import type { ReadingHistoryFilters } from "@/types/api"
 
 const dashboardHistoryFilters: ReadingHistoryFilters = { limit: 120 }
 
@@ -32,13 +30,9 @@ export function DashboardPage() {
   const history = useReadingHistory(dashboardHistoryFilters, eventRevision)
   const s1 = summary?.latest_readings.S1
   const s2 = summary?.latest_readings.S2
-  const systemStatus = resolveSystemStatus(
-    summary?.gateway?.status,
-    [s1?.sensor_health_status, s2?.sensor_health_status].filter(
-      (status): status is SensorHealthStatus => Boolean(status),
-    ),
-    summary?.latest_prediction?.final_status,
-  )
+  const currentThermalStatus = summary?.overall_current_thermal_status || "normal"
+  const currentThermalSource = summary?.overall_current_thermal_source_sensor
+  const predictionThermalStatus = summary?.prediction_thermal_status
 
   return (
     <div className="space-y-6">
@@ -63,12 +57,15 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-sidebar-muted">
-                System condition
+                Current thermal condition
               </p>
-              <p className="mt-1 font-display text-xl font-bold">Priority status assembly</p>
+              <p className="mt-1 font-display text-xl font-bold">Actual S1/S2 reading classification</p>
             </div>
           </div>
-          <StatusBadge label={`System: ${systemStatus}`} status={systemStatus} />
+          <StatusBadge
+            label={`Current Thermal: ${currentThermalStatus}${currentThermalSource ? ` (${currentThermalSource})` : ""}`}
+            status={currentThermalStatus}
+          />
         </CardContent>
       </Card>
 
@@ -89,17 +86,17 @@ export function DashboardPage() {
               value={summary?.gateway?.status || "Unavailable"}
             />
             <SummaryMetric
-              detail={summary?.latest_prediction ? `For ${formatDateTime(summary.latest_prediction.predicted_for)}` : "Model inference has not produced a value."}
-              icon={BrainCircuit}
-              label="Predicted S2"
+              detail={currentThermalSource ? `Worst latest actual reading from ${currentThermalSource}.` : "No latest actual reading has arrived yet."}
+              icon={ShieldCheck}
+              label="Current thermal status"
               tone="accent"
-              value={formatMeasurement(summary?.latest_prediction?.predicted_temperature, "°C")}
+              value={currentThermalStatus}
             />
             <SummaryMetric
-              detail={summary?.active_model ? `Active version ${summary.active_model.version}` : "Train and activate a model in a later milestone."}
-              icon={Gauge}
-              label="Model readiness"
-              value={summary?.active_model ? "Ready" : "Not ready"}
+              detail={summary?.latest_prediction ? `Predicted S2 for ${formatDateTime(summary.latest_prediction.predicted_for)}.` : "Model inference has not produced a value."}
+              icon={BrainCircuit}
+              label="Prediction status"
+              value={predictionThermalStatus || "No prediction"}
             />
             <SummaryMetric
               detail="Accepted sensor records since start of local day."

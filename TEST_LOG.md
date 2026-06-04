@@ -1175,3 +1175,51 @@ Limitations:
 - This run is a larger hardware candidate, not final thesis model-quality
   evidence.
 - No periodic inference service was implemented in this task.
+
+## Milestone 10G - Current Thermal Status Classification
+
+Status: Passed
+
+Backend checks:
+
+- Passed: `gofmt` on changed backend files.
+- Passed: `go test ./...`.
+- Passed: `go vet ./...`.
+- Passed: `go build ./cmd/server`.
+- Passed: current thermal status boundary unit tests for `normal`, `waspada`,
+  and `anomali`.
+
+Frontend checks:
+
+- Passed: `npm run typecheck`.
+- Passed: `npm run lint`.
+- Passed: `npm run build`.
+
+Runtime API validation:
+
+- Passed: backend restarted on `APP_PORT=8081` and
+  `GET /api/v1/health` returned healthy database status.
+- Passed: `GET /api/v1/dashboard/summary` included:
+  `latest_readings.S1.current_thermal_status`,
+  `latest_readings.S2.current_thermal_status`,
+  `overall_current_thermal_status`,
+  `overall_current_thermal_source_sensor`, and `prediction_thermal_status`.
+- Passed: current live S1 reading `33.6 C` classified as `anomali`.
+- Passed: current live S2 reading `33.6 C` classified as `anomali`.
+- Passed: overall current thermal status returned `anomali` with source `S2`.
+- Passed: sensor health remained separate and stayed `normal` for S1 and S2.
+- Passed: stale prediction was not exposed as active `prediction_thermal_status`.
+
+Gateway continuity:
+
+- Passed: hardware row counts increased after backend restarts.
+- Passed: Raspberry Pi gateway process remained alive.
+- Passed: Raspberry Pi gateway log showed repeated
+  `POST /api/v1/readings` HTTP `201 Created` responses after backend restart.
+
+Frontend UI validation:
+
+- Passed by typecheck/build and source inspection: dashboard now renders
+  explicit labels for `Sensor Health`, `Current Thermal`, and
+  `Prediction status`.
+- Browser visual inspection was not available in this tool session.

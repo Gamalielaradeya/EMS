@@ -591,3 +591,28 @@ Documentation and ML runtime validation only:
 - Recorded limitation: despite larger dataset, persistence and moving-average
   baselines still outperform the LSTM, so this remains candidate evidence, not
   final model quality evidence.
+
+## Milestone 10G - Current Thermal Status Classification
+
+Status: Completed
+
+Backend and frontend integration:
+
+- Added current actual-reading thermal classification to dashboard summary
+  without changing gateway or ML Worker behavior.
+- Kept `sensor_health_status` separate from `current_thermal_status`.
+- Added per-sensor `current_thermal_status` for S1 and S2 latest readings.
+- Added `overall_current_thermal_status` and
+  `overall_current_thermal_source_sensor`, using severity order
+  `anomali > waspada > normal` and preferring S2 on equal severity because S2
+  is the hotspot/prediction target.
+- Added `prediction_thermal_status` only when a latest non-stale prediction is
+  available.
+- Reused settings thresholds `threshold_normal_max` and
+  `threshold_anomaly_min`, with existing defaults `30.0` and `32.0`.
+- Did not change existing LSTM prediction classification, Telegram behavior,
+  anomaly-event creation, gateway code, or ML Worker code.
+- Updated dashboard UI labels so sensor health, current thermal status, and
+  prediction status are visually and textually distinct.
+- Restarted backend on `APP_PORT=8081` after the build and confirmed the
+  Raspberry Pi gateway continued posting readings successfully.
