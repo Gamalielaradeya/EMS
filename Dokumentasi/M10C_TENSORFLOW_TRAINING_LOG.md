@@ -330,3 +330,138 @@ Limitations:
   evidence yet.
 - XY-MD02 automatic-report/noisy-bus risk remains part of the hardware evidence
   context.
+
+## M10H Larger Overnight Hardware Dataset Training
+
+Status: passed as larger hardware training candidate.
+
+Date: 2026-06-04 local time.
+
+Dataset source:
+
+```text
+Source filter: hardware
+Quality filter: valid
+Sensors: S1 ambient/reference and S2 hotspot/exhaust
+Target: future_temperature_s2, five minutes ahead
+Resample interval: 1 minute
+Window size: 30
+Horizon: 5 minutes
+Split: chronological only
+Epochs: 50
+Batch size: 32
+```
+
+Collection status before training:
+
+| Sensor | Rows | First hardware timestamp | Latest hardware timestamp |
+|---|---:|---|---|
+| S1 | `2,602` | `2026-06-03 01:17:26.270295+00` | `2026-06-04 01:00:38.723418+00` |
+| S2 | `2,582` | `2026-06-03 05:39:31.022051+00` | `2026-06-04 01:00:38.723418+00` |
+
+The latest hardware row was only seconds behind database `now()`, so collection
+was still running during the training run.
+
+Dry dataset check:
+
+| Item | Count |
+|---|---:|
+| Raw S1/S2 rows loaded | `5,198` |
+| Usable one-minute resampled rows | `496` |
+| Labeled rows after five-minute target shift | `491` |
+| Chronological train rows | `343` |
+| Chronological validation rows | `73` |
+| Chronological test rows | `75` |
+| Train windows | `313` |
+| Validation windows | `43` |
+| Test windows | `45` |
+
+Training command:
+
+```powershell
+$env:ML_ALLOWED_SOURCES = "hardware"
+$env:ML_ALLOWED_QUALITY_STATUSES = "valid"
+$env:ML_EPOCHS = "50"
+$env:ML_BATCH_SIZE = "32"
+./.venv/Scripts/python.exe -m ml_worker.cli train --activate
+```
+
+Generated active model:
+
+```text
+v20260604_010335
+```
+
+Generated local artifacts, not committed:
+
+```text
+ml-worker/models/ems_s2_lstm_v20260604_010335/model.keras
+ml-worker/models/ems_s2_lstm_v20260604_010335/feature_scaler.pkl
+ml-worker/models/ems_s2_lstm_v20260604_010335/target_scaler.pkl
+ml-worker/models/ems_s2_lstm_v20260604_010335/model_metadata.json
+ml-worker/reports/ems_s2_lstm_v20260604_010335/training_report.json
+```
+
+Training metrics in Celsius:
+
+| Model | RMSE | MAE | MAPE |
+|---|---:|---:|---:|
+| LSTM | `1.2221` | `0.7854` | `2.3028%` |
+| Persistence baseline | `0.9654` | `0.3752` | `1.0638%` |
+| Moving-average baseline | `0.9805` | `0.3954` | `1.1244%` |
+
+Evaluation command:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli evaluate
+```
+
+Evaluation metrics in Celsius:
+
+| Model | RMSE | MAE | MAPE |
+|---|---:|---:|---:|
+| LSTM | `1.4902` | `0.9049` | `2.6127%` |
+| Persistence baseline | `1.1839` | `0.4763` | `1.3287%` |
+| Moving-average baseline | `1.2384` | `0.5074` | `1.4180%` |
+
+Inference command:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli infer
+```
+
+Backend bridge result:
+
+| Item | Value |
+|---|---|
+| Predicted S2 temperature | `32.7849 C` |
+| Predicted for | `2026-06-04T01:08:00Z` |
+| Backend submission | Passed |
+| Backend prediction id | `2` |
+| Thermal status | `anomali` |
+| Final status | `anomali` |
+| Stale | `false` |
+
+Backend/database verification:
+
+- `model_versions`: two models total, one active model `v20260604_010335`.
+- `model_metrics`: two rows total, latest row for `v20260604_010335`.
+- `baseline_results`: persistence and moving-average rows exist for the new
+  model.
+- `predictions/latest`: returned the submitted non-stale prediction.
+
+Hardware-valid rows after verification continued to increase:
+
+| Sensor | Rows | Latest hardware timestamp |
+|---|---:|---|
+| S1 | `2,628` | `2026-06-04 01:04:58.726242+00` |
+| S2 | `2,608` | `2026-06-04 01:04:58.726242+00` |
+
+Interpretation:
+
+- Larger overnight hardware dataset was sufficient for normal minimum-row
+  training without small-dataset ratio overrides.
+- LSTM still underperforms persistence and moving-average baselines, so it is
+  not yet strong final thesis model evidence.
+- Keep collecting hardware data and investigate feature/target behavior before
+  final model claim.

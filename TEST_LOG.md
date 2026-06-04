@@ -1100,3 +1100,78 @@ Limitations:
 - Baselines outperform the LSTM in both train-result and evaluate-result
   metrics.
 - This is not final thesis model quality evidence.
+
+## Milestone 10H - Larger Hardware LSTM Candidate Training
+
+Status: Passed as larger hardware training candidate
+
+Runtime checks:
+
+- Passed: `GET http://localhost:8081/api/v1/health`.
+- Passed: PostgreSQL Docker container was reachable on host port `15432`.
+- Passed: collection was still running; latest hardware row was seconds behind
+  database `now()`.
+
+Hardware dataset checks:
+
+- Passed: hardware-valid counts before training were S1 `2,602` and S2
+  `2,582`.
+- Passed: latest hardware timestamp before training was
+  `2026-06-04 01:00:38.723418+00`.
+- Passed: paired minute buckets before training: `442`.
+- Passed: ML dry check loaded `5,198` raw hardware rows and produced `496`
+  usable one-minute rows.
+- Passed: target creation produced `491` labeled rows after five-minute shift.
+- Passed: chronological split produced train `343`, validation `73`, and test
+  `75` rows.
+- Passed: window counts were train `313`, validation `43`, and test `45`.
+
+Training command:
+
+```powershell
+$env:ML_ALLOWED_SOURCES = "hardware"
+$env:ML_ALLOWED_QUALITY_STATUSES = "valid"
+$env:ML_EPOCHS = "50"
+$env:ML_BATCH_SIZE = "32"
+./.venv/Scripts/python.exe -m ml_worker.cli train --activate
+```
+
+Training result:
+
+- Passed: model `v20260604_010335` trained and activated.
+- Passed: artifacts generated locally: Keras model, feature scaler, target
+  scaler, metadata, and training report.
+- Passed: LSTM training metrics were RMSE `1.2221`, MAE `0.7854`, MAPE
+  `2.3028%`.
+- Passed: persistence baseline metrics were RMSE `0.9654`, MAE `0.3752`, MAPE
+  `1.0638%`.
+- Passed: moving-average baseline metrics were RMSE `0.9805`, MAE `0.3954`,
+  MAPE `1.1244%`.
+
+Evaluate and infer:
+
+- Passed: `python -m ml_worker.cli evaluate`.
+- Evaluation LSTM metrics: RMSE `1.4902`, MAE `0.9049`, MAPE `2.6127%`.
+- Evaluation persistence baseline: RMSE `1.1839`, MAE `0.4763`, MAPE
+  `1.3287%`.
+- Evaluation moving-average baseline: RMSE `1.2384`, MAE `0.5074`, MAPE
+  `1.4180%`.
+- Passed: `python -m ml_worker.cli infer` submitted through the backend bridge.
+- Passed: backend stored prediction id `2`, predicted S2 `32.7849 C`,
+  `thermal_status=anomali`, `final_status=anomali`, `is_stale=false`.
+
+Backend verification:
+
+- Passed: `GET /api/v1/predictions/latest`.
+- Passed: `GET /api/v1/model-metrics/latest`.
+- Passed: `GET /api/v1/model-comparison/latest`.
+- Passed: PostgreSQL showed two model versions, one active model
+  `v20260604_010335`, two model-metrics rows, persistence and moving-average
+  baseline rows for both training runs, and two prediction rows.
+
+Limitations:
+
+- LSTM still underperforms both baselines.
+- This run is a larger hardware candidate, not final thesis model-quality
+  evidence.
+- No periodic inference service was implemented in this task.

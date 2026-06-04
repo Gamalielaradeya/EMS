@@ -561,3 +561,33 @@ Documentation and ML runtime validation only:
 - Recorded limitations: short dataset, small validation/test windows, and
   baselines outperforming the LSTM, so this is not final Bab 4 model quality
   evidence.
+
+## Milestone 10H - Larger Hardware LSTM Candidate Training
+
+Status: Completed - larger hardware candidate only
+
+Documentation and ML runtime validation only:
+
+- Did not stop the Raspberry Pi gateway, backend, frontend, or PostgreSQL.
+- Used only `source=hardware` and `quality_status=valid` rows.
+- Confirmed live collection before training: S1 `2,602`, S2 `2,582`, latest
+  hardware timestamp `2026-06-04 01:00:38.723418+00`, only seconds behind
+  database time.
+- Confirmed larger paired dataset after overnight collection: `5,198` raw rows,
+  `496` usable one-minute rows, and `491` labeled rows after five-minute target
+  shift.
+- Used default chronological split ratios with `ML_EPOCHS=50` and
+  `ML_BATCH_SIZE=32`.
+- Trained and activated hardware candidate model `v20260604_010335`.
+- Generated local artifacts under `ml-worker/models/ems_s2_lstm_v20260604_010335`
+  and `ml-worker/reports/ems_s2_lstm_v20260604_010335`; these were not staged.
+- Ran evaluate and infer.
+- Submitted inference through the protected backend ML bridge; backend stored
+  prediction id `2` with predicted S2 `32.7849 C`, `thermal_status=anomali`,
+  and `final_status=anomali`.
+- Verified API/database state: two model versions total, active model
+  `v20260604_010335`, latest metrics row, persistence and moving-average
+  baseline rows, and latest non-stale prediction.
+- Recorded limitation: despite larger dataset, persistence and moving-average
+  baselines still outperform the LSTM, so this remains candidate evidence, not
+  final model quality evidence.

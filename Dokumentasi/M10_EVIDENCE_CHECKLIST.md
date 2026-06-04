@@ -157,6 +157,14 @@ evidence only: the dataset is short, validation/test windows are small, and
 both baselines outperform the LSTM. Do not present it as final Bab 4 model
 quality.
 
+Larger overnight hardware candidate training on 2026-06-04 produced active
+model `v20260604_010335` from hardware-only valid rows. It used `496` usable
+one-minute rows, `491` labeled rows, and chronological windows of train `313`,
+validation `43`, and test `45`. The backend bridge stored prediction id `2`
+with predicted S2 `32.7849 C` and `final_status=anomali`. This is better
+dataset coverage than M10F, but it is still not final model-quality evidence
+because persistence and moving-average baselines still outperform the LSTM.
+
 ## Alert and Telegram Checklist
 
 - [ ] Keep Telegram disabled during dry runs and confirm safe skipped logs.
