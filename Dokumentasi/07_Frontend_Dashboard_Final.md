@@ -479,17 +479,17 @@ Frontend mengubah rasio menjadi pixel berdasarkan ukuran gambar saat render.
 
 ### 12.1 Tujuan
 
-Menampilkan anomaly events, notification logs, dan system logs.
+Menampilkan status events, notification logs, dan system logs.
 
 ### 12.2 Tab Final
 
 ```text
-Anomaly Events
+Status Events
 Notifications
 System Logs
 ```
 
-### 12.3 Anomaly Events Table Columns
+### 12.3 Status Events Table Columns
 
 ```text
 Detected At
@@ -542,7 +542,7 @@ Context
 | Kode | Kriteria |
 |---|---|
 | FE-EV-001 | Semua tab tampil |
-| FE-EV-002 | Anomaly events tampil |
+| FE-EV-002 | Status events tampil |
 | FE-EV-003 | Notification logs tampil |
 | FE-EV-004 | System logs tampil |
 | FE-EV-005 | Filter dasar bekerja |

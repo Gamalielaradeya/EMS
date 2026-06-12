@@ -1,12 +1,12 @@
 # EMS Thermal LSTM
 
-Hardware-first thesis engineering prototype for server testbed thermal monitoring.
+Hardware-first thesis engineering prototype for an **Early Warning System pada EMS Server** using LSTM-based S2 temperature forecasting five minutes ahead.
 
 Main flow:
 
 ```text
 XY-MD02 S1/S2 -> Raspberry Pi gateway -> Go backend -> PostgreSQL -> React dashboard
-PostgreSQL -> Python ML worker -> protected backend prediction endpoint -> alert + Telegram
+PostgreSQL -> Python ML worker -> protected backend prediction endpoint -> early warning + Telegram
 ```
 
 ## Documentation
@@ -76,4 +76,6 @@ If port `5432` is already used locally, set `POSTGRES_PORT` in the local `.env` 
 Milestones `-1` through `9` and local integration Milestone `10A` are complete.
 Milestone `10B` remains pending for Raspberry Pi hardware validation, real
 TensorFlow training evidence, enabled Telegram evidence, and final Bab 4
-capture.
+capture. Current model evidence must remain honest: the LSTM pipeline works,
+but persistence and moving-average baselines may outperform LSTM on the current
+dataset.

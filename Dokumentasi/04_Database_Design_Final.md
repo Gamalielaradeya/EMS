@@ -585,7 +585,7 @@ Dashboard summary membutuhkan:
 2. Latest prediction.
 3. Active model.
 4. Latest metrics.
-5. Recent anomaly events.
+5. Recent status events.
 6. Gateway status.
 7. Telegram enabled.
 8. Today total readings/events.
@@ -734,7 +734,7 @@ Default tetap PostgreSQL biasa.
 | DB-006 | History readings dapat difilter waktu dan sensor |
 | DB-007 | Model version dan metrics dapat disimpan |
 | DB-008 | Prediction dapat disimpan dan dilacak ke model |
-| DB-009 | Anomaly events dapat disimpan |
+| DB-009 | Status events dapat disimpan pada tabel internal `anomaly_events` |
 | DB-010 | Notification logs dapat disimpan |
 | DB-011 | Layout dan marker sensor dapat disimpan |
 | DB-012 | Settings dapat dibaca dan diubah |

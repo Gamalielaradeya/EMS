@@ -26,7 +26,7 @@ interface FilterValues {
 
 const defaultValues: FilterValues = { status: "", source: "", level: "", from: "", to: "", limit: 100 }
 const tabs: Array<{ id: OperationalTab; label: string; icon: typeof ShieldAlert }> = [
-  { id: "anomalies", label: "Anomaly Events", icon: ShieldAlert },
+  { id: "anomalies", label: "Status Events", icon: ShieldAlert },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "system", label: "System Logs", icon: Terminal },
 ]
@@ -58,7 +58,7 @@ export function EventsLogsPage() {
             Refresh
           </Button>
         }
-        description="Trace thermal anomalies, Telegram delivery decisions, and backend operational evidence without leaving the monitoring dashboard."
+        description="Trace status events, Telegram delivery decisions, and operational evidence without leaving the monitoring dashboard."
         title="Events & Logs"
       />
 

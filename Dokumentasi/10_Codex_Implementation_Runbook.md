@@ -291,7 +291,7 @@ Done
 
 1. Canonical documentation path: `Dokumentasi/`.
 2. ML inference result dikirim ke protected `POST /api/v1/ml/predictions`.
-3. Backend memiliki final classification, anomaly events, SSE, dan Telegram.
+3. Backend memiliki final classification, status event history pada tabel internal `anomaly_events`, SSE, dan Telegram.
 4. Status dipisahkan menjadi `sensor_health_status`, `thermal_status`, dan `final_status`.
 5. Reading dedupe key: `(gateway_id, sensor_id, recorded_at)`.
 6. Gateway token bootstrap dari `.env`, lalu simpan dan validasi hash pada `api_tokens`.
@@ -1048,17 +1048,17 @@ POST /api/v1/ml/predictions
 
 ## 18. Tujuan
 
-Menerapkan alert rule, Telegram notification, anomaly events, notification logs, dan system logs.
+Menerapkan alert rule, Telegram notification, status event history pada tabel internal `anomaly_events`, notification logs, dan system logs.
 
 ## 18.1 Tasks
 
 1. Implement status classification service.
-2. Implement anomaly event creation.
+2. Implement status event creation using the internal `anomaly_events` table.
 3. Implement notification decision/cooldown.
 4. Implement Telegram client.
 5. Implement notification logs.
 6. Implement test Telegram endpoint.
-7. Implement anomaly events API.
+7. Implement status events API using the existing `/api/v1/anomaly-events` route.
 8. Implement notification logs API.
 9. Implement system logs API.
 10. Implement Events & Logs page tabs.
@@ -1114,7 +1114,7 @@ curl -X POST http://localhost:8080/api/v1/notifications/test
 
 ```text
 [ ] Status classification sesuai threshold
-[ ] Anomaly event tersimpan
+[ ] Status event tersimpan pada tabel internal `anomaly_events`
 [ ] Notification log tersimpan
 [ ] Telegram disabled menghasilkan skipped aman
 [ ] Telegram failed tidak crash
@@ -1277,7 +1277,7 @@ Ambil bukti berikut:
 [ ] ML Worker inference menghasilkan prediksi
 [ ] Prediction tampil di dashboard
 [ ] Status normal/waspada/anomali/trouble dapat diuji
-[ ] Anomaly events tersimpan
+[ ] Status events tersimpan pada tabel internal `anomaly_events`
 [ ] Notification logs tersimpan
 [ ] Layout sensor bekerja
 [ ] Test plan memiliki hasil
@@ -1294,7 +1294,7 @@ Gunakan prompt ini saat pertama kali memulai di Codex:
 ```text
 You are working inside a new thesis project repository named ems-thermal-lstm.
 
-This project is EMS Thermal LSTM, a hardware-first Environment Monitoring System for server testbed thermal anomaly prediction using LSTM.
+This project is EMS Thermal LSTM, a hardware-first Early Warning System for an EMS server that uses LSTM for S2 temperature forecasting five minutes ahead.
 
 Before coding, read all documents in Dokumentasi/:
 - 00_Project_Direction_Final.md

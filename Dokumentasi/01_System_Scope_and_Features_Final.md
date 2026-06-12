@@ -395,21 +395,21 @@ Marker harus menampilkan teks status, tidak hanya warna.
 
 ### 9.1 Tujuan
 
-Halaman ini menggabungkan anomaly events, notification history, dan system logs.
+Halaman ini menggabungkan status events, notification history, dan system logs.
 
 ### 9.2 Struktur Tab
 
 Gunakan tab agar halaman tidak terlalu penuh:
 
 ```text
-[Anomaly Events] [Notifications] [System Logs]
+[Status Events] [Notifications] [System Logs]
 ```
 
-### 9.3 Anomaly Events
+### 9.3 Status Events
 
 Fitur:
 
-1. Tabel anomaly events.
+1. Tabel status events dari route internal `/api/v1/anomaly-events`.
 2. Filter final status: normal, waspada, anomali, trouble.
 3. Filter waktu.
 4. Detail event.
@@ -459,7 +459,7 @@ Fitur:
 
 | Kode | Kriteria |
 |---|---|
-| EV-001 | Anomaly events tampil dari database |
+| EV-001 | Status events tampil dari database |
 | EV-002 | Notification logs tampil dari database |
 | EV-003 | System logs tampil dari database |
 | EV-004 | Filter status dan waktu bekerja |
@@ -639,7 +639,7 @@ Backend wajib menyediakan:
 11. Activate model.
 12. Model metrics.
 13. Layout API.
-14. Anomaly events API.
+14. Status events API melalui route internal `/api/v1/anomaly-events`.
 15. Notification logs API.
 16. Settings API.
 17. System logs API.

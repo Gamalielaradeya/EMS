@@ -4,7 +4,7 @@
 
 **Nama project:** EMS Thermal LSTM  
 **Jenis project:** Skripsi Informatika jalur perekayasaan  
-**Fokus penelitian:** Environment Monitoring System berbasis prediksi anomali termal menggunakan Long Short-Term Memory  
+**Fokus penelitian:** Early Warning System pada EMS Server menggunakan Long Short-Term Memory untuk estimasi suhu S2 lima menit ke depan
 **Mode utama:** Hardware-first / real sensor mode  
 **Repository:** repo baru dari nol  
 **Deployment awal:** laptop development lokal  
@@ -176,7 +176,7 @@ Fitur:
 - Grafik kelembaban realtime/historis.
 - Grafik actual S2 vs predicted S2.
 - Preview layout sensor.
-- Recent anomaly/events.
+- Recent status events.
 
 ### 5.2 Sensors & Readings
 
@@ -227,11 +227,11 @@ Fitur:
 
 ### 5.5 Events & Logs
 
-Gabungan halaman anomali, notifikasi, dan log sistem.
+Gabungan halaman status event, notifikasi, dan log sistem.
 
 Fitur:
 
-- Riwayat anomaly events.
+- Riwayat status events.
 - Riwayat status normal/waspada/anomali.
 - Riwayat sensor trouble.
 - Riwayat Telegram notification.
@@ -392,7 +392,7 @@ Fitur berikut wajib dibuat:
 14. ML Worker menghasilkan model artifact.
 15. ML Worker menghitung RMSE, MAE, MAPE.
 16. ML Worker menyimpan hasil prediksi ke database.
-17. Sistem menyimpan anomaly events.
+17. Sistem menyimpan riwayat status events pada tabel internal `anomaly_events`.
 18. Sistem mengirim Telegram alert untuk kondisi penting.
 19. Sistem memiliki settings dasar.
 20. Sistem memiliki test plan dan runbook.

@@ -655,7 +655,7 @@ Database PostgreSQL menyimpan:
 6. Model versions.
 7. Model metrics.
 8. Baseline results.
-9. Anomaly events.
+9. Status event history pada tabel internal `anomaly_events`.
 10. Notification logs.
 11. Layouts.
 12. Layout devices.
@@ -857,7 +857,7 @@ System logs penting untuk Bab 4 karena menunjukkan sistem dapat menangani kondis
 1. Prediction APIs.
 2. Model version UI.
 3. Status classification.
-4. Anomaly events.
+4. Status event history pada tabel internal `anomaly_events`.
 5. Telegram.
 
 ### Milestone G — Layout and Final Testing

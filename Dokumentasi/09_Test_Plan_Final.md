@@ -799,7 +799,7 @@ Payload:
 
 | Field | Detail |
 |---|---|
-| Expected | Tab anomaly events, notifications, system logs tampil |
+| Expected | Tab status events, notifications, system logs tampil |
 | Evidence | Screenshot |
 | Status | Pending |
 

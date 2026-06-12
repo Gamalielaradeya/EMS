@@ -1,6 +1,7 @@
 # Frontend Dashboard
 
-React, Vite, and TypeScript dashboard foundation for EMS Thermal LSTM.
+React, Vite, and TypeScript dashboard for the EMS Thermal LSTM early warning
+prototype, focused on sensor monitoring and S2 temperature forecasting.
 
 ## Setup
 
@@ -73,9 +74,10 @@ metrics, and baseline comparison APIs. It shows explicit model-not-ready and
 no-prediction states. Model activation is enabled only when a local
 `VITE_ADMIN_TOKEN` is configured.
 
-The Events & Logs page reads anomaly events, notification logs, and system logs.
-It provides focused tabs, relevant filters, manual refresh, and safe loading,
-empty, and unavailable states.
+The Events & Logs page reads status events from the existing internal
+`/api/v1/anomaly-events` route, notification logs, and system logs. It provides
+focused tabs, relevant filters, manual refresh, and safe loading, empty, and
+unavailable states.
 
 The Settings page reads masked backend settings and groups thermal thresholds,
 Telegram delivery controls, and read-only gateway, app, and ML parameters.

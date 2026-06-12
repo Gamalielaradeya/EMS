@@ -5,10 +5,12 @@ Go REST API for EMS Thermal LSTM.
 Milestone `2A` implements the core gateway ingestion and reading query surface.
 Milestone `2B` adds dashboard summary, SSE delivery, timeout status checks, and
 system logs. Milestone `7` adds protected prediction integration, backend-owned
-final classification, anomaly events, model query APIs, and Telegram
-notification. Milestone `8` adds filtered system logs and masked settings
-management. Milestone `9` adds one active testbed layout image and ratio-based
-sensor markers.
+final classification, status event history, model query APIs, and Telegram
+notification. Status event history is stored through the existing internal
+`anomaly_events` table and `/api/v1/anomaly-events` route; those names are kept
+stable as API/database contracts. Milestone `8` adds filtered system logs and
+masked settings management. Milestone `9` adds one active testbed layout image
+and ratio-based sensor markers.
 
 ## Database Migrations
 

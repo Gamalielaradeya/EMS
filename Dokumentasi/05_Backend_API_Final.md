@@ -28,7 +28,7 @@ Backend harus mengikuti prinsip berikut:
    API harus mudah dipakai dashboard untuk card, chart, table, layout, settings, dan logs.
 
 3. **ML-ready**  
-   Backend/database harus mendukung hasil model, prediksi, metrics, dan anomaly events.
+   Backend/database harus mendukung hasil model, prediksi, metrics, dan status event history pada tabel internal `anomaly_events`.
 
 4. **Validation first**  
    Semua input dari gateway dan dashboard harus divalidasi.
