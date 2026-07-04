@@ -368,10 +368,10 @@ function InfoCard({
         <dl className="space-y-3">
           {settings.map((setting) => (
             <div className="border-b pb-3 last:border-0 last:pb-0" key={setting.key}>
-              <dt className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                {setting.key}
+              <dt className="text-xs font-bold text-muted-foreground">
+                {settingLabel(setting)}
               </dt>
-              <dd className="mt-1 text-sm font-semibold">{setting.value}</dd>
+              <dd className="mt-1 text-sm font-semibold">{settingValue(setting)}</dd>
             </div>
           ))}
         </dl>
@@ -420,4 +420,47 @@ function configured(settings: Map<string, Setting>, key: string) {
 
 function pick(settings: Map<string, Setting>, keys: string[]) {
   return keys.flatMap((key) => (settings.get(key) ? [settings.get(key)!] : []))
+}
+
+/** Human-readable label for a setting key, with unit suffix where known. */
+const SETTING_LABELS: Record<string, string> = {
+  active_gateway_code: "Active gateway code",
+  gateway_heartbeat_interval_seconds: "Gateway heartbeat interval",
+  backend_offline_check_interval_seconds: "Offline checker interval",
+  raw_sampling_interval_seconds: "Raw sampling interval",
+  ml_resample_interval_seconds: "ML resample interval",
+  lstm_window_size: "LSTM window size",
+  prediction_horizon_minutes: "Prediction horizon",
+  prediction_stale_ttl_minutes: "Prediction stale TTL",
+  actual_temperature_match_tolerance_seconds: "Actual temperature match tolerance",
+  threshold_normal_max: "Normal threshold (max)",
+  threshold_anomaly_min: "Anomaly threshold (min)",
+  sensor_timeout_minutes: "Sensor timeout",
+  telegram_enabled: "Telegram enabled",
+  telegram_cooldown_minutes: "Telegram cooldown",
+  telegram_bot_token: "Telegram bot token",
+  telegram_chat_id: "Telegram chat ID",
+}
+
+/** Unit suffix per key — appended to the value for clarity. */
+const SETTING_UNITS: Record<string, string> = {
+  gateway_heartbeat_interval_seconds: " s",
+  backend_offline_check_interval_seconds: " s",
+  raw_sampling_interval_seconds: " s",
+  ml_resample_interval_seconds: " s",
+  actual_temperature_match_tolerance_seconds: " s",
+  lstm_window_size: " points",
+  prediction_horizon_minutes: " min",
+  prediction_stale_ttl_minutes: " min",
+  sensor_timeout_minutes: " min",
+  telegram_cooldown_minutes: " min",
+}
+
+function settingLabel(setting: Setting): string {
+  return SETTING_LABELS[setting.key] || setting.description || setting.key
+}
+
+function settingValue(setting: Setting): string {
+  const unit = SETTING_UNITS[setting.key] || ""
+  return `${setting.value}${unit}`
 }

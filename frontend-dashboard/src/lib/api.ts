@@ -25,11 +25,8 @@ import type {
 
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 export const API_BASE_URL = (configuredApiUrl || "http://localhost:8080/api/v1").replace(/\/$/, "")
-import { getRuntimeAdminToken, hasRuntimeAdminToken } from "@/lib/adminToken"
+import { getRuntimeAdminToken } from "@/lib/adminToken"
 
-/** True if an admin token is available (env var OR runtime sessionStorage). */
-export const HAS_ADMIN_TOKEN =
-  Boolean(import.meta.env.VITE_ADMIN_TOKEN?.trim()) || hasRuntimeAdminToken()
 export const resolveApiAssetUrl = (path: string) => new URL(path, API_BASE_URL).toString()
 
 export class ApiError extends Error {
