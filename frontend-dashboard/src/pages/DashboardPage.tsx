@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useReadingHistory } from "@/hooks/useReadingHistory"
 import { formatDateTime } from "@/lib/format"
+import { formatStatus } from "@/lib/status"
 import type { ReadingHistoryFilters } from "@/types/api"
 
 const dashboardHistoryFilters: ReadingHistoryFilters = { limit: 120 }
@@ -63,7 +64,7 @@ export function DashboardPage() {
             </div>
           </div>
           <StatusBadge
-            label={`Current Thermal: ${currentThermalStatus}${currentThermalSource ? ` (${currentThermalSource})` : ""}`}
+            label={`${currentThermalStatus}${currentThermalSource ? ` (${currentThermalSource})` : ""}`}
             status={currentThermalStatus}
           />
         </CardContent>
@@ -83,20 +84,20 @@ export function DashboardPage() {
               detail={summary?.gateway?.last_seen_at ? `Last seen ${formatDateTime(summary.gateway.last_seen_at)}` : "No heartbeat has arrived yet."}
               icon={Wifi}
               label="Gateway status"
-              value={summary?.gateway?.status || "Unavailable"}
+              value={summary?.gateway?.status ? formatStatus(summary.gateway.status) : "Unavailable"}
             />
             <SummaryMetric
               detail={currentThermalSource ? `Worst latest actual reading from ${currentThermalSource}.` : "No latest actual reading has arrived yet."}
               icon={ShieldCheck}
               label="Current thermal status"
               tone="accent"
-              value={currentThermalStatus}
+              value={formatStatus(currentThermalStatus)}
             />
             <SummaryMetric
               detail={summary?.latest_prediction ? `Predicted S2 for ${formatDateTime(summary.latest_prediction.predicted_for)}.` : "Model inference has not produced a value."}
               icon={BrainCircuit}
               label="Prediction status"
-              value={predictionThermalStatus || "No prediction"}
+              value={predictionThermalStatus ? formatStatus(predictionThermalStatus) : "No prediction"}
             />
             <SummaryMetric
               detail="Accepted sensor records since start of local day."

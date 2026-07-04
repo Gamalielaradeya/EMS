@@ -91,7 +91,7 @@ export function PredictionLSTMPage() {
                 </p>
               </div>
               {workspace.latest ? (
-                <StatusBadge label={`Final: ${workspace.latest.final_status}`} status={workspace.latest.final_status} />
+                <StatusBadge label={workspace.latest.final_status} status={workspace.latest.final_status} />
               ) : (
                 <StatusBadge label="No prediction" status="inactive" />
               )}

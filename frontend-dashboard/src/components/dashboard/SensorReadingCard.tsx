@@ -3,6 +3,7 @@ import { Droplets, Thermometer } from "lucide-react"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
+import { formatStatus } from "@/lib/status"
 import type { DashboardReading } from "@/types/api"
 
 interface SensorReadingCardProps {
@@ -15,6 +16,12 @@ export function SensorReadingCard({ sensorCode, sensorRole, reading }: SensorRea
   const healthStatus = reading?.sensor_health_status || "inactive"
   const currentThermalStatus = reading?.current_thermal_status || "normal"
 
+  // Single badge: show Trouble when sensor is broken, otherwise show thermal status
+  const isTrouble = healthStatus === "trouble"
+  const isInactive = healthStatus === "inactive"
+  const badgeStatus = isTrouble ? "trouble" : isInactive ? "inactive" : currentThermalStatus
+  const badgeLabel = isTrouble ? "Trouble" : isInactive ? "Inactive" : formatStatus(currentThermalStatus)
+
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3 pb-0">
@@ -24,10 +31,7 @@ export function SensorReadingCard({ sensorCode, sensorRole, reading }: SensorRea
           </p>
           <CardTitle className="mt-1">{sensorRole} sensor</CardTitle>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <StatusBadge label={`Sensor Health: ${healthStatus}`} status={healthStatus} />
-          <StatusBadge label={`Current Thermal: ${currentThermalStatus}`} status={currentThermalStatus} />
-        </div>
+        <StatusBadge label={badgeLabel} status={badgeStatus} />
       </CardHeader>
       <CardContent className="pt-5">
         <div className="grid grid-cols-2 gap-3">
