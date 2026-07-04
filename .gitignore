@@ -1,0 +1,37 @@
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+config.yaml
+
+# Logs and runtime data
+*.log
+failed_payloads.jsonl
+uploads/
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+
+# Go
+build/
+*.exe
+
+# ML artifacts
+*.keras
+*.h5
+*.pkl
+*.joblib
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

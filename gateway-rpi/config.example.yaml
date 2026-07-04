@@ -1,0 +1,81 @@
+gateway:
+  id: "raspi-gateway-01"
+  name: "Raspberry Pi Gateway 01"
+  mode: "hardware"
+  location: "Server Testbed"
+
+backend:
+  base_url: "http://192.168.1.100:8080/api/v1"
+  readings_endpoint: "/readings"
+  status_endpoint: "/gateway/status"
+  token: "change-gateway-token"
+  timeout_seconds: 5
+  retry_count: 1
+  retry_delay_seconds: 2
+
+sampling:
+  interval_seconds: 10
+  heartbeat_interval_seconds: 60
+
+modbus:
+  port: "/dev/ttyUSB0"
+  baudrate: 9600
+  bytesize: 8
+  parity: "N"
+  stopbits: 1
+  timeout_seconds: 3
+  register_type: "input" # XY-MD02 uses function 04 / input registers.
+  inter_read_delay_ms: 300
+
+sensors:
+  - code: "S1"
+    role: "ambient"
+    name: "S1 Ambient Sensor"
+    enabled: true
+    slave_id: 1
+    registers:
+      temperature:
+        address: 1
+        count: 1
+        scale: 0.1
+        register_type: "input"
+      humidity:
+        address: 2
+        count: 1
+        scale: 0.1
+        register_type: "input"
+
+  - code: "S2"
+    role: "hotspot"
+    name: "S2 Hotspot Sensor"
+    enabled: true
+    slave_id: 2
+    registers:
+      temperature:
+        address: 1
+        count: 1
+        scale: 0.1
+        register_type: "input"
+      humidity:
+        address: 2
+        count: 1
+        scale: 0.1
+        register_type: "input"
+
+validation:
+  temperature_min: 0
+  temperature_max: 80
+  humidity_min: 0
+  humidity_max: 100
+
+buffer:
+  enabled: true
+  file_path: "./data/failed_payloads.jsonl"
+  max_items: 1000
+  replay_enabled: true
+  replay_batch_size: 5
+  replay_interval_seconds: 60
+
+logging:
+  level: "INFO"
+  file_path: "./logs/gateway.log"

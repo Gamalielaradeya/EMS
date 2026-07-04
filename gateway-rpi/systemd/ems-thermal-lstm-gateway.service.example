@@ -1,0 +1,16 @@
+[Unit]
+Description=EMS Thermal LSTM Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ems-thermal-lstm/gateway-rpi
+ExecStart=/opt/ems-thermal-lstm/gateway-rpi/.venv/bin/python -m gateway.cli run --config ./config.yaml
+Restart=always
+RestartSec=5
+User=pi
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
