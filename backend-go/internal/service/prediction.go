@@ -27,15 +27,18 @@ func (s *Service) InsertPrediction(ctx context.Context, input model.PredictionIn
 		s.publish(sse.EventSystemLog, systemLog)
 	}
 	s.publish(sse.EventPredictionLatest, prediction)
-	if prediction.IsStale || prediction.FinalStatus == "normal" {
+	if prediction.IsStale {
 		return prediction, nil, nil
 	}
-	event, err := s.repository.InsertAnomalyEvent(ctx, prediction, severityForStatus(prediction.FinalStatus), descriptionForStatus(prediction.FinalStatus))
+	event, err := s.repository.InsertPredictionTransitionEvent(ctx, prediction)
 	if err != nil {
 		return model.Prediction{}, nil, err
 	}
+	if event == nil {
+		return prediction, nil, nil
+	}
 	s.publish(sse.EventAnomalyCreated, event)
-	s.processTelegramNotification(ctx, &event, prediction)
+	s.processEventNotification(ctx, event)
 	return prediction, nil, nil
 }
 
@@ -116,23 +119,27 @@ func (s *Service) refreshPredictions(ctx context.Context) error {
 	return s.repository.RefreshPredictions(ctx, settings)
 }
 
-func (s *Service) processTelegramNotification(ctx context.Context, event *model.AnomalyEvent, prediction model.Prediction) {
+func (s *Service) processEventNotification(ctx context.Context, event *model.AnomalyEvent) {
+	if event == nil || event.Status == "normal" {
+		return
+	}
 	settings, err := s.repository.TelegramSettings(ctx)
 	if err != nil {
 		return
 	}
-	message := thermalAlertMessage(prediction)
+	message := eventAlertMessage(*event)
 	item := model.NotificationLog{
 		AnomalyEventID: &event.ID,
 		Channel:        "telegram",
 		Message:        message,
 		Metadata: map[string]any{
-			"sensor_code": prediction.TargetSensor,
-			"status":      prediction.FinalStatus,
+			"event_type":  event.EventType,
+			"sensor_code": event.SensorCode,
+			"status":      event.Status,
 		},
 	}
-	if prediction.TargetSensorID != nil {
-		lastSentAt, lookupErr := s.repository.LastSentNotificationAt(ctx, *prediction.TargetSensorID, prediction.FinalStatus)
+	if event.EventType == "prediction_threshold" {
+		lastSentAt, lookupErr := s.repository.LastSentNotificationAt(ctx, event.SensorID, event.EventType, event.Status)
 		if lookupErr == nil && lastSentAt != nil && time.Since(*lastSentAt) < time.Duration(settings.CooldownMinutes)*time.Minute {
 			reason := "notification skipped during cooldown"
 			item.Status = "skipped"
@@ -215,14 +222,35 @@ func descriptionForStatus(status string) string {
 	}
 }
 
-func thermalAlertMessage(prediction model.Prediction) string {
+func eventAlertMessage(event model.AnomalyEvent) string {
+	category := "TROUBLE"
+	valueLabel := "Detail"
+	value := "Technical health transition"
+	switch event.EventType {
+	case "actual_threshold":
+		category = "ALARM"
+		valueLabel = "Actual temperature"
+		if event.ActualTemperature != nil {
+			value = fmt.Sprintf("%.2f C", *event.ActualTemperature)
+		}
+	case "prediction_threshold":
+		category = "PRE-ALARM"
+		valueLabel = "Predicted temperature"
+		if event.PredictedTemperature != nil {
+			value = fmt.Sprintf("%.2f C", *event.PredictedTemperature)
+		}
+	}
+	sensor := "Gateway"
+	if event.SensorCode != nil {
+		sensor = *event.SensorCode
+	}
 	return fmt.Sprintf(
-		"[EMS THERMAL ALERT]\n\nStatus: %s\nSensor: %s - Hotspot/Exhaust\nPredicted temperature: %.2f C\nPredicted for: %s\nThreshold: Normal < %.2f C, Anomaly > %.2f C",
-		prediction.FinalStatus,
-		prediction.TargetSensor,
-		prediction.PredictedTemperature,
-		prediction.PredictedFor.Format(time.RFC3339),
-		prediction.ThresholdNormalMax,
-		prediction.ThresholdAnomalyMin,
+		"[EMS THERMAL %s]\n\nStatus: %s\nSource: %s\n%s: %s\nDetected at: %s",
+		category,
+		event.Status,
+		sensor,
+		valueLabel,
+		value,
+		event.DetectedAt.Format(time.RFC3339),
 	)
 }

@@ -56,6 +56,9 @@ Keputusan berikut mengikat implementasi dan mengesampingkan contoh lama yang tid
 7. Sensor atau gateway menjadi trouble jika tidak ada data lebih dari 5 menit.
 8. Prediction stale setelah 10 menit dan tidak boleh memicu active dashboard status atau Telegram.
 9. Simulator hanya helper development. Evidence skripsi memprioritaskan `source = 'hardware'` dan `quality_status = 'valid'`.
+10. Kategori event operasional dipisahkan dari status dasar: `alarm` untuk threshold aktual S1/S2, `pre_alarm` untuk threshold prediksi S2 lima menit ke depan, `trouble` untuk gangguan sensor/gateway, dan `recovery` untuk kembali normal.
+11. Event threshold/trouble dibuat pada transisi status atau eskalasi, bukan pada setiap reading/inference berstatus sama.
+12. Threshold aktual dan prediksi memakai setting yang sama. Prediction stale tidak boleh membuat Pre-Alarm aktif.
 
 ---
 

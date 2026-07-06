@@ -1,9 +1,10 @@
 import { Activity, BarChart3, BrainCircuit, CalendarClock, ChevronDown, ChevronUp, ListChecks } from "lucide-react"
-import { useMemo, useRef, useState, type PointerEvent } from "react"
+import { useRef, useState, type PointerEvent } from "react"
 
 import { ReadingsChart } from "@/components/charts/ReadingsChart"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { Button } from "@/components/ui/button"
+import { getEventCategory } from "@/lib/events"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { DashboardEvent, DashboardSummary, SensorReading } from "@/types/api"
@@ -27,13 +28,11 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
   const dragStartRef = useRef<{ y: number; height: number } | null>(null)
   const collapsed = height <= MIN_HEIGHT + 12
 
-  const eventCounts = useMemo(() => {
-    const events = summary?.recent_events ?? []
-    return {
-      alarm: events.filter((event) => event.status === "anomali" || event.status === "waspada").length,
-      trouble: events.filter((event) => event.status === "trouble").length,
-    }
-  }, [summary?.recent_events])
+  const eventCounts = {
+    alarm: summary?.today_summary.total_alarm ?? 0,
+    preAlarm: summary?.today_summary.total_pre_alarm ?? 0,
+    trouble: summary?.today_summary.total_trouble ?? 0,
+  }
 
   const clampPanelHeight = (value: number) => clamp(value, MIN_HEIGHT, getSheetMaxHeight())
 
@@ -71,6 +70,7 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
         />
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <span className="shrink-0 rounded-md bg-danger px-2.5 py-1.5 text-xs font-bold text-destructive-foreground sm:text-sm">Alarm: {eventCounts.alarm}</span>
+          <span className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-bold text-primary-foreground sm:text-sm">Pre-Alarm: {eventCounts.preAlarm}</span>
           <span className="shrink-0 rounded-md bg-warning px-2.5 py-1.5 text-xs font-bold text-foreground sm:text-sm">Trouble: {eventCounts.trouble}</span>
           <span className="ml-auto hidden shrink-0 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 md:inline-flex">
             Readings today: {summary?.today_summary.total_readings ?? 0}
@@ -156,7 +156,7 @@ function EventsTable({ summary }: { summary: DashboardSummary | null }) {
             return (
               <tr className={cn("border-b last:border-0", presentation.rowClassName)} key={event.id}>
                 <td className={cn("border-l-4 py-3 pl-3 pr-4", presentation.accentClassName)}>{formatDateTime(event.detected_at)}</td>
-                <td className="py-3 pr-4 font-mono text-xs font-bold">{event.sensor_code || "System"}</td>
+                <td className="py-3 pr-4 font-mono text-xs font-bold">{event.sensor_code || (event.event_type === "gateway_trouble" ? "Gateway" : "System")}</td>
                 <td className="py-3 pr-4">
                   <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase", presentation.categoryClassName)}>
                     {presentation.category}
@@ -174,20 +174,36 @@ function EventsTable({ summary }: { summary: DashboardSummary | null }) {
 }
 
 function getEventPresentation(event: DashboardEvent) {
-  if (event.status === "trouble") {
+  if (event.status === "normal") {
     return {
-      category: "Trouble",
+      category: getEventCategory(event.event_type, event.status),
+      accentClassName: "border-success",
+      categoryClassName: "bg-success text-success-foreground",
+      rowClassName: "bg-success-soft text-foreground",
+    }
+  }
+  if (event.event_type === "sensor_trouble" || event.event_type === "gateway_trouble") {
+    return {
+      category: getEventCategory(event.event_type, event.status),
       accentClassName: "border-warning",
       categoryClassName: "bg-warning text-foreground",
       rowClassName: "bg-warning-soft text-foreground",
     }
   }
-  if (event.status === "waspada" || event.status === "anomali") {
+  if (event.event_type === "actual_threshold") {
     return {
-      category: "Alarm",
+      category: getEventCategory(event.event_type, event.status),
       accentClassName: "border-danger",
       categoryClassName: "bg-danger text-destructive-foreground",
       rowClassName: "bg-danger-soft text-foreground",
+    }
+  }
+  if (event.event_type === "prediction_threshold") {
+    return {
+      category: getEventCategory(event.event_type, event.status),
+      accentClassName: "border-primary",
+      categoryClassName: "bg-primary text-primary-foreground",
+      rowClassName: "bg-accent text-foreground",
     }
   }
   return {

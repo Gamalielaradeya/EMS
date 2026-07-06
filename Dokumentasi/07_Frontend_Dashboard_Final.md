@@ -876,3 +876,8 @@ Saat membuat frontend, Codex harus:
 8. Menggunakan Chart.js untuk grafik.
 9. Menjaga UI bersih dan presentable untuk skripsi.
 10. Menjalankan `npm run build` sebelum milestone frontend dianggap selesai.
+## Alert Category Documentation Lock Addendum
+
+Monitoring bottom sheet menampilkan ringkasan `Alarm`, `Pre-Alarm`, dan `Trouble`. Alarm/Trouble memakai event backend, sedangkan Pre-Alarm memakai prediksi masa depan aktif. Kategori tabel diturunkan dari `event_type`, bukan ditebak dari `status`. Recovery ditampilkan untuk event berstatus `normal` setelah kondisi non-normal.
+
+Counter Pre-Alarm menunjukkan kondisi aktif 0/1 dari prediksi masa depan, bukan jumlah event prediksi dalam histori.

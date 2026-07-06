@@ -1016,3 +1016,6 @@ Saat membuat ML Worker, Codex harus:
 10. Menangani error data kurang dengan baik.
 11. Tidak menjalankan training di Raspberry Pi.
 12. Menjaga kode modular dan mudah diuji.
+## Alert Category Documentation Lock Addendum
+
+ML Worker tetap hanya mengirim hasil inference ke backend. Backend mengklasifikasikan prediksi S2 non-stale sebagai Pre-Alarm (`event_type = prediction_threshold`) dan memiliki seluruh keputusan event, SSE, serta Telegram. ML Worker tidak membuat Alarm aktual atau Trouble.

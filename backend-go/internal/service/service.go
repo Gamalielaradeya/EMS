@@ -70,16 +70,26 @@ func (s *Service) InsertReadings(ctx context.Context, input model.ReadingsInput)
 	}
 
 	readings := make([]model.ReadingInsert, 0, len(input.Readings))
+	settings, err := s.repository.PredictionSettings(ctx)
+	if err != nil {
+		return 0, nil, err
+	}
 	for _, reading := range input.Readings {
 		readings = append(readings, model.ReadingInsert{
-			SensorCode:  reading.SensorCode,
-			Temperature: *reading.Temperature,
-			Humidity:    *reading.Humidity,
+			SensorCode:    reading.SensorCode,
+			Temperature:   *reading.Temperature,
+			Humidity:      *reading.Humidity,
+			ThermalStatus: classifyThermalStatus(*reading.Temperature, settings),
 		})
 	}
-	storedCount, err := s.repository.InsertReadings(ctx, input.GatewayID, recordedAt, input.Source, readings, rawPayload)
+	storedCount, events, err := s.repository.InsertReadings(ctx, input.GatewayID, recordedAt, input.Source, readings, rawPayload, settings)
 	if err == nil {
 		s.publish(sse.EventReadingLatest, readingLatestEvent(input, recordedAt))
+		for index := range events {
+			event := &events[index]
+			s.publish(sse.EventAnomalyCreated, event)
+			s.processEventNotification(ctx, event)
+		}
 	}
 	return storedCount, nil, err
 }
@@ -89,7 +99,7 @@ func (s *Service) RecordGatewayStatus(ctx context.Context, input model.GatewaySt
 		return errs, ErrValidation
 	}
 	reportedAt, _ := time.Parse(time.RFC3339, input.ReportedAt)
-	systemLogs, err := s.repository.RecordGatewayStatus(ctx, input, reportedAt)
+	systemLogs, events, err := s.repository.RecordGatewayStatus(ctx, input, reportedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +111,11 @@ func (s *Service) RecordGatewayStatus(ctx context.Context, input model.GatewaySt
 	}
 	for _, systemLog := range systemLogs {
 		s.publish(sse.EventSystemLog, systemLog)
+	}
+	for index := range events {
+		event := &events[index]
+		s.publish(sse.EventAnomalyCreated, event)
+		s.processEventNotification(ctx, event)
 	}
 	return nil, nil
 }
@@ -160,6 +175,10 @@ func (s *Service) checkOfflineStatuses(ctx context.Context) {
 	}
 	for _, change := range changes {
 		s.publish(sse.EventSystemLog, change.Log)
+		if change.Event != nil {
+			s.publish(sse.EventAnomalyCreated, change.Event)
+			s.processEventNotification(ctx, change.Event)
+		}
 		switch change.Entity {
 		case "gateway":
 			s.publish(sse.EventGatewayStatus, change)

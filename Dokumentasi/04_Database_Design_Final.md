@@ -760,3 +760,15 @@ Saat membuat database, Codex harus:
 10. Tidak membuat tabel PUE atau energy optimization.
 11. Tidak membuat schema enterprise multi-tenant.
 12. Menjaga database tetap mudah dijelaskan dalam Bab 4.
+## Alert Category Documentation Lock Addendum
+
+`anomaly_events` tetap menjadi tabel event tunggal. Nilai canonical `event_type`:
+
+```text
+actual_threshold     -> Alarm aktual S1/S2
+prediction_threshold -> Pre-Alarm prediksi S2
+sensor_trouble       -> Trouble sensor
+gateway_trouble      -> Trouble gateway
+```
+
+Status tetap `normal`, `waspada`, `anomali`, atau `trouble`. Baris `normal` setelah event non-normal merepresentasikan Recovery. Event baru hanya dibuat jika status terakhir untuk kombinasi entity dan `event_type` berubah; status berulang tidak membuat baris baru.

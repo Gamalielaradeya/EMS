@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { type OperationalTab, useOperationalLogs } from "@/hooks/useOperationalLogs"
+import { getEventCategory } from "@/lib/events"
 import { formatDateTime } from "@/lib/format"
 import { controlClassName } from "@/lib/forms"
 import { cn } from "@/lib/utils"
@@ -167,7 +168,12 @@ function OperationalTable({ items, tab }: { items: Array<AnomalyEvent | Notifica
 }
 
 function AnomalyTable({ items }: { items: AnomalyEvent[] }) {
-  return <RecordTable headings={["Detected", "Sensor", "Status", "Prediction", "Description"]} rows={items.map((item) => [formatDateTime(item.detected_at), item.sensor_code || "--", <RecordBadge key="status" label={item.status} tone={item.status} />, item.predicted_temperature === null ? "--" : `${item.predicted_temperature.toFixed(1)}°C`, item.description || "--"])} />
+  return <RecordTable headings={["Detected", "Sensor", "Event", "Condition", "Temperature", "Description"]} rows={items.map((item) => [formatDateTime(item.detected_at), item.sensor_code || (item.event_type === "gateway_trouble" ? "Gateway" : "--"), getEventCategory(item.event_type, item.status), <RecordBadge key="status" label={item.status} tone={item.status} />, eventTemperature(item), item.description || "--"])} />
+}
+
+function eventTemperature(item: AnomalyEvent) {
+  const temperature = item.event_type === "actual_threshold" ? item.actual_temperature : item.predicted_temperature
+  return temperature === null ? "--" : `${temperature.toFixed(1)}°C`
 }
 
 function NotificationTable({ items }: { items: NotificationLog[] }) {

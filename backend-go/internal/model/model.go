@@ -74,9 +74,10 @@ type ReadingFilters struct {
 }
 
 type ReadingInsert struct {
-	SensorCode  string
-	Temperature float64
-	Humidity    float64
+	SensorCode    string
+	Temperature   float64
+	Humidity      float64
+	ThermalStatus string
 }
 
 type GatewaySummary struct {
@@ -123,6 +124,8 @@ type TodaySummary struct {
 	TotalReadings int64 `json:"total_readings"`
 	TotalWaspada  int64 `json:"total_waspada"`
 	TotalAnomali  int64 `json:"total_anomali"`
+	TotalAlarm    int64 `json:"total_alarm"`
+	TotalPreAlarm int64 `json:"total_pre_alarm"`
 	TotalTrouble  int64 `json:"total_trouble"`
 }
 
@@ -134,6 +137,7 @@ type TelegramSummary struct {
 type DashboardEvent struct {
 	ID          int64     `json:"id"`
 	SensorCode  *string   `json:"sensor_code"`
+	EventType   string    `json:"event_type"`
 	Status      string    `json:"status"`
 	Severity    string    `json:"severity"`
 	Description *string   `json:"description"`
@@ -164,8 +168,9 @@ type SystemLog struct {
 }
 
 type StatusChange struct {
-	Entity string    `json:"entity"`
-	Code   string    `json:"code"`
-	Status string    `json:"status"`
-	Log    SystemLog `json:"-"`
+	Entity string        `json:"entity"`
+	Code   string        `json:"code"`
+	Status string        `json:"status"`
+	Log    SystemLog     `json:"-"`
+	Event  *AnomalyEvent `json:"-"`
 }

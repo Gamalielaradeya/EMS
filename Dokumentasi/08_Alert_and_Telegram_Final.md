@@ -705,3 +705,14 @@ Saat mengimplementasikan alert dan Telegram, Codex harus:
 8. Tidak membuat backend crash ketika Telegram gagal.
 9. Menyediakan test notification endpoint.
 10. Tidak membuat fitur kontrol pendingin otomatis.
+## Alert Category Documentation Lock Addendum
+
+Keputusan final yang mengesampingkan penyebutan alert generik sebelumnya:
+
+1. Alarm: reading aktual S1/S2 berubah ke `waspada` atau `anomali`.
+2. Pre-Alarm: prediksi S2 non-stale berubah ke `waspada` atau `anomali`.
+3. Trouble: sensor/gateway berubah ke kondisi trouble/offline.
+4. Recovery: sumber yang sama kembali normal/active.
+5. Status berulang tidak membuat event atau Telegram baru; eskalasi tetap membuat event.
+6. Alarm aktual dan Trouble dievaluasi untuk Telegram segera. Pre-Alarm memakai cooldown. Recovery dicatat dan tidak dikirim ke Telegram.
+7. Counter Pre-Alarm aktif hanya selama `predicted_for > now`; prediksi yang waktunya sudah lewat tetap berada dalam histori tetapi tidak dihitung aktif.

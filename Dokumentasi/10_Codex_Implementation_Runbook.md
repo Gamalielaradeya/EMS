@@ -1426,3 +1426,6 @@ Sensor asli → Gateway Raspberry Pi → Go Backend → PostgreSQL → React Das
 ```
 
 Sistem dianggap berhasil jika alur utama tersebut berjalan, dapat diuji, dan buktinya dapat ditulis ke Bab 4 skripsi.
+## Approved Alert Category Change
+
+Implementasi alert memakai event transition canonical: Alarm aktual S1/S2, Pre-Alarm prediksi S2 non-stale, Trouble sensor/gateway, dan Recovery. Gunakan `anomaly_events.event_type`; jangan membuat microservice atau tabel event baru.

@@ -63,6 +63,9 @@ final_status        : trouble > anomali > waspada > normal
 6. Backend offline checker setiap 30 detik.
 7. Sensor atau gateway trouble jika tidak ada data lebih dari 5 menit.
 8. Prediction stale setelah 10 menit dan tidak boleh menjadi active dashboard status atau Telegram trigger.
+9. `anomaly_events.event_type` membedakan `actual_threshold`, `prediction_threshold`, `sensor_trouble`, dan `gateway_trouble`; kategori UI-nya adalah Alarm, Pre-Alarm, Trouble, atau Recovery.
+10. Event disimpan hanya pada transisi status/eskalasi. Reading mentah tetap disimpan setiap 10 detik.
+11. Alarm aktual berlaku untuk S1 dan S2. Pre-Alarm hanya berlaku untuk prediksi target S2 yang tidak stale.
 
 ---
 

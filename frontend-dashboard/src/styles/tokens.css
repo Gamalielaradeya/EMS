@@ -25,6 +25,7 @@
   --color-chart-s2: oklch(57% 0.16 35);
   --color-success: oklch(45% 0.19 145);
   --color-success-soft: oklch(90% 0.09 145);
+  --color-success-ink: oklch(98% 0.01 145);
   --color-warning: oklch(70% 0.19 85);
   --color-warning-soft: oklch(93% 0.09 85);
   --color-danger: oklch(48% 0.22 20);

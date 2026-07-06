@@ -69,6 +69,8 @@ export interface TodaySummary {
   total_readings: number
   total_waspada: number
   total_anomali: number
+  total_alarm: number
+  total_pre_alarm: number
   total_trouble: number
 }
 
@@ -80,6 +82,7 @@ export interface TelegramSummary {
 export interface DashboardEvent {
   id: number
   sensor_code: string | null
+  event_type: "actual_threshold" | "prediction_threshold" | "sensor_trouble" | "gateway_trouble" | string
   status: FinalStatus
   severity: string
   description: string | null
