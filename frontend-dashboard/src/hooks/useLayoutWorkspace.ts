@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { ApiError, api } from "@/lib/api"
+import { createDarkFloorplanFile } from "@/lib/imageProcessing"
 import type { ActiveLayout, Sensor, SensorCode, SensorReading } from "@/types/api"
 
 export function useLayoutWorkspace(eventRevision = 0) {
@@ -51,9 +52,10 @@ export function useLayoutWorkspace(eventRevision = 0) {
 
   const upload = useCallback(async (image: File, name: string) => {
     await run(async () => {
-      await api.uploadLayout(image, name)
+      const darkFloorplan = await createDarkFloorplanFile(image)
+      await api.uploadLayout(darkFloorplan, name)
       return api.getLayout()
-    }, "Layout image uploaded. Place S1 and S2 markers on the map.")
+    }, "Layout image uploaded and auto-converted to dark monitoring style. Place S1 and S2 markers on the map.")
   }, [run])
 
   const saveMarker = useCallback(async (sensorCode: SensorCode, positionX: number, positionY: number) => {

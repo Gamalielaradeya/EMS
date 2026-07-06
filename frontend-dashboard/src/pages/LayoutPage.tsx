@@ -39,7 +39,7 @@ export function LayoutPage() {
             Refresh
           </Button>
         }
-        description="Place S1 ambient and S2 hotspot markers on one active server-testbed image. Positions persist as responsive 0–1 ratios."
+        description="Place S1 ambient and S2 hotspot markers on one active server-testbed image. Uploaded white AutoCAD floorplans are auto-converted to the dark monitoring style."
         title="Layout"
       />
 
@@ -50,7 +50,7 @@ export function LayoutPage() {
       <Card>
         <CardHeader>
           <CardTitle>{workspace.layout ? "Replace active layout" : "Upload testbed layout"}</CardTitle>
-          <CardDescription>PNG, JPG, JPEG, or WebP. Maximum file size: 5 MB.</CardDescription>
+          <CardDescription>PNG, JPG, JPEG, or WebP. Maximum file size: 5 MB. Upload the normal white AutoCAD floorplan; EMS will store a dark monitoring copy automatically.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={submitUpload}>
