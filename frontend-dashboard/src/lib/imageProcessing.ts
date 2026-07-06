@@ -7,7 +7,6 @@ export async function createDarkFloorplanFile(file: File): Promise<File> {
 }
 
 export interface PreparedFloorplanImage {
-  mode: "already-dark" | "converted" | "fallback-filter"
   converted: boolean
   revoke: () => void
   url: string
@@ -17,18 +16,14 @@ export async function prepareFloorplanDisplayImage(imageUrl: string): Promise<Pr
   try {
     const image = await loadImageUrl(imageUrl)
     const analysis = analyzeImageBrightness(image)
-    if (!shouldInvertFloorplan(analysis)) {
-      return { mode: "already-dark", converted: false, revoke: () => undefined, url: imageUrl }
+    if (analysis.averageLuminance < 145) {
+      return { converted: false, revoke: () => undefined, url: imageUrl }
     }
     const blob = await createDarkFloorplanBlob(image)
     const objectUrl = URL.createObjectURL(blob)
-    return { mode: "converted", converted: true, revoke: () => URL.revokeObjectURL(objectUrl), url: objectUrl }
+    return { converted: true, revoke: () => URL.revokeObjectURL(objectUrl), url: objectUrl }
   } catch {
-    // If the browser cannot inspect the image pixels (for example because a
-    // cached/static asset is missing CORS headers), keep the image visible but
-    // mark it for a CSS display filter. This prevents white AutoCAD layouts
-    // from leaking back into the monitoring dashboard.
-    return { mode: "fallback-filter", converted: false, revoke: () => undefined, url: imageUrl }
+    return { converted: false, revoke: () => undefined, url: imageUrl }
   }
 }
 
@@ -112,29 +107,16 @@ function analyzeImageBrightness(image: HTMLImageElement) {
   context.drawImage(image, 0, 0, width, height)
   const data = context.getImageData(0, 0, width, height).data
   let totalLuminance = 0
-  let brightPixels = 0
   let count = 0
 
   for (let index = 0; index < data.length; index += 4) {
     const alpha = data[index + 3]
     if (alpha < 16) continue
-    const luminance = 0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2]
-    totalLuminance += luminance
-    if (luminance > 205) brightPixels += 1
+    totalLuminance += 0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2]
     count += 1
   }
 
-  return {
-    averageLuminance: count > 0 ? totalLuminance / count : 0,
-    brightPixelRatio: count > 0 ? brightPixels / count : 0,
-  }
-}
-
-function shouldInvertFloorplan(analysis: { averageLuminance: number; brightPixelRatio: number }) {
-  // White CAD plans are dominated by high-luminance background, while already
-  // inverted monitoring layouts sit much lower. Use both average and ratio so
-  // dense linework or room labels do not accidentally bypass inversion.
-  return analysis.averageLuminance >= 128 || analysis.brightPixelRatio >= 0.35
+  return { averageLuminance: count > 0 ? totalLuminance / count : 0 }
 }
 
 function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {

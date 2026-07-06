@@ -61,10 +61,6 @@
     user-select: none;
   }
 
-  .ems-floorplan-image-overlay--force-dark {
-    filter: invert(1) grayscale(0.78) brightness(0.72) contrast(1.12);
-  }
-
   .ems-leaflet-marker-wrapper {
     background: transparent;
     border: 0;
