@@ -29,7 +29,10 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey }: Floo
   }, [activeLayout])
 
   const sourceImageUrl = useMemo(() => {
-    return activeLayout ? resolveApiAssetUrl(activeLayout.layout.image_url) : null
+    if (!activeLayout) return null
+    const url = new URL(resolveApiAssetUrl(activeLayout.layout.image_url))
+    url.searchParams.set("v", activeLayout.layout.updated_at || activeLayout.layout.created_at)
+    return url.toString()
   }, [activeLayout])
 
   useEffect(() => {
@@ -74,7 +77,10 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey }: Floo
 
     L.imageOverlay(preparedImage.url, bounds, {
       alt: `${activeLayout.layout.name} dark floorplan`,
-      className: "ems-floorplan-image-overlay",
+      className: cn(
+        "ems-floorplan-image-overlay",
+        preparedImage.mode === "fallback-filter" && "ems-floorplan-image-overlay--force-dark",
+      ),
       interactive: false,
     }).addTo(map)
 

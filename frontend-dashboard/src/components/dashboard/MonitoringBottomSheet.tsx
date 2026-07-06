@@ -5,6 +5,7 @@ import { ReadingsChart } from "@/components/charts/ReadingsChart"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
+import { formatStatus } from "@/lib/status"
 import { cn } from "@/lib/utils"
 import type { DashboardSummary, SensorReading } from "@/types/api"
 
@@ -27,13 +28,7 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
   const dragStartRef = useRef<{ y: number; height: number } | null>(null)
   const collapsed = height <= MIN_HEIGHT + 12
 
-  const eventCounts = useMemo(() => {
-    const events = summary?.recent_events ?? []
-    return {
-      alarm: events.filter((event) => event.status === "anomali" || event.status === "waspada").length,
-      trouble: events.filter((event) => event.status === "trouble").length,
-    }
-  }, [summary?.recent_events])
+  const statusSummary = useMemo(() => summarizeStatus(summary), [summary])
 
   const clampPanelHeight = (value: number) => clamp(value, MIN_HEIGHT, getSheetMaxHeight())
 
@@ -70,8 +65,9 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
           role="separator"
         />
         <div className="flex min-w-0 flex-1 items-center gap-2 pt-3 sm:gap-3">
-          <span className="shrink-0 rounded-md bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-700 sm:text-sm">Alarm: {eventCounts.alarm}</span>
-          <span className="shrink-0 rounded-md bg-amber-100 px-2.5 py-1.5 text-xs font-bold text-amber-800 sm:text-sm">Trouble: {eventCounts.trouble}</span>
+          <StatusSummaryPill label="Alarm" tone={statusSummary.alarmTone} value={statusSummary.alarm} />
+          <StatusSummaryPill label="Pre-Alarm" tone={statusSummary.preAlarmTone} value={statusSummary.preAlarm} />
+          <StatusSummaryPill label="Trouble" tone={statusSummary.troubleTone} value={statusSummary.trouble} />
           <span className="ml-auto hidden shrink-0 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 md:inline-flex">
             Readings today: {summary?.today_summary.total_readings ?? 0}
           </span>
@@ -115,6 +111,52 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
         </div>
       </div>
     </section>
+  )
+}
+
+function summarizeStatus(summary: DashboardSummary | null) {
+  const readings = Object.values(summary?.latest_readings ?? {}).filter((reading): reading is NonNullable<typeof reading> => Boolean(reading))
+
+  const actualAlarms = readings
+    .filter((reading) => reading.sensor_health_status === "normal" && reading.current_thermal_status !== "normal")
+    .map((reading) => `${reading.sensor_code} ${formatStatus(reading.current_thermal_status)}`)
+
+  const prediction = summary?.latest_prediction
+  const preAlarm = prediction && !prediction.is_stale && prediction.thermal_status !== "normal"
+    ? `${prediction.target_sensor} ${formatStatus(prediction.thermal_status)}`
+    : "Clear"
+
+  const troubleItems = [
+    ...(summary?.gateway && ["offline", "trouble"].includes(summary.gateway.status) ? [`GW ${formatStatus(summary.gateway.status)}`] : []),
+    ...readings
+      .filter((reading) => reading.sensor_health_status === "trouble" || reading.sensor_health_status === "inactive")
+      .map((reading) => `${reading.sensor_code} ${formatStatus(reading.sensor_health_status)}`),
+  ]
+
+  return {
+    alarm: actualAlarms.length > 0 ? actualAlarms.join(" · ") : "Clear",
+    alarmTone: actualAlarms.length > 0 ? "alarm" : "clear",
+    preAlarm,
+    preAlarmTone: preAlarm === "Clear" ? "clear" : "preAlarm",
+    trouble: troubleItems.length > 0 ? troubleItems.join(" · ") : "Clear",
+    troubleTone: troubleItems.length > 0 ? "trouble" : "clear",
+  } as const
+}
+
+function StatusSummaryPill({ label, tone, value }: { label: string; tone: "alarm" | "preAlarm" | "trouble" | "clear"; value: string }) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-md px-2.5 py-1.5 text-xs font-bold sm:text-sm",
+        tone === "alarm" && "bg-red-100 text-red-800",
+        tone === "preAlarm" && "bg-sky-50 text-sky-700",
+        tone === "trouble" && "bg-amber-100 text-amber-900",
+        tone === "clear" && "bg-emerald-50 text-emerald-700",
+      )}
+      title={`${label}: ${value}`}
+    >
+      {label}: {value}
+    </span>
   )
 }
 
