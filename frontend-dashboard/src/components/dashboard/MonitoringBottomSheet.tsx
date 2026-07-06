@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/status/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { DashboardSummary, SensorReading } from "@/types/api"
+import type { DashboardEvent, DashboardSummary, SensorReading } from "@/types/api"
 
 interface MonitoringBottomSheetProps {
   historyError?: string | null
@@ -60,7 +60,7 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
       className="absolute inset-x-0 bottom-0 z-30 max-h-[calc(100dvh-5.5rem)] overflow-hidden rounded-t-md border-t border-white/15 bg-white text-slate-950 shadow-[0_-16px_38px_rgba(0,0,0,0.34)] transition-[height] duration-200"
       style={{ height: clampPanelHeight(height) }}
     >
-      <div className="relative flex h-[54px] items-center justify-between gap-3 border-b bg-white px-4 sm:px-5">
+      <div className="relative flex h-[54px] items-center justify-between gap-3 border-b bg-white px-4 pt-3 sm:px-5">
         <div
           aria-label="Drag monitoring panel"
           className="absolute left-1/2 top-2 h-2 w-28 -translate-x-1/2 cursor-row-resize rounded-full bg-slate-500"
@@ -69,13 +69,12 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
           onPointerUp={stopDrag}
           role="separator"
         />
-        <div className="flex min-w-0 flex-1 items-center gap-2 pt-3 sm:gap-3">
-          <span className="shrink-0 rounded-md bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-700 sm:text-sm">Alarm: {eventCounts.alarm}</span>
-          <span className="shrink-0 rounded-md bg-amber-100 px-2.5 py-1.5 text-xs font-bold text-amber-800 sm:text-sm">Trouble: {eventCounts.trouble}</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+          <span className="shrink-0 rounded-md bg-danger px-2.5 py-1.5 text-xs font-bold text-destructive-foreground sm:text-sm">Alarm: {eventCounts.alarm}</span>
+          <span className="shrink-0 rounded-md bg-warning px-2.5 py-1.5 text-xs font-bold text-foreground sm:text-sm">Trouble: {eventCounts.trouble}</span>
           <span className="ml-auto hidden shrink-0 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 md:inline-flex">
             Readings today: {summary?.today_summary.total_readings ?? 0}
           </span>
-          <span className="hidden shrink-0 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground lg:inline">EMS status panel</span>
         </div>
         <Button className="shrink-0" onClick={toggle} size="sm" type="button" variant="ghost">
           Toggle Panel
@@ -146,23 +145,57 @@ function EventsTable({ summary }: { summary: DashboardSummary | null }) {
           <tr>
             <th className="pb-3 font-bold">Detected</th>
             <th className="pb-3 font-bold">Sensor</th>
-            <th className="pb-3 font-bold">Status</th>
+            <th className="pb-3 font-bold">Event</th>
+            <th className="pb-3 font-bold">Condition</th>
             <th className="pb-3 font-bold">Description</th>
           </tr>
         </thead>
         <tbody>
-          {events.map((event) => (
-            <tr className="border-b last:border-0" key={event.id}>
-              <td className="py-3 pr-4 text-muted-foreground">{formatDateTime(event.detected_at)}</td>
-              <td className="py-3 pr-4 font-mono text-xs font-bold">{event.sensor_code || "System"}</td>
-              <td className="py-3 pr-4"><StatusBadge status={event.status} /></td>
-              <td className="py-3 text-muted-foreground">{event.description || "No description supplied."}</td>
-            </tr>
-          ))}
+          {events.map((event) => {
+            const presentation = getEventPresentation(event)
+            return (
+              <tr className={cn("border-b last:border-0", presentation.rowClassName)} key={event.id}>
+                <td className={cn("border-l-4 py-3 pl-3 pr-4", presentation.accentClassName)}>{formatDateTime(event.detected_at)}</td>
+                <td className="py-3 pr-4 font-mono text-xs font-bold">{event.sensor_code || "System"}</td>
+                <td className="py-3 pr-4">
+                  <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase", presentation.categoryClassName)}>
+                    {presentation.category}
+                  </span>
+                </td>
+                <td className="py-3 pr-4"><StatusBadge status={event.status} /></td>
+                <td className="py-3 text-foreground">{event.description || "No description supplied."}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
   )
+}
+
+function getEventPresentation(event: DashboardEvent) {
+  if (event.status === "trouble") {
+    return {
+      category: "Trouble",
+      accentClassName: "border-warning",
+      categoryClassName: "bg-warning text-foreground",
+      rowClassName: "bg-warning-soft text-foreground",
+    }
+  }
+  if (event.status === "waspada" || event.status === "anomali") {
+    return {
+      category: "Alarm",
+      accentClassName: "border-danger",
+      categoryClassName: "bg-danger text-destructive-foreground",
+      rowClassName: "bg-danger-soft text-foreground",
+    }
+  }
+  return {
+    category: "Status",
+    accentClassName: "border-border",
+    categoryClassName: "bg-neutral-soft text-foreground",
+    rowClassName: "bg-card text-foreground",
+  }
 }
 
 function ModelMetrics({ summary }: { summary: DashboardSummary | null }) {
