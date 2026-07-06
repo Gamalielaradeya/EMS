@@ -1,10 +1,10 @@
-import { Activity, BarChart3, ChevronDown, ChevronUp, ListChecks } from "lucide-react"
+import { Activity, BarChart3, BrainCircuit, CalendarClock, ChevronDown, ChevronUp, ListChecks } from "lucide-react"
 import { useMemo, useRef, useState, type PointerEvent } from "react"
 
 import { ReadingsChart } from "@/components/charts/ReadingsChart"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { Button } from "@/components/ui/button"
-import { formatDateTime } from "@/lib/format"
+import { formatDateTime, formatMeasurement } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { DashboardSummary, SensorReading } from "@/types/api"
 
@@ -18,8 +18,8 @@ interface MonitoringBottomSheetProps {
 type BottomSheetTab = "events" | "trends" | "model"
 
 const MIN_HEIGHT = 54
-const DEFAULT_HEIGHT = 282
-const MAX_HEIGHT = 540
+const DEFAULT_HEIGHT = 252
+const MAX_HEIGHT = 430
 
 export function MonitoringBottomSheet({ historyError, historyIsLoading, readings, summary }: MonitoringBottomSheetProps) {
   const [height, setHeight] = useState(DEFAULT_HEIGHT)
@@ -35,6 +35,8 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
     }
   }, [summary?.recent_events])
 
+  const clampPanelHeight = (value: number) => clamp(value, MIN_HEIGHT, getSheetMaxHeight())
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     dragStartRef.current = { y: event.clientY, height }
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -43,22 +45,22 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragStartRef.current) return
     const delta = dragStartRef.current.y - event.clientY
-    setHeight(clamp(dragStartRef.current.height + delta, MIN_HEIGHT, MAX_HEIGHT))
+    setHeight(clampPanelHeight(dragStartRef.current.height + delta))
   }
 
   const stopDrag = () => {
     dragStartRef.current = null
   }
 
-  const toggle = () => setHeight((current) => (current <= MIN_HEIGHT + 12 ? DEFAULT_HEIGHT : MIN_HEIGHT))
+  const toggle = () => setHeight((current) => (current <= MIN_HEIGHT + 12 ? clampPanelHeight(DEFAULT_HEIGHT) : MIN_HEIGHT))
 
   return (
     <section
       aria-label="Draggable monitoring status panel"
-      className="absolute inset-x-0 bottom-0 z-30 overflow-hidden rounded-t-md border-t border-white/15 bg-white shadow-[0_-16px_38px_rgba(0,0,0,0.34)] transition-[height] duration-200"
-      style={{ height }}
+      className="absolute inset-x-0 bottom-0 z-30 max-h-[calc(100dvh-5.5rem)] overflow-hidden rounded-t-md border-t border-white/15 bg-white text-slate-950 shadow-[0_-16px_38px_rgba(0,0,0,0.34)] transition-[height] duration-200"
+      style={{ height: clampPanelHeight(height) }}
     >
-      <div className="relative flex h-[54px] items-center justify-between gap-4 border-b bg-white px-5">
+      <div className="relative flex h-[54px] items-center justify-between gap-3 border-b bg-white px-4 sm:px-5">
         <div
           aria-label="Drag monitoring panel"
           className="absolute left-1/2 top-2 h-2 w-28 -translate-x-1/2 cursor-row-resize rounded-full bg-slate-500"
@@ -67,24 +69,27 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
           onPointerUp={stopDrag}
           role="separator"
         />
-        <div className="flex items-center gap-4 pt-3">
-          <span className="rounded-md bg-sky-50 px-3 py-1.5 text-sm font-bold text-sky-700">Alarm: {eventCounts.alarm}</span>
-          <span className="rounded-md bg-amber-100 px-3 py-1.5 text-sm font-bold text-amber-800">Trouble: {eventCounts.trouble}</span>
-          <span className="hidden font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground sm:inline">EMS status panel</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 pt-3 sm:gap-3">
+          <span className="shrink-0 rounded-md bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-700 sm:text-sm">Alarm: {eventCounts.alarm}</span>
+          <span className="shrink-0 rounded-md bg-amber-100 px-2.5 py-1.5 text-xs font-bold text-amber-800 sm:text-sm">Trouble: {eventCounts.trouble}</span>
+          <span className="ml-auto hidden shrink-0 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 md:inline-flex">
+            Readings today: {summary?.today_summary.total_readings ?? 0}
+          </span>
+          <span className="hidden shrink-0 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground lg:inline">EMS status panel</span>
         </div>
-        <Button onClick={toggle} size="sm" type="button" variant="ghost">
+        <Button className="shrink-0" onClick={toggle} size="sm" type="button" variant="ghost">
           Toggle Panel
           {collapsed ? <ChevronUp aria-hidden="true" className="size-4" /> : <ChevronDown aria-hidden="true" className="size-4" />}
         </Button>
       </div>
 
       <div className="grid h-[calc(100%-54px)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-        <div className="flex flex-wrap gap-2 border-b bg-muted/40 px-5 py-3">
+        <div className="flex flex-wrap gap-2 border-b bg-muted/40 px-4 py-3 sm:px-5">
           <SheetTab active={tab === "events"} icon={ListChecks} label="Events" onClick={() => setTab("events")} />
           <SheetTab active={tab === "trends"} icon={BarChart3} label="Trends" onClick={() => setTab("trends")} />
           <SheetTab active={tab === "model"} icon={Activity} label="LSTM Metrics" onClick={() => setTab("model")} />
         </div>
-        <div className="overflow-y-auto px-5 py-4">
+        <div className="overflow-y-auto px-4 py-4 sm:px-5">
           {tab === "events" ? <EventsTable summary={summary} /> : null}
           {tab === "trends" ? (
             <div className="grid gap-4 xl:grid-cols-2">
@@ -162,13 +167,37 @@ function EventsTable({ summary }: { summary: DashboardSummary | null }) {
 
 function ModelMetrics({ summary }: { summary: DashboardSummary | null }) {
   const metrics = summary?.latest_metrics
+  const prediction = summary?.latest_prediction
+  const activeModel = summary?.active_model
+
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <MetricBox label="RMSE" value={metrics ? metrics.rmse.toFixed(2) : "--"} />
-      <MetricBox label="MAE" value={metrics ? metrics.mae.toFixed(2) : "--"} />
-      <MetricBox label="MAPE" value={metrics ? `${metrics.mape.toFixed(2)}%` : "--"} />
-      <div className="rounded-md border bg-muted/50 p-4 text-sm leading-6 text-muted-foreground md:col-span-3">
-        Active model: <span className="font-semibold text-foreground">{summary?.active_model?.version || "Not ready"}</span>. Metrics are from the active LSTM evaluation and stay read-only on this monitoring view.
+    <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <MetricBox label="RMSE" value={metrics ? metrics.rmse.toFixed(2) : "--"} />
+        <MetricBox label="MAE" value={metrics ? metrics.mae.toFixed(2) : "--"} />
+        <MetricBox label="MAPE" value={metrics ? `${metrics.mape.toFixed(2)}%` : "--"} />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <InfoBox icon={BrainCircuit} label="Active model" value={activeModel?.version || prediction?.model_version || "Not ready"} />
+        <InfoBox icon={CalendarClock} label="Trained at" value={activeModel?.trained_at ? formatDateTime(activeModel.trained_at) : "Not available"} />
+      </div>
+
+      <div className="rounded-md border bg-muted/50 p-4 text-sm leading-6 text-muted-foreground xl:col-span-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-foreground">Latest prediction</span>
+          <StatusBadge status={prediction?.final_status || prediction?.thermal_status || "inactive"} />
+        </div>
+        {prediction ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <PredictionField label="Target" value={prediction.target_sensor} />
+            <PredictionField label="Temperature" value={formatMeasurement(prediction.predicted_temperature, "°C")} />
+            <PredictionField label="Predicted for" value={formatDateTime(prediction.predicted_for)} />
+            <PredictionField label="Stale" value={prediction.is_stale ? "Yes" : "No"} />
+          </div>
+        ) : (
+          <p className="mt-3">No latest prediction has been recorded yet. Metrics will appear here after the LSTM worker produces an active prediction and evaluation summary.</p>
+        )}
       </div>
     </div>
   )
@@ -181,6 +210,32 @@ function MetricBox({ label, value }: { label: string; value: string }) {
       <p className="mt-2 font-display text-2xl font-bold">{value}</p>
     </div>
   )
+}
+
+function InfoBox({ icon: Icon, label, value }: { icon: typeof BrainCircuit; label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-card p-4 shadow-card">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <Icon aria-hidden="true" className="size-4 text-cyan-700" />
+      </div>
+      <p className="mt-2 font-display text-base font-bold">{value}</p>
+    </div>
+  )
+}
+
+function PredictionField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-1 font-semibold text-foreground">{value}</p>
+    </div>
+  )
+}
+
+function getSheetMaxHeight() {
+  if (typeof window === "undefined") return MAX_HEIGHT
+  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, window.innerHeight - 96))
 }
 
 function clamp(value: number, min: number, max: number) {

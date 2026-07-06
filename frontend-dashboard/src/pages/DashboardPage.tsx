@@ -1,4 +1,4 @@
-import { BrainCircuit, Database, MapPinned, RefreshCw, ShieldCheck, Thermometer, Wifi, type LucideIcon } from "lucide-react"
+import { BrainCircuit, MapPinned, RefreshCw, ShieldCheck, Thermometer, Wifi, type LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { MonitoringBottomSheet } from "@/components/dashboard/MonitoringBottomSheet"
@@ -17,7 +17,7 @@ import type { DashboardReading, ReadingHistoryFilters } from "@/types/api"
 const dashboardHistoryFilters: ReadingHistoryFilters = { limit: 120 }
 
 export function DashboardPage() {
-  const { summary, error, isLoading, refresh, eventRevision, sseStatus } = useDashboardContext()
+  const { summary, error, isLoading, refresh, eventRevision } = useDashboardContext()
   const layoutWorkspace = useLayoutWorkspace(eventRevision)
   const history = useReadingHistory(dashboardHistoryFilters, eventRevision)
   const s1 = summary?.latest_readings.S1
@@ -25,11 +25,10 @@ export function DashboardPage() {
   const currentThermalStatus = summary?.overall_current_thermal_status || "normal"
   const currentThermalSource = summary?.overall_current_thermal_source_sensor
   const predictionThermalStatus = summary?.prediction_thermal_status
-  const sseBadgeStatus = sseStatus === "connecting" ? "checking" : sseStatus
 
   return (
     <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8">
-      <section className="relative isolate h-[calc(100dvh-5.4rem)] min-h-[44rem] overflow-hidden bg-black text-white">
+      <section className="relative isolate h-[calc(100dvh-5rem)] min-h-0 overflow-hidden bg-black text-white">
         <FloorplanMonitoringMap activeLayout={layoutWorkspace.layout} className="absolute inset-0 z-0" fitKey={eventRevision} />
         <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(90deg,rgba(2,6,23,0.72),transparent_34%,transparent_67%,rgba(2,6,23,0.42)),linear-gradient(180deg,rgba(2,6,23,0.46),transparent_30%,rgba(2,6,23,0.22))]" />
 
@@ -87,26 +86,7 @@ export function DashboardPage() {
             status={predictionThermalStatus || "inactive"}
             value={predictionThermalStatus ? formatStatus(predictionThermalStatus) : "No prediction"}
           />
-          <GlassMetric
-            detail="Accepted sensor records since start of local day."
-            icon={Database}
-            label="Readings today"
-            status="normal"
-            value={String(summary?.today_summary.total_readings ?? 0)}
-          />
-          <GlassMetric
-            detail="Realtime event-stream connection for dashboard refresh."
-            icon={BrainCircuit}
-            label="SSE"
-            status={sseBadgeStatus}
-            value={formatStatus(sseStatus)}
-          />
         </aside>
-
-        <div className="absolute bottom-[17.75rem] right-4 z-20 hidden rounded-md border border-white/10 bg-black/35 p-3 text-xs text-slate-300 shadow-floating backdrop-blur lg:block">
-          <p className="font-mono font-bold uppercase tracking-[0.16em] text-cyan-200">Floorplan mode</p>
-          <p className="mt-1 max-w-64 leading-5">Leaflet CRS.Simple image overlay · black pan/zoom background · uploaded layouts auto-convert to dark style.</p>
-        </div>
 
         {error ? (
           <div className="absolute left-6 right-6 top-6 z-40 mx-auto max-w-3xl text-slate-950">
@@ -161,15 +141,15 @@ function SensorMiniCard({ reading, role, sensorCode }: { reading?: DashboardRead
 
 function GlassMetric({ detail, icon: Icon, label, status, value }: { detail: string; icon: LucideIcon; label: string; status: Parameters<typeof StatusBadge>[0]["status"]; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/92 p-4 text-slate-950 shadow-floating backdrop-blur-md">
+    <div className="rounded-lg border border-white/10 bg-slate-950/72 p-4 text-white shadow-floating backdrop-blur-md">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-          <p className="mt-1 font-display text-xl font-bold">{value}</p>
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-cyan-200">{label}</p>
+          <p className="mt-1 font-display text-xl font-bold text-white">{value}</p>
         </div>
-        <Icon aria-hidden="true" className="size-5 text-cyan-700" />
+        <Icon aria-hidden="true" className="size-5 text-cyan-200" />
       </div>
-      <p className="mt-2 text-xs leading-5 text-slate-600">{detail}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-300">{detail}</p>
       <div className="mt-3"><StatusBadge status={status} /></div>
     </div>
   )
