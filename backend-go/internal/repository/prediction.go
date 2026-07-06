@@ -268,6 +268,17 @@ func (r *Repository) GetModelVersion(ctx context.Context, id int64) (model.Model
 	return item, err
 }
 
+func (r *Repository) UpdateModelVersionName(ctx context.Context, id int64, name string) (model.ModelVersion, error) {
+	commandTag, err := r.db.Exec(ctx, `UPDATE model_versions SET model_name = $1 WHERE id = $2`, strings.TrimSpace(name), id)
+	if err != nil {
+		return model.ModelVersion{}, fmt.Errorf("update model name: %w", err)
+	}
+	if commandTag.RowsAffected() == 0 {
+		return model.ModelVersion{}, ErrNotFound
+	}
+	return r.GetModelVersion(ctx, id)
+}
+
 func (r *Repository) ActivateModelVersion(ctx context.Context, id int64) (model.ModelVersion, model.SystemLog, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {

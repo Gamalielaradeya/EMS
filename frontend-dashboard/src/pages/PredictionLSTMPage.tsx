@@ -1,7 +1,9 @@
-import { Activity, BrainCircuit, Database, RefreshCw, ShieldAlert } from "lucide-react"
+import { Activity, BrainCircuit, Database, Eye, RefreshCw, ShieldAlert } from "lucide-react"
+import { useState } from "react"
 
 import { PredictionChart } from "@/components/charts/PredictionChart"
 import { SummaryMetric } from "@/components/dashboard/SummaryMetric"
+import { ModelDetailModal } from "@/components/prediction/ModelDetailModal"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/states/EmptyState"
 import { ErrorState } from "@/components/states/ErrorState"
@@ -19,6 +21,8 @@ export function PredictionLSTMPage() {
   const workspace = usePredictionWorkspace(eventRevision)
   const { hasToken } = useAdminToken()
   const activeModel = workspace.models.find((model) => model.is_active)
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(null)
+  const selectedModel = selectedModelId ? workspace.models.find((m) => m.id === selectedModelId) : null
 
   return (
     <div className="space-y-6">
@@ -67,7 +71,7 @@ export function PredictionLSTMPage() {
               detail={activeModel ? `Trained ${formatDateTime(activeModel.trained_at)}` : "Activation required before ML inference."}
               icon={Database}
               label="Active model"
-              value={activeModel?.version || "Not ready"}
+              value={activeModel?.model_name || "Not ready"}
             />
             <SummaryMetric
               detail="Latest active-model evaluation in Celsius units."
@@ -112,6 +116,7 @@ export function PredictionLSTMPage() {
               isActivating={workspace.isActivating}
               models={workspace.models}
               onActivate={(id) => void workspace.activate(id)}
+              onDetail={(id) => setSelectedModelId(id)}
             />
             <BaselineComparison comparison={workspace.comparison} />
           </section>
@@ -119,6 +124,16 @@ export function PredictionLSTMPage() {
           <PredictionHistory predictions={workspace.history} />
         </>
       )}
+
+      {selectedModel ? (
+        <ModelDetailModal
+          model={selectedModel}
+          fullMetrics={workspace.metrics}
+          comparison={workspace.comparison}
+          onClose={() => setSelectedModelId(null)}
+          onRenamed={() => void workspace.refresh()}
+        />
+      ) : null}
     </div>
   )
 }
@@ -128,11 +143,13 @@ function ModelVersions({
   isActivating,
   models,
   onActivate,
+  onDetail,
 }: {
   hasToken: boolean
   isActivating: boolean
   models: ReturnType<typeof usePredictionWorkspace>["models"]
   onActivate: (id: number) => void
+  onDetail: (id: number) => void
 }) {
   return (
     <Card>
@@ -149,18 +166,25 @@ function ModelVersions({
               <div className="flex flex-col gap-3 rounded-md border bg-muted p-4 sm:flex-row sm:items-center sm:justify-between" key={model.id}>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-display text-sm font-bold">{model.version}</p>
+                    <p className="font-display text-sm font-bold">{model.model_name}</p>
                     <StatusBadge label={model.is_active ? "Active" : "Inactive"} status={model.is_active ? "normal" : "inactive"} />
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">{model.version}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     Window {model.window_size} min / horizon {model.horizon_minutes} min / {formatDateTime(model.trained_at)}
                   </p>
                 </div>
-                {!model.is_active ? (
-                  <Button disabled={!hasToken || isActivating} onClick={() => onActivate(model.id)} size="sm" variant="secondary">
-                    Activate
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button onClick={() => onDetail(model.id)} size="sm" variant="ghost">
+                    <Eye aria-hidden="true" className="size-4" />
+                    Detail
                   </Button>
-                ) : null}
+                  {!model.is_active ? (
+                    <Button disabled={!hasToken || isActivating} onClick={() => onActivate(model.id)} size="sm" variant="secondary">
+                      Activate
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ))}
             {!hasToken ? <p className="text-xs leading-5 text-muted-foreground">Set the admin token in Settings to enable model activation.</p> : null}

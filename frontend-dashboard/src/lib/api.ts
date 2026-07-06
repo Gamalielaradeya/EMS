@@ -150,6 +150,12 @@ export const api = {
       method: "PUT",
       headers: adminHeaders(),
     }),
+  updateModelVersion: (id: number, name: string) =>
+    request<ModelVersion>(`/model-versions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify({ model_name: name }),
+    }),
   getLatestModelMetrics: () => request<ModelMetrics | null>("/model-metrics/latest"),
   getLatestModelComparison: () => request<ModelComparison | null>("/model-comparison/latest"),
   getAnomalyEvents: (filters: OperationalLogFilters) =>

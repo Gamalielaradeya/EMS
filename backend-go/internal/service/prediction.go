@@ -61,6 +61,10 @@ func (s *Service) GetModelVersion(ctx context.Context, id int64) (model.ModelVer
 	return s.repository.GetModelVersion(ctx, id)
 }
 
+func (s *Service) UpdateModelVersionName(ctx context.Context, id int64, name string) (model.ModelVersion, error) {
+	return s.repository.UpdateModelVersionName(ctx, id, name)
+}
+
 func (s *Service) ActivateModelVersion(ctx context.Context, id int64) (model.ModelVersion, error) {
 	item, systemLog, err := s.repository.ActivateModelVersion(ctx, id)
 	if err == nil {

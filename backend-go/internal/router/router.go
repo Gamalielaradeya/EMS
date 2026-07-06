@@ -50,6 +50,7 @@ func New(handler *handler.Handler, tokenValidator interface {
 			router.Use(middleware.AdminOrInternalBearerAuth(adminToken, internalAPIToken))
 			router.Post("/ml/predictions", handler.InsertPrediction)
 			router.Put("/model-versions/{id}/activate", handler.ActivateModelVersion)
+			router.Put("/model-versions/{id}", handler.UpdateModelVersion)
 			router.Post("/notifications/test", handler.TestNotification)
 			router.Put("/settings/{key}", handler.UpdateSetting)
 			router.Post("/layout/image", handler.UploadLayout)
