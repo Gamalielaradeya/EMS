@@ -34,13 +34,11 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey }: Floo
 
   useEffect(() => {
     if (!sourceImageUrl) {
-      setPreparedImage(null)
       return undefined
     }
 
     let cancelled = false
     let prepared: PreparedFloorplanImage | null = null
-    setPreparedImage(null)
     void prepareFloorplanDisplayImage(sourceImageUrl).then((result) => {
       if (cancelled) {
         result.revoke()
@@ -76,10 +74,7 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey }: Floo
 
     L.imageOverlay(preparedImage.url, bounds, {
       alt: `${activeLayout.layout.name} dark floorplan`,
-      className: cn(
-        "ems-floorplan-image-overlay",
-        preparedImage.converted ? "ems-floorplan-image-overlay--prepared" : "ems-floorplan-image-overlay--fallback-dark",
-      ),
+      className: "ems-floorplan-image-overlay",
       interactive: false,
     }).addTo(map)
 
@@ -101,18 +96,9 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey }: Floo
   }, [activeLayout, dimensions.height, dimensions.width, fitKey, preparedImage, sourceImageUrl])
 
   return (
-    <div className={cn("relative h-full min-h-[28rem] overflow-hidden bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.10),transparent_42%),#020617]", className)}>
+    <div className={cn("relative h-full min-h-[28rem] overflow-hidden bg-black", className)}>
       {activeLayout ? (
-        <>
-          {!preparedImage ? (
-            <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.10),transparent_42%),#020617] text-center text-slate-300">
-              <div className="rounded-md border border-white/10 bg-black/35 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] backdrop-blur">
-                Preparing dark floorplan
-              </div>
-            </div>
-          ) : null}
-          <div className="ems-floorplan-leaflet h-full w-full" ref={mapContainerRef} />
-        </>
+        <div className="ems-floorplan-leaflet h-full w-full" ref={mapContainerRef} />
       ) : (
         <div className="grid h-full min-h-[28rem] place-items-center bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.12),transparent_38%),#020617] px-6 text-center text-white">
           <div className="max-w-md rounded-lg border border-white/10 bg-black/45 p-6 shadow-floating backdrop-blur">
