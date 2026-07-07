@@ -26,6 +26,7 @@ class SimulatorOptions:
 class Segment:
     name: str
     seconds: float
+    target_s1: float
     target_s2: float
 
 
@@ -45,6 +46,7 @@ class SmoothThermalSimulator:
         self._segments = self._build_segments(options.scenario)
         self._segment_index = 0
         self._segment_elapsed = 0.0
+        self._segment_start_s1 = self._s1_temperature
         self._segment_start_s2 = self._s2_temperature
 
     def next_readings(self) -> tuple[list[SensorReading], dict[str, object]]:
@@ -54,11 +56,7 @@ class SmoothThermalSimulator:
         noise_s1 = self._rng.uniform(-0.03, 0.03)
         noise_s2 = self._rng.uniform(-0.05, 0.05)
 
-        self._s1_temperature = _approach(
-            self._s1_temperature,
-            27.8 + self._rng.uniform(-0.12, 0.12),
-            0.06,
-        ) + noise_s1
+        self._s1_temperature = self._segment_start_s1 + (segment.target_s1 - self._segment_start_s1) * smooth + noise_s1
         self._s2_temperature = self._segment_start_s2 + (segment.target_s2 - self._segment_start_s2) * smooth + noise_s2
         delta = max(0.0, self._s2_temperature - self._s1_temperature)
         self._s1_humidity = _approach(self._s1_humidity, 62.0 - (self._s1_temperature - 27.8) * 1.2, 0.08)
@@ -72,6 +70,7 @@ class SmoothThermalSimulator:
         metadata = {
             "elapsed_seconds": round(self._elapsed, 3),
             "segment": segment.name,
+            "target_s1": segment.target_s1,
             "target_s2": segment.target_s2,
             "readings_count": len(readings),
         }
@@ -86,6 +85,7 @@ class SmoothThermalSimulator:
         if self._segment_elapsed >= current.seconds:
             self._segment_index = (self._segment_index + 1) % len(self._segments)
             self._segment_elapsed = 0.0
+            self._segment_start_s1 = self._s1_temperature
             self._segment_start_s2 = self._s2_temperature
 
     def _apply_drop_sensor(self, readings: list[SensorReading]) -> list[SensorReading]:
@@ -98,34 +98,56 @@ class SmoothThermalSimulator:
 
     def _build_segments(self, scenario: str) -> list[Segment]:
         if scenario == "normal":
-            return [Segment("normal_stable", self._options.duration_seconds or 3600, 28.4)]
+            return [Segment("normal_stable", self._options.duration_seconds or 3600, 27.8, 28.4)]
         if scenario == "heat-cycle":
             return [
-                Segment("normal_stable", 180, 28.4),
-                Segment("heating_slow", 300, 30.8),
-                Segment("hot_hold", 180, 31.2),
-                Segment("recovery", 420, 28.5),
+                Segment("normal_stable", 180, 27.8, 28.4),
+                Segment("heating_slow", 300, 28.5, 30.8),
+                Segment("hot_hold", 180, 28.8, 31.2),
+                Segment("recovery", 420, 27.8, 28.5),
             ]
         if scenario != "random-smooth":
             raise ValueError("scenario must be random-smooth, heat-cycle, or normal")
 
-        segments: list[Segment] = [Segment("normal_stable", self._rng.uniform(120, 240), 28.4)]
+        segments: list[Segment] = [Segment("normal_stable", self._rng.uniform(120, 240), 27.8, 28.4)]
         target_duration = self._options.duration_seconds or 86400
         while sum(segment.seconds for segment in segments) < target_duration + 300:
-            peak = self._rng.uniform(30.2, 33.4)
+            peak_s1, peak_s2, impact = self._random_heat_targets()
+            recovery_s1 = self._rng.uniform(27.6, 28.5)
+            recovery_s2 = self._rng.uniform(28.1, 29.0)
             segments.extend(
                 [
                     Segment(
-                        "heating_slow" if self._rng.random() < 0.65 else "heating_fast",
+                        f"{impact}_{'heating_slow' if self._rng.random() < 0.65 else 'heating_fast'}",
                         self._rng.uniform(120, 420),
-                        peak,
+                        peak_s1,
+                        peak_s2,
                     ),
-                    Segment("hot_hold", self._rng.uniform(90, 240), peak + self._rng.uniform(-0.25, 0.25)),
-                    Segment("recovery", self._rng.uniform(240, 540), self._rng.uniform(28.2, 29.2)),
-                    Segment("normal_stable", self._rng.uniform(120, 360), self._rng.uniform(28.1, 28.8)),
+                    Segment(
+                        f"{impact}_hot_hold",
+                        self._rng.uniform(90, 240),
+                        peak_s1 + self._rng.uniform(-0.18, 0.18),
+                        peak_s2 + self._rng.uniform(-0.25, 0.25),
+                    ),
+                    Segment("recovery", self._rng.uniform(240, 540), recovery_s1, recovery_s2),
+                    Segment(
+                        "normal_stable",
+                        self._rng.uniform(120, 360),
+                        self._rng.uniform(27.5, 28.4),
+                        self._rng.uniform(28.1, 28.8),
+                    ),
                 ]
             )
         return segments
+
+    def _random_heat_targets(self) -> tuple[float, float, str]:
+        impact = self._rng.choices(("s2_only", "s1_only", "both"), weights=(0.55, 0.20, 0.25), k=1)[0]
+        if impact == "s1_only":
+            return self._rng.uniform(30.1, 31.6), self._rng.uniform(28.4, 29.4), impact
+        if impact == "both":
+            base_peak = self._rng.uniform(30.1, 32.4)
+            return base_peak + self._rng.uniform(-0.4, 0.4), base_peak + self._rng.uniform(0.2, 1.2), impact
+        return self._rng.uniform(27.7, 28.7), self._rng.uniform(30.2, 33.4), impact
 
 
 def run_simulator(

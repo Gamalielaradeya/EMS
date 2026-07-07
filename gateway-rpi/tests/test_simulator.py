@@ -9,14 +9,34 @@ from gateway.simulator import SimulatorOptions, SmoothThermalSimulator, duration
 
 class SimulatorTests(unittest.TestCase):
     def test_random_smooth_generates_threshold_crossing_readings(self) -> None:
-        simulator = SmoothThermalSimulator(SimulatorOptions(duration_seconds=900, interval_seconds=10, seed=5))
+        simulator = SmoothThermalSimulator(SimulatorOptions(duration_seconds=1800, interval_seconds=10, seed=1))
         temperatures = []
-        for _ in range(90):
+        for _ in range(180):
             readings, metadata = simulator.next_readings()
             self.assertEqual(len(readings), 2)
-            self.assertIn(metadata["segment"], {"normal_stable", "heating_slow", "heating_fast", "hot_hold", "recovery"})
+            self.assertIsInstance(metadata["segment"], str)
             temperatures.append(next(reading.temperature for reading in readings if reading.sensor_code == "S2"))
         self.assertGreater(max(temperatures), 30.0)
+
+    def test_random_smooth_can_heat_s1_without_s2(self) -> None:
+        simulator = SmoothThermalSimulator(SimulatorOptions(duration_seconds=7200, interval_seconds=10, seed=1))
+        s1_temperatures = []
+        s2_temperatures = []
+        for _ in range(720):
+            readings, _ = simulator.next_readings()
+            by_code = {reading.sensor_code: reading.temperature for reading in readings}
+            s1_temperatures.append(by_code["S1"])
+            s2_temperatures.append(by_code["S2"])
+        self.assertGreater(max(s1_temperatures), 30.0)
+        self.assertTrue(any(s1 > 30.0 and s2 < 30.0 for s1, s2 in zip(s1_temperatures, s2_temperatures)))
+
+    def test_random_smooth_contains_s1_s2_and_joint_heat_segments(self) -> None:
+        simulator = SmoothThermalSimulator(SimulatorOptions(duration_seconds=7200, interval_seconds=10, seed=1))
+        segment_names = {segment.name for segment in simulator._segments}  # noqa: SLF001 - verifies deterministic scenario mix.
+
+        self.assertTrue(any(name.startswith("s1_only_") for name in segment_names))
+        self.assertTrue(any(name.startswith("s2_only_") for name in segment_names))
+        self.assertTrue(any(name.startswith("both_") for name in segment_names))
 
     def test_drop_sensor_omits_sensor_after_configured_time(self) -> None:
         simulator = SmoothThermalSimulator(
