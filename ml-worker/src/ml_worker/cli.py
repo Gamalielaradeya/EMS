@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from ml_worker.config import Settings, load_settings
 from ml_worker.database import connect
+from ml_worker.early_warning import build_early_warning_report
 from ml_worker.errors import MLWorkerError
 from ml_worker.logging_config import configure_logging
 from ml_worker.pipeline import evaluate, infer, train
@@ -24,6 +25,19 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate_parser = subparsers.add_parser("evaluate", help="evaluate the latest or requested saved LSTM model")
     _add_time_range_arguments(evaluate_parser)
     evaluate_parser.add_argument("--version", help="specific model version; defaults to active or latest")
+
+    warning_parser = subparsers.add_parser(
+        "early-warning-report",
+        help="audit matched predictions, transition episodes, and baseline promotion quality",
+    )
+    _add_time_range_arguments(warning_parser)
+    warning_parser.add_argument("--version", help="specific model version; defaults to active or latest")
+    warning_parser.add_argument(
+        "--max-baseline-ratio",
+        type=float,
+        default=1.0,
+        help="maximum allowed LSTM MAE/RMSE ratio versus the best baseline (default: 1.0)",
+    )
 
     infer_parser = subparsers.add_parser("infer", help="produce one local prediction from the active/latest model")
     infer_parser.add_argument("--version", help="specific model version; defaults to active or latest")
@@ -51,6 +65,15 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "evaluate":
                 start_at, end_at = _time_range(args, settings)
                 result = evaluate(connection, settings, start_at, end_at, version=args.version)
+            elif args.command == "early-warning-report":
+                start_at, end_at = _time_range(args, settings)
+                result = build_early_warning_report(
+                    connection,
+                    start_at,
+                    end_at,
+                    version=args.version,
+                    max_baseline_ratio=args.max_baseline_ratio,
+                )
             else:
                 result = infer(connection, settings, _parse_datetime(args.end) or _now(), version=args.version)
     except (MLWorkerError, OSError, ValueError) as exc:

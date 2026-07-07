@@ -12,6 +12,7 @@ from ml_worker.baselines import evaluate_baselines
 from ml_worker.backend_client import build_prediction_payload, submit_prediction
 from ml_worker.config import Settings
 from ml_worker.dataset import load_raw_readings
+from ml_worker.early_warning import evaluate_promotion_gate
 from ml_worker.errors import InsufficientDataError, MLWorkerError
 from ml_worker.metrics import calculate_metrics
 from ml_worker.model import build_lstm_model, load_model, tensorflow
@@ -81,6 +82,13 @@ def train(
         predicted_celsius = scaled.target_scaler.inverse_transform(predicted_scaled).reshape(-1)
         actual_celsius = raw_test_y.reshape(-1)
         metrics = calculate_metrics(actual_celsius, predicted_celsius)
+        promotion_gate = evaluate_promotion_gate(
+            {
+                "lstm": metrics.to_dict(),
+                "baselines": {name: value.to_dict() for name, value in baselines.items()},
+            }
+        )
+        activation_allowed = activate and promotion_gate["passed"]
 
         version = datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
         artifacts = _save_artifacts(
@@ -116,7 +124,7 @@ def train(
                 "learning_rate": settings.learning_rate,
                 "early_stopping_patience": settings.early_stopping_patience,
             },
-            activate,
+            activation_allowed,
         )
         insert_model_metrics(
             connection,
@@ -132,14 +140,26 @@ def train(
             run_id,
             "success",
             f"Trained model {version}.",
-            {"metrics_celsius": metrics.to_dict(), "artifacts": {k: str(v) for k, v in artifacts.items()}},
+            {
+                "metrics_celsius": metrics.to_dict(),
+                "artifacts": {k: str(v) for k, v in artifacts.items()},
+                "activation_requested": activate,
+                "activated": activation_allowed,
+                "promotion_gate": promotion_gate,
+            },
             model_version_id,
         )
         insert_system_log(
             connection,
             "info",
             f"ML training completed for {version}.",
-            {"model_version_id": model_version_id, "metrics_celsius": metrics.to_dict()},
+            {
+                "model_version_id": model_version_id,
+                "metrics_celsius": metrics.to_dict(),
+                "activation_requested": activate,
+                "activated": activation_allowed,
+                "promotion_gate": promotion_gate,
+            },
         )
         connection.commit()
         return {
@@ -147,6 +167,9 @@ def train(
             "version": version,
             "metrics_celsius": metrics.to_dict(),
             "baselines_celsius": {name: value.to_dict() for name, value in baselines.items()},
+            "activation_requested": activate,
+            "activated": activation_allowed,
+            "promotion_gate": promotion_gate,
             "artifacts": {name: str(path) for name, path in artifacts.items()},
         }
     except Exception as exc:

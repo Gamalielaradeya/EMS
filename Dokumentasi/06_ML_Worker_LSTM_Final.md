@@ -1039,6 +1039,8 @@ Audit dilakukan terhadap model aktif `v20260624_115955` ketika S2 dipindahkan me
 
 Input inference telah mengikuti data terbaru. Karena itu, kasus ini bukan bukti data macet atau worker berhenti. Model menghasilkan prediksi yang terlalu rendah saat terjadi kenaikan suhu cepat.
 
+Replay operasional pukul 11:20–13:30 WIB menghasilkan 121 prediction-actual matches, 4 episode threshold, 2 episode terdeteksi lebih awal, dan 2 episode terlewat. Threshold episode recall adalah `50%`, MAE operasional `1.086°C`, dan MAE pada titik threshold `1.292°C`. Nilai ini adalah snapshot satu periode eksperimen, bukan estimasi performa final; jumlah episode harus ditambah sebelum menarik kesimpulan statistik skripsi.
+
 Metrik test model saat training:
 
 | Metode | RMSE (°C) | MAE (°C) | MAPE (%) |

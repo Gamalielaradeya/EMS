@@ -60,6 +60,7 @@ metrics are not thesis results.
 ./.venv/Scripts/python.exe -m ml_worker.cli train
 ./.venv/Scripts/python.exe -m ml_worker.cli train --activate
 ./.venv/Scripts/python.exe -m ml_worker.cli evaluate
+./.venv/Scripts/python.exe -m ml_worker.cli early-warning-report
 ./.venv/Scripts/python.exe -m ml_worker.cli infer
 ./.venv/Scripts/python.exe -m ml_worker.cli infer-loop
 ```
@@ -88,6 +89,24 @@ $env:ML_INFER_INTERVAL_SECONDS = "60"
 
 Keep this process running alongside the backend when the dashboard needs a
 fresh non-stale prediction stream. It uses the active model; it does not retrain.
+
+`early-warning-report` is read-only. It compares stored LSTM metrics with the
+best stored baseline and audits predictions that backend has matched to actual
+S2 readings. The report includes threshold episodes, missed warnings, false
+warnings, transition MAE, threshold recall, and median lead time. It never
+activates or deactivates a model.
+
+`train --activate` also applies the same baseline gate. A candidate that is
+worse than the best baseline is still saved for audit, but remains inactive and
+the command output explains the failed MAE/RMSE checks.
+
+Example for a controlled heat/recovery period:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli early-warning-report `
+  --start 2026-07-07T11:30:00+07:00 `
+  --end 2026-07-07T13:00:00+07:00
+```
 
 ## Pipeline
 
