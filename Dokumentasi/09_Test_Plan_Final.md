@@ -1199,3 +1199,7 @@ Sistem dianggap siap untuk masuk Bab 4 jika semua kondisi berikut terpenuhi:
 Test wajib mencakup: aktual normal->waspada, waspada berulang tanpa event baru, waspada->anomali, recovery ke normal, prediksi non-stale menjadi Pre-Alarm, prediksi stale tanpa Pre-Alarm aktif, sensor/gateway Trouble, serta recovery sensor/gateway. Verifikasi kategori API/SSE dan keputusan Telegram menggunakan event yang sama.
 
 Verifikasi tambahan: Pre-Alarm aktif bernilai 1 sebelum `predicted_for`, lalu menjadi 0 setelah waktu target terlewati tanpa menghapus histori event.
+
+Verifikasi bottom sheet menampilkan maksimum satu Pre-Alarm aktif, menggantinya dengan prediksi threshold yang lebih baru, mempertahankannya ketika prediksi normal datang sebelum target, dan menghapusnya dari bottom sheet setelah target lewat.
+
+Verifikasi Alarm/Trouble hilang dari bottom sheet setelah Recovery, sedangkan event Recovery tetap dapat ditemukan pada Events & Logs.

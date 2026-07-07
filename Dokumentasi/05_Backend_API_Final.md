@@ -1522,3 +1522,7 @@ Kontrak event dashboard dan `/anomaly-events` wajib menyertakan `event_type`. Ma
 Status `normal` setelah status non-normal ditampilkan sebagai Recovery. Backend membuat event dan `anomaly.created` hanya pada transisi atau eskalasi.
 
 `today_summary.total_pre_alarm` adalah indikator aktif 0/1, bukan jumlah histori harian. Nilainya 1 hanya jika terdapat prediksi S2 non-stale berstatus waspada/anomali dengan `predicted_for` masih lebih besar dari waktu sekarang.
+
+Dashboard summary juga mengembalikan `active_pre_alarm`, yaitu prediksi threshold masa depan terbaru. Prediksi threshold yang lebih baru menggantikan nilai sebelumnya. Prediksi normal tidak menghapus Pre-Alarm lama sebelum waktu targetnya lewat; setelah `predicted_for <= now`, nilai menjadi `null`.
+
+Dashboard summary mengembalikan `active_events` untuk kondisi Alarm/Trouble yang status terakhirnya masih non-normal. Recovery tetap berada di `recent_events` dan `/anomaly-events`, tetapi tidak masuk `active_events`.

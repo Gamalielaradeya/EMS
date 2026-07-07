@@ -716,3 +716,5 @@ Keputusan final yang mengesampingkan penyebutan alert generik sebelumnya:
 5. Status berulang tidak membuat event atau Telegram baru; eskalasi tetap membuat event.
 6. Alarm aktual dan Trouble dievaluasi untuk Telegram segera. Pre-Alarm memakai cooldown. Recovery dicatat dan tidak dikirim ke Telegram.
 7. Counter Pre-Alarm aktif hanya selama `predicted_for > now`; prediksi yang waktunya sudah lewat tetap berada dalam histori tetapi tidak dihitung aktif.
+8. Dashboard mempertahankan satu Pre-Alarm threshold terbaru sampai waktu targetnya lewat. Prediksi threshold baru menggantikannya; prediksi normal yang lebih baru tidak menghapus peringatan yang targetnya masih di masa depan.
+9. Recovery disimpan sebagai histori, tetapi tidak dianggap event aktif dan tidak ditampilkan pada monitoring bottom sheet.

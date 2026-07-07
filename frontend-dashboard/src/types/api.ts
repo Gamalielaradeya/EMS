@@ -40,6 +40,7 @@ export interface PredictionSummary {
   final_status: FinalStatus
   model_version: string | null
   is_stale: boolean
+  created_at: string
 }
 
 export interface Prediction extends PredictionSummary {
@@ -50,7 +51,6 @@ export interface Prediction extends PredictionSummary {
   input_window_end_at: string | null
   threshold_normal_max: number
   threshold_anomaly_min: number
-  created_at: string
 }
 
 export interface ActiveModelSummary {
@@ -96,10 +96,12 @@ export interface DashboardSummary {
   overall_current_thermal_source_sensor: SensorCode | null
   prediction_thermal_status: ThermalStatus | null
   latest_prediction: PredictionSummary | null
+  active_pre_alarm: PredictionSummary | null
   active_model: ActiveModelSummary | null
   latest_metrics: MetricsSummary | null
   today_summary: TodaySummary
   telegram: TelegramSummary
+  active_events: DashboardEvent[]
   recent_events: DashboardEvent[]
 }
 

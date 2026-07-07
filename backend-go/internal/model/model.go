@@ -106,6 +106,7 @@ type PredictionSummary struct {
 	FinalStatus          string    `json:"final_status"`
 	ModelVersion         *string   `json:"model_version"`
 	IsStale              bool      `json:"is_stale"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 type ActiveModelSummary struct {
@@ -151,10 +152,12 @@ type DashboardSummary struct {
 	OverallCurrentThermalSourceSensor *string                     `json:"overall_current_thermal_source_sensor"`
 	PredictionThermalStatus           *string                     `json:"prediction_thermal_status"`
 	LatestPrediction                  *PredictionSummary          `json:"latest_prediction"`
+	ActivePreAlarm                    *PredictionSummary          `json:"active_pre_alarm"`
 	ActiveModel                       *ActiveModelSummary         `json:"active_model"`
 	LatestMetrics                     *MetricsSummary             `json:"latest_metrics"`
 	TodaySummary                      TodaySummary                `json:"today_summary"`
 	Telegram                          TelegramSummary             `json:"telegram"`
+	ActiveEvents                      []DashboardEvent            `json:"active_events"`
 	RecentEvents                      []DashboardEvent            `json:"recent_events"`
 }
 

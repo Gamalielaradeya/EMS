@@ -585,6 +585,7 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 	summary := model.DashboardSummary{
 		LatestReadings:              make(map[string]model.DashboardReading),
 		OverallCurrentThermalStatus: "normal",
+		ActiveEvents:                make([]model.DashboardEvent, 0),
 		RecentEvents:                make([]model.DashboardEvent, 0),
 	}
 
@@ -662,7 +663,8 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 			predictions.thermal_status,
 			predictions.final_status,
 			model_versions.version,
-			predictions.is_stale
+			predictions.is_stale,
+			predictions.created_at
 		FROM predictions
 		LEFT JOIN sensors ON sensors.id = predictions.target_sensor_id
 		LEFT JOIN model_versions ON model_versions.id = predictions.model_version_id
@@ -678,12 +680,51 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 		&prediction.FinalStatus,
 		&prediction.ModelVersion,
 		&prediction.IsStale,
+		&prediction.CreatedAt,
 	)
 	if err == nil {
 		summary.LatestPrediction = &prediction
 		summary.PredictionThermalStatus = &prediction.ThermalStatus
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return model.DashboardSummary{}, fmt.Errorf("get dashboard latest prediction: %w", err)
+	}
+
+	var activePreAlarm model.PredictionSummary
+	err = r.db.QueryRow(ctx, `
+		SELECT
+			predictions.id,
+			COALESCE(sensors.sensor_code, 'S2'),
+			predictions.predicted_temperature::FLOAT8,
+			predictions.predicted_for,
+			predictions.thermal_status,
+			predictions.final_status,
+			model_versions.version,
+			predictions.is_stale,
+			predictions.created_at
+		FROM predictions
+		LEFT JOIN sensors ON sensors.id = predictions.target_sensor_id
+		LEFT JOIN model_versions ON model_versions.id = predictions.model_version_id
+		WHERE predictions.is_stale = FALSE
+		  AND predictions.predicted_for > NOW()
+		  AND predictions.thermal_status IN ('waspada', 'anomali')
+		  AND predictions.final_status IN ('waspada', 'anomali')
+		ORDER BY predictions.created_at DESC
+		LIMIT 1`,
+	).Scan(
+		&activePreAlarm.ID,
+		&activePreAlarm.TargetSensor,
+		&activePreAlarm.PredictedTemperature,
+		&activePreAlarm.PredictedFor,
+		&activePreAlarm.ThermalStatus,
+		&activePreAlarm.FinalStatus,
+		&activePreAlarm.ModelVersion,
+		&activePreAlarm.IsStale,
+		&activePreAlarm.CreatedAt,
+	)
+	if err == nil {
+		summary.ActivePreAlarm = &activePreAlarm
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return model.DashboardSummary{}, fmt.Errorf("get active pre-alarm: %w", err)
 	}
 
 	var activeModel model.ActiveModelSummary
@@ -720,23 +761,18 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 			(SELECT COUNT(*) FROM anomaly_events WHERE status = 'waspada' AND detected_at >= date_trunc('day', NOW())),
 			(SELECT COUNT(*) FROM anomaly_events WHERE status = 'anomali' AND detected_at >= date_trunc('day', NOW())),
 			(SELECT COUNT(*) FROM anomaly_events WHERE event_type = 'actual_threshold' AND status IN ('waspada', 'anomali') AND detected_at >= date_trunc('day', NOW())),
-			(SELECT CASE WHEN EXISTS (
-				SELECT 1
-				FROM predictions
-				WHERE is_stale = FALSE
-				  AND predicted_for > NOW()
-				  AND thermal_status IN ('waspada', 'anomali')
-			) THEN 1 ELSE 0 END),
 			(SELECT COUNT(*) FROM anomaly_events WHERE event_type IN ('sensor_trouble', 'gateway_trouble') AND status = 'trouble' AND detected_at >= date_trunc('day', NOW()))`,
 	).Scan(
 		&summary.TodaySummary.TotalReadings,
 		&summary.TodaySummary.TotalWaspada,
 		&summary.TodaySummary.TotalAnomali,
 		&summary.TodaySummary.TotalAlarm,
-		&summary.TodaySummary.TotalPreAlarm,
 		&summary.TodaySummary.TotalTrouble,
 	); err != nil {
 		return model.DashboardSummary{}, fmt.Errorf("get dashboard today summary: %w", err)
+	}
+	if summary.ActivePreAlarm != nil {
+		summary.TodaySummary.TotalPreAlarm = 1
 	}
 
 	var telegramEnabled string
@@ -784,6 +820,47 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 	}
 	if err := rows.Err(); err != nil {
 		return model.DashboardSummary{}, fmt.Errorf("iterate dashboard events: %w", err)
+	}
+	rows.Close()
+
+	rows, err = r.db.Query(ctx, `
+		SELECT latest.id, latest.sensor_code, latest.event_type, latest.status,
+		       latest.severity, latest.description, latest.detected_at
+		FROM (
+			SELECT DISTINCT ON (anomaly_events.event_type, anomaly_events.sensor_id)
+			       anomaly_events.id, sensors.sensor_code, anomaly_events.sensor_id,
+			       anomaly_events.event_type, anomaly_events.status, anomaly_events.severity,
+			       anomaly_events.description, anomaly_events.detected_at
+			FROM anomaly_events
+			LEFT JOIN sensors ON sensors.id = anomaly_events.sensor_id
+			WHERE anomaly_events.event_type IN ('actual_threshold', 'sensor_trouble', 'gateway_trouble')
+			ORDER BY anomaly_events.event_type, anomaly_events.sensor_id,
+			         anomaly_events.detected_at DESC, anomaly_events.id DESC
+		) AS latest
+		WHERE latest.status <> 'normal'
+		ORDER BY latest.detected_at DESC
+		LIMIT 10`)
+	if err != nil {
+		return model.DashboardSummary{}, fmt.Errorf("get dashboard active events: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var event model.DashboardEvent
+		if err := rows.Scan(
+			&event.ID,
+			&event.SensorCode,
+			&event.EventType,
+			&event.Status,
+			&event.Severity,
+			&event.Description,
+			&event.DetectedAt,
+		); err != nil {
+			return model.DashboardSummary{}, fmt.Errorf("scan dashboard active event: %w", err)
+		}
+		summary.ActiveEvents = append(summary.ActiveEvents, event)
+	}
+	if err := rows.Err(); err != nil {
+		return model.DashboardSummary{}, fmt.Errorf("iterate dashboard active events: %w", err)
 	}
 
 	return summary, nil

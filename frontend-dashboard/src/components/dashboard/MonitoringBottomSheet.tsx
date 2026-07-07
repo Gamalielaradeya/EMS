@@ -1,5 +1,5 @@
 import { Activity, BarChart3, BrainCircuit, CalendarClock, ChevronDown, ChevronUp, ListChecks } from "lucide-react"
-import { useRef, useState, type PointerEvent } from "react"
+import { useEffect, useRef, useState, type PointerEvent } from "react"
 
 import { ReadingsChart } from "@/components/charts/ReadingsChart"
 import { StatusBadge } from "@/components/status/StatusBadge"
@@ -26,12 +26,24 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
   const [height, setHeight] = useState(DEFAULT_HEIGHT)
   const [tab, setTab] = useState<BottomSheetTab>("events")
   const dragStartRef = useRef<{ y: number; height: number } | null>(null)
+  const [now, setNow] = useState(() => Date.now())
   const collapsed = height <= MIN_HEIGHT + 12
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 5000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const activePreAlarm = summary?.active_pre_alarm && new Date(summary.active_pre_alarm.predicted_for).getTime() > now
+    ? summary.active_pre_alarm
+    : null
+
   const eventCounts = {
-    alarm: summary?.today_summary.total_alarm ?? 0,
-    preAlarm: summary?.today_summary.total_pre_alarm ?? 0,
-    trouble: summary?.today_summary.total_trouble ?? 0,
+    alarm: (summary?.active_events ?? []).filter((event) => event.event_type === "actual_threshold").length,
+    preAlarm: activePreAlarm ? 1 : 0,
+    trouble: (summary?.active_events ?? []).filter(
+      (event) => event.event_type === "sensor_trouble" || event.event_type === "gateway_trouble",
+    ).length,
   }
 
   const clampPanelHeight = (value: number) => clamp(value, MIN_HEIGHT, getSheetMaxHeight())
@@ -89,7 +101,7 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
           <SheetTab active={tab === "model"} icon={Activity} label="LSTM Metrics" onClick={() => setTab("model")} />
         </div>
         <div className="overflow-y-auto px-4 py-4 sm:px-5">
-          {tab === "events" ? <EventsTable summary={summary} /> : null}
+          {tab === "events" ? <EventsTable activePreAlarm={activePreAlarm} summary={summary} /> : null}
           {tab === "trends" ? (
             <div className="grid gap-4 xl:grid-cols-2">
               <ReadingsChart
@@ -133,8 +145,22 @@ function SheetTab({ active, icon: Icon, label, onClick }: { active: boolean; ico
   )
 }
 
-function EventsTable({ summary }: { summary: DashboardSummary | null }) {
-  const events = summary?.recent_events ?? []
+function EventsTable({ activePreAlarm, summary }: { activePreAlarm: DashboardSummary["active_pre_alarm"]; summary: DashboardSummary | null }) {
+  const activeEvents = summary?.active_events ?? []
+  const events: DashboardEvent[] = activePreAlarm
+    ? [
+        {
+          id: -activePreAlarm.id,
+          sensor_code: activePreAlarm.target_sensor,
+          event_type: "prediction_threshold",
+          status: activePreAlarm.thermal_status,
+          severity: activePreAlarm.thermal_status === "anomali" ? "critical" : "warning",
+          description: `Predicted S2 temperature ${formatMeasurement(activePreAlarm.predicted_temperature, "°C")} for ${formatDateTime(activePreAlarm.predicted_for)}.`,
+          detected_at: activePreAlarm.predicted_for,
+        },
+        ...activeEvents,
+      ].slice(0, 10)
+    : activeEvents.slice(0, 10)
   if (events.length === 0) {
     return <p className="rounded-md border border-dashed bg-muted p-5 text-sm font-semibold text-muted-foreground">No recent thermal event has been recorded.</p>
   }
@@ -143,7 +169,7 @@ function EventsTable({ summary }: { summary: DashboardSummary | null }) {
       <table className="w-full min-w-[42rem] text-left text-sm">
         <thead className="border-b text-xs uppercase tracking-[0.12em] text-muted-foreground">
           <tr>
-            <th className="pb-3 font-bold">Detected</th>
+            <th className="pb-3 font-bold">Event time</th>
             <th className="pb-3 font-bold">Sensor</th>
             <th className="pb-3 font-bold">Event</th>
             <th className="pb-3 font-bold">Condition</th>
