@@ -154,6 +154,15 @@
     background: #7f1d1d;
     box-shadow: 0 0 0 5px rgb(239 68 68 / 0.24), 0 12px 24px rgb(0 0 0 / 0.48);
   }
+
+  .ems-leaflet-marker--focused .ems-leaflet-marker__pin {
+    border-color: #fff;
+    box-shadow: 0 0 0 7px rgb(255 255 255 / 0.24), 0 0 0 13px rgb(34 211 238 / 0.22), 0 16px 32px rgb(0 0 0 / 0.56);
+  }
+
+  .ems-leaflet-marker--focused .ems-leaflet-marker__card {
+    border-color: rgb(255 255 255 / 0.34);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

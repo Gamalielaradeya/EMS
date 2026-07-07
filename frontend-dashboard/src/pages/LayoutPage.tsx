@@ -23,11 +23,12 @@ export function LayoutPage() {
   const [selectedSensor, setSelectedSensor] = useState<SensorCode>("S1")
   const [layoutName, setLayoutName] = useState("")
   const [image, setImage] = useState<File | null>(null)
+  const [invertToDark, setInvertToDark] = useState(false)
 
   const submitUpload = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!image) return
-    void workspace.upload(image, layoutName)
+    void workspace.upload(image, layoutName, invertToDark)
   }
 
   return (
@@ -39,7 +40,7 @@ export function LayoutPage() {
             Refresh
           </Button>
         }
-        description="Place S1 ambient and S2 hotspot markers on one active server-testbed image. Uploaded white AutoCAD floorplans are auto-converted to the dark monitoring style."
+        description="Place S1 ambient and S2 hotspot markers on one active server-testbed image. Upload a ready dark floorplan as-is, or invert a white AutoCAD export during upload."
         title="Layout"
       />
 
@@ -50,10 +51,10 @@ export function LayoutPage() {
       <Card>
         <CardHeader>
           <CardTitle>{workspace.layout ? "Replace active layout" : "Upload testbed layout"}</CardTitle>
-          <CardDescription>PNG, JPG, JPEG, or WebP. Maximum file size: 5 MB. Upload the normal white AutoCAD floorplan; EMS will store a dark monitoring copy automatically.</CardDescription>
+          <CardDescription>PNG, JPG, JPEG, or WebP. Maximum file size: 5 MB. If the image is already dark, leave invert off.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={submitUpload}>
+          <form className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(15rem,0.7fr)_auto] xl:items-end" onSubmit={submitUpload}>
             <label className="grid gap-2 text-sm font-semibold">
               Layout name
               <input className={controlClassName} onChange={(event) => setLayoutName(event.target.value)} placeholder="Server Testbed Layout" value={layoutName} />
@@ -61,6 +62,18 @@ export function LayoutPage() {
             <label className="grid gap-2 text-sm font-semibold">
               Image file
               <input accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" className={controlClassName} onChange={(event) => setImage(event.target.files?.[0] || null)} type="file" />
+            </label>
+            <label className="flex min-h-11 items-center gap-3 rounded-md border bg-card px-3 py-2 text-sm font-semibold transition-[border-color] hover:border-input">
+              <input
+                checked={invertToDark}
+                className="size-4 accent-primary"
+                onChange={(event) => setInvertToDark(event.target.checked)}
+                type="checkbox"
+              />
+              <span className="leading-5">
+                Invert to dark map
+                <span className="block text-xs font-medium text-muted-foreground">Use only for white CAD images.</span>
+              </span>
             </label>
             <Button disabled={!hasToken || !image || workspace.isSaving} type="submit">
               <ImageUp aria-hidden="true" className="size-4" />

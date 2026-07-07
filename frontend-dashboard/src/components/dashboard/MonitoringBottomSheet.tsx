@@ -10,8 +10,10 @@ import { cn } from "@/lib/utils"
 import type { DashboardEvent, DashboardSummary, SensorReading } from "@/types/api"
 
 interface MonitoringBottomSheetProps {
+  focusedEventId?: number | null
   historyError?: string | null
   historyIsLoading?: boolean
+  onFocusEvent?: (eventId: number) => void
   readings: SensorReading[]
   summary: DashboardSummary | null
 }
@@ -22,7 +24,7 @@ const MIN_HEIGHT = 54
 const DEFAULT_HEIGHT = 252
 const MAX_HEIGHT = 430
 
-export function MonitoringBottomSheet({ historyError, historyIsLoading, readings, summary }: MonitoringBottomSheetProps) {
+export function MonitoringBottomSheet({ focusedEventId, historyError, historyIsLoading, onFocusEvent, readings, summary }: MonitoringBottomSheetProps) {
   const [height, setHeight] = useState(DEFAULT_HEIGHT)
   const [tab, setTab] = useState<BottomSheetTab>("events")
   const dragStartRef = useRef<{ y: number; height: number } | null>(null)
@@ -101,7 +103,7 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
           <SheetTab active={tab === "model"} icon={Activity} label="LSTM Metrics" onClick={() => setTab("model")} />
         </div>
         <div className="overflow-y-auto px-4 py-4 sm:px-5">
-          {tab === "events" ? <EventsTable activePreAlarm={activePreAlarm} summary={summary} /> : null}
+          {tab === "events" ? <EventsTable activePreAlarm={activePreAlarm} focusedEventId={focusedEventId} onFocusEvent={onFocusEvent} summary={summary} /> : null}
           {tab === "trends" ? (
             <div className="grid gap-4 xl:grid-cols-2">
               <ReadingsChart
@@ -145,7 +147,17 @@ function SheetTab({ active, icon: Icon, label, onClick }: { active: boolean; ico
   )
 }
 
-function EventsTable({ activePreAlarm, summary }: { activePreAlarm: DashboardSummary["active_pre_alarm"]; summary: DashboardSummary | null }) {
+function EventsTable({
+  activePreAlarm,
+  focusedEventId,
+  onFocusEvent,
+  summary,
+}: {
+  activePreAlarm: DashboardSummary["active_pre_alarm"]
+  focusedEventId?: number | null
+  onFocusEvent?: (eventId: number) => void
+  summary: DashboardSummary | null
+}) {
   const activeEvents = summary?.active_events ?? []
   const events: DashboardEvent[] = activePreAlarm
     ? [
@@ -180,7 +192,23 @@ function EventsTable({ activePreAlarm, summary }: { activePreAlarm: DashboardSum
           {events.map((event) => {
             const presentation = getEventPresentation(event)
             return (
-              <tr className={cn("border-b last:border-0", presentation.rowClassName)} key={event.id}>
+              <tr
+                className={cn(
+                  "border-b last:border-0",
+                  onFocusEvent ? "cursor-pointer transition-[filter] hover:brightness-95" : undefined,
+                  focusedEventId === event.id ? "outline outline-2 outline-offset-[-2px] outline-slate-950/45" : undefined,
+                  presentation.rowClassName,
+                )}
+                key={event.id}
+                onKeyDown={(keyboardEvent) => {
+                  if (!onFocusEvent || (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ")) return
+                  keyboardEvent.preventDefault()
+                  onFocusEvent(event.id)
+                }}
+                onClick={() => onFocusEvent?.(event.id)}
+                role={onFocusEvent ? "button" : undefined}
+                tabIndex={onFocusEvent ? 0 : undefined}
+              >
                 <td className={cn("border-l-4 py-3 pl-3 pr-4", presentation.accentClassName)}>{formatDateTime(event.detected_at)}</td>
                 <td className="py-3 pr-4 font-mono text-xs font-bold">{event.sensor_code || (event.event_type === "gateway_trouble" ? "Gateway" : "System")}</td>
                 <td className="py-3 pr-4">
