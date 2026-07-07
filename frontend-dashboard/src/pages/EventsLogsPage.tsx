@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/states/EmptyState"
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
+import { StatusBadge } from "@/components/status/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -170,7 +171,7 @@ function OperationalTable({ items, tab }: { items: Array<AnomalyEvent | Notifica
 function AnomalyTable({ items }: { items: AnomalyEvent[] }) {
   return <RecordTable headings={["Detected", "Sensor", "Event", "Condition", "Temperature", "Description"]} rows={items.map((item) => {
     const category = getEventCategory(item.event_type, item.status)
-    return [formatDateTime(item.detected_at), item.sensor_code || (item.event_type === "gateway_trouble" ? "Gateway" : "--"), <EventBadge category={category} key="event" />, <RecordBadge key="status" label={item.status} tone={item.status} />, eventTemperature(item), item.description || "--"]
+    return [formatDateTime(item.detected_at), item.sensor_code || (item.event_type === "gateway_trouble" ? "Gateway" : "--"), <EventBadge category={category} key="event" />, <StatusBadge key="status" status={item.status} />, eventTemperature(item), item.description || "--"]
   })} />
 }
 
