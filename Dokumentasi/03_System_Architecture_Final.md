@@ -649,6 +649,7 @@ Development-only realtime simulator:
 
 ```bash
 python -m gateway.cli simulate --scenario random-smooth --duration 30m --interval 10
+python -m gateway.cli simulate --scenario random-smooth --duration forever --interval 10
 ```
 
 Aturan:

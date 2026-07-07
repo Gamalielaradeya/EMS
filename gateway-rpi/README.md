@@ -148,6 +148,7 @@ Examples:
 python -m gateway.cli simulate --scenario random-smooth --duration 30m --interval 10
 python -m gateway.cli simulate --scenario heat-cycle --duration 20m
 python -m gateway.cli simulate --scenario normal --duration 10m
+python -m gateway.cli simulate --scenario random-smooth --duration forever
 python -m gateway.cli simulate --scenario random-smooth --duration 10m --drop-sensor S2 --drop-after 2m
 ```
 

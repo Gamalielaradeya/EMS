@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="random-smooth",
     )
     simulate_parser.add_argument("--interval", type=float, default=10.0, help="send interval in seconds")
-    simulate_parser.add_argument("--duration", default="30m", help="duration, for example 300s, 30m, or 1h")
+    simulate_parser.add_argument("--duration", default="30m", help="duration, for example 300s, 30m, 1h, or forever")
     simulate_parser.add_argument("--seed", type=int, default=42)
     simulate_parser.add_argument("--drop-sensor", choices=("S1", "S2"), help="omit one sensor after --drop-after")
     simulate_parser.add_argument("--drop-after", default="0s", help="when to start dropping --drop-sensor")

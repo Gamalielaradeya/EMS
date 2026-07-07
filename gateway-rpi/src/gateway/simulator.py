@@ -16,7 +16,7 @@ from gateway.payload_builder import build_readings_payload
 class SimulatorOptions:
     scenario: str = "random-smooth"
     interval_seconds: float = 10.0
-    duration_seconds: float = 1800.0
+    duration_seconds: float | None = 1800.0
     seed: int = 42
     drop_sensor: str | None = None
     drop_after_seconds: float | None = None
@@ -33,7 +33,7 @@ class SmoothThermalSimulator:
     def __init__(self, options: SimulatorOptions) -> None:
         if options.interval_seconds <= 0:
             raise ValueError("interval_seconds must be positive")
-        if options.duration_seconds <= 0:
+        if options.duration_seconds is not None and options.duration_seconds <= 0:
             raise ValueError("duration_seconds must be positive")
         self._options = options
         self._rng = random.Random(options.seed)
@@ -98,7 +98,7 @@ class SmoothThermalSimulator:
 
     def _build_segments(self, scenario: str) -> list[Segment]:
         if scenario == "normal":
-            return [Segment("normal_stable", self._options.duration_seconds, 28.4)]
+            return [Segment("normal_stable", self._options.duration_seconds or 3600, 28.4)]
         if scenario == "heat-cycle":
             return [
                 Segment("normal_stable", 180, 28.4),
@@ -110,7 +110,8 @@ class SmoothThermalSimulator:
             raise ValueError("scenario must be random-smooth, heat-cycle, or normal")
 
         segments: list[Segment] = [Segment("normal_stable", self._rng.uniform(120, 240), 28.4)]
-        while sum(segment.seconds for segment in segments) < self._options.duration_seconds + 300:
+        target_duration = self._options.duration_seconds or 86400
+        while sum(segment.seconds for segment in segments) < target_duration + 300:
             peak = self._rng.uniform(30.2, 33.4)
             segments.extend(
                 [
@@ -142,7 +143,7 @@ def run_simulator(
     started_at = now()
     sent = 0
     try:
-        while (now() - started_at).total_seconds() < options.duration_seconds:
+        while options.duration_seconds is None or (now() - started_at).total_seconds() < options.duration_seconds:
             readings, metadata = simulator.next_readings()
             if readings:
                 payload = build_readings_payload(
@@ -172,10 +173,12 @@ def run_simulator(
             sender.close()
 
 
-def duration_to_seconds(value: str) -> float:
+def duration_to_seconds(value: str) -> float | None:
     text = value.strip().lower()
     if not text:
         raise ValueError("duration must not be empty")
+    if text in {"forever", "infinite", "inf", "none"}:
+        return None
     unit = text[-1]
     number = text[:-1] if unit in {"s", "m", "h"} else text
     amount = float(number)

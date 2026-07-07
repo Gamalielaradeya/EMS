@@ -32,6 +32,7 @@ class SimulatorTests(unittest.TestCase):
         self.assertEqual(duration_to_seconds("2m"), 120)
         self.assertEqual(duration_to_seconds("1h"), 3600)
         self.assertEqual(duration_to_seconds("15"), 15)
+        self.assertIsNone(duration_to_seconds("forever"))
 
     def test_run_simulator_sends_simulator_payloads(self) -> None:
         config = load_config("config.example.yaml")
