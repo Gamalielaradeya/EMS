@@ -168,14 +168,15 @@ function OperationalTable({ items, tab }: { items: Array<AnomalyEvent | Notifica
 }
 
 function AnomalyTable({ items }: { items: AnomalyEvent[] }) {
-  return <RecordTable headings={["Detected", "Sensor", "Event", "Condition", "Temperature", "Description"]} rowClassNames={items.map((item) => eventRowClassName(item.status))} rows={items.map((item) => [formatDateTime(item.detected_at), item.sensor_code || (item.event_type === "gateway_trouble" ? "Gateway" : "--"), getEventCategory(item.event_type, item.status), <RecordBadge key="status" label={item.status} tone={item.status} />, eventTemperature(item), item.description || "--"])} />
+  return <RecordTable headings={["Detected", "Sensor", "Event", "Condition", "Temperature", "Description"]} rows={items.map((item) => {
+    const category = getEventCategory(item.event_type, item.status)
+    return [formatDateTime(item.detected_at), item.sensor_code || (item.event_type === "gateway_trouble" ? "Gateway" : "--"), <EventBadge category={category} key="event" />, <RecordBadge key="status" label={item.status} tone={item.status} />, eventTemperature(item), item.description || "--"]
+  })} />
 }
 
-function eventRowClassName(status: AnomalyEvent["status"]) {
-  if (status === "normal") return "bg-success-soft"
-  if (status === "waspada") return "bg-warning-soft"
-  if (status === "anomali") return "bg-danger-soft"
-  return "bg-trouble-soft"
+function EventBadge({ category }: { category: ReturnType<typeof getEventCategory> }) {
+  const variant = category === "Alarm" ? "danger" : category === "Pre-Alarm" ? "info" : category === "Trouble" ? "trouble" : category === "Recovery" ? "normal" : "inactive"
+  return <Badge variant={variant}>{category}</Badge>
 }
 
 function eventTemperature(item: AnomalyEvent) {
@@ -191,12 +192,12 @@ function SystemLogTable({ items }: { items: SystemLog[] }) {
   return <RecordTable headings={["Created", "Source", "Level", "Message", "Context"]} rows={items.map((item) => [formatDateTime(item.created_at), item.source, <RecordBadge key="level" label={item.level} tone={item.level} />, item.message, item.context ? JSON.stringify(item.context) : "--"])} />
 }
 
-function RecordTable({ headings, rowClassNames = [], rows }: { headings: string[]; rowClassNames?: string[]; rows: ReactNode[][] }) {
+function RecordTable({ headings, rows }: { headings: string[]; rows: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-[760px] table-fixed text-left text-sm">
         <thead><tr className="border-b text-xs uppercase tracking-[0.1em] text-muted-foreground">{headings.map((heading) => <th className="px-3 py-3" key={heading}>{heading}</th>)}</tr></thead>
-        <tbody>{rows.map((cells, rowIndex) => <tr className={cn("border-b align-top last:border-0", rowClassNames[rowIndex])} key={rowIndex}>{cells.map((cell, index) => <td className="break-words px-3 py-3 leading-5" key={index}>{cell}</td>)}</tr>)}</tbody>
+        <tbody>{rows.map((cells, rowIndex) => <tr className="border-b align-top last:border-0" key={rowIndex}>{cells.map((cell, index) => <td className="break-words px-3 py-3 leading-5" key={index}>{cell}</td>)}</tr>)}</tbody>
       </table>
     </div>
   )

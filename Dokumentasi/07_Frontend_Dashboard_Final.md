@@ -888,4 +888,4 @@ Alarm dan Trouble pada bottom sheet berasal dari `active_events`. Event Recovery
 
 Semua tampilan status perangkat (Dashboard, Sensors & Readings, Layout card, dan marker map) memakai aturan yang sama: trouble hanya untuk health perangkat, sedangkan waspada/anomali berasal dari suhu aktual. Pre-Alarm ditampilkan terpisah dan tidak mengubah warna marker.
 
-Color code status berlaku konsisten di seluruh halaman: normal/recovery hijau, waspada kuning, anomali merah, dan trouble oranye. Tabel Events & Logs memakai tint baris yang sama selain badge teks.
+Color code status berlaku konsisten di seluruh halaman: normal/recovery hijau, waspada kuning, anomali merah, dan trouble oranye. Pada Events & Logs, warna diterapkan pada badge Event dan Condition; latar baris tabel tetap netral.
