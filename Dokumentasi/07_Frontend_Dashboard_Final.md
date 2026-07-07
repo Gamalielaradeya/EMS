@@ -885,3 +885,5 @@ Counter Pre-Alarm menunjukkan kondisi aktif 0/1 dari prediksi masa depan, bukan 
 Bottom sheet hanya menampilkan satu baris Pre-Alarm aktif dari `active_pre_alarm`. Histori `prediction_threshold` tidak dicampur ke tabel bottom sheet dan tetap tersedia pada halaman Events & Logs serta Prediction & LSTM. Baris aktif hilang otomatis setelah waktu `predicted_for` terlewati.
 
 Alarm dan Trouble pada bottom sheet berasal dari `active_events`. Event Recovery/normal dan event lama yang sudah pulih tidak ditampilkan di bottom sheet, tetapi tetap tersedia pada Events & Logs sebagai histori audit.
+
+Semua tampilan status perangkat (Dashboard, Sensors & Readings, Layout card, dan marker map) memakai aturan yang sama: trouble hanya untuk health perangkat, sedangkan waspada/anomali berasal dari suhu aktual. Pre-Alarm ditampilkan terpisah dan tidak mengubah warna marker.

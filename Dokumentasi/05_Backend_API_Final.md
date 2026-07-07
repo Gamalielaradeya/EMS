@@ -1526,3 +1526,5 @@ Status `normal` setelah status non-normal ditampilkan sebagai Recovery. Backend 
 Dashboard summary juga mengembalikan `active_pre_alarm`, yaitu prediksi threshold masa depan terbaru. Prediksi threshold yang lebih baru menggantikan nilai sebelumnya. Prediksi normal tidak menghapus Pre-Alarm lama sebelum waktu targetnya lewat; setelah `predicted_for <= now`, nilai menjadi `null`.
 
 Dashboard summary mengembalikan `active_events` untuk kondisi Alarm/Trouble yang status terakhirnya masih non-normal. Recovery tetap berada di `recent_events` dan `/anomaly-events`, tetapi tidak masuk `active_events`.
+
+`GET /layout` menghitung `final_status` setiap marker dari kesehatan sensor dan suhu aktual terbaru untuk S1 maupun S2: trouble bila health tidak normal, selain itu normal/waspada/anomali berdasarkan threshold aktif. Prediction/Pre-Alarm tidak mengubah `final_status` marker.

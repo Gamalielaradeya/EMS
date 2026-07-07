@@ -66,6 +66,7 @@ final_status        : trouble > anomali > waspada > normal
 9. `anomaly_events.event_type` membedakan `actual_threshold`, `prediction_threshold`, `sensor_trouble`, dan `gateway_trouble`; kategori UI-nya adalah Alarm, Pre-Alarm, Trouble, atau Recovery.
 10. Event disimpan hanya pada transisi status/eskalasi. Reading mentah tetap disimpan setiap 10 detik.
 11. Alarm aktual berlaku untuk S1 dan S2. Pre-Alarm hanya berlaku untuk prediksi target S2 yang tidak stale.
+12. Status perangkat pada Dashboard, Sensors & Readings, dan Layout memakai health trouble sebagai prioritas; bila health normal, status mengikuti threshold suhu aktual. Pre-Alarm tidak mengubah status atau warna perangkat.
 
 ---
 

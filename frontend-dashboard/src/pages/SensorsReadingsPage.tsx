@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useSensorReadings } from "@/hooks/useSensorReadings"
 import { formatDateTime } from "@/lib/format"
-import type { ReadingHistoryFilters } from "@/types/api"
+import type { DashboardReading, FinalStatus, ReadingHistoryFilters } from "@/types/api"
 
 export function SensorsReadingsPage() {
   const [filters, setFilters] = useState<ReadingHistoryFilters>({ limit: 100 })
@@ -83,12 +83,14 @@ export function SensorsReadingsPage() {
               sensor={s1}
               sensorCode="S1"
               sensorRole="Ambient"
+              status={resolveSensorStatus(summary?.latest_readings.S1)}
             />
             <SensorWorkspaceCard
               reading={latestReadings.S2}
               sensor={s2}
               sensorCode="S2"
               sensorRole="Hotspot"
+              status={resolveSensorStatus(summary?.latest_readings.S2)}
             />
           </section>
 
@@ -123,4 +125,10 @@ export function SensorsReadingsPage() {
       )}
     </div>
   )
+}
+
+function resolveSensorStatus(reading?: DashboardReading): FinalStatus | "inactive" {
+  if (!reading) return "inactive" as const
+  if (reading.sensor_health_status !== "normal") return reading.sensor_health_status
+  return reading.current_thermal_status
 }

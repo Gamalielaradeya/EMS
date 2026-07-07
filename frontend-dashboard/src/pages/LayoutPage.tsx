@@ -111,7 +111,7 @@ export function LayoutPage() {
                       <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">{sensor.sensor_code}</p>
                       <CardTitle className="mt-1 capitalize">{sensor.sensor_role}</CardTitle>
                     </div>
-                    <StatusBadge status={sensor.sensor_health_status} />
+                    <StatusBadge status={marker?.final_status || sensor.sensor_health_status} />
                   </CardHeader>
                   <CardContent className="space-y-3 pt-4 text-sm">
                     <p className="font-display font-bold">{formatMeasurement(reading?.temperature, "°C")} · {formatMeasurement(reading?.humidity, "%")}</p>

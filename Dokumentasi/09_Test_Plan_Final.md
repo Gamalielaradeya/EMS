@@ -1203,3 +1203,5 @@ Verifikasi tambahan: Pre-Alarm aktif bernilai 1 sebelum `predicted_for`, lalu me
 Verifikasi bottom sheet menampilkan maksimum satu Pre-Alarm aktif, menggantinya dengan prediksi threshold yang lebih baru, mempertahankannya ketika prediksi normal datang sebelum target, dan menghapusnya dari bottom sheet setelah target lewat.
 
 Verifikasi Alarm/Trouble hilang dari bottom sheet setelah Recovery, sedangkan event Recovery tetap dapat ditemukan pada Events & Logs.
+
+Verifikasi marker S1 dan S2 serta card Sensors & Readings mengikuti status suhu aktual yang sama dengan dashboard; trouble hanya muncul ketika health bermasalah, dan Pre-Alarm tidak mengubah warna perangkat.
