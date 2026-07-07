@@ -40,6 +40,10 @@ export default {
           DEFAULT: "var(--color-warning)",
           soft: "var(--color-warning-soft)",
         },
+        trouble: {
+          DEFAULT: "var(--color-trouble)",
+          soft: "var(--color-trouble-soft)",
+        },
         danger: {
           DEFAULT: "var(--color-danger)",
           soft: "var(--color-danger-soft)",
