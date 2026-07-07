@@ -25,6 +25,7 @@ export function DashboardPage() {
   const [focusedEventId, setFocusedEventId] = useState<number | null>(null)
   const focusedEvent = activeEvents.find((event) => event.id === focusedEventId) ?? activeEvents[0] ?? null
   const focusedSensorCode = sensorCodeFromEvent(focusedEvent)
+  const focusedEventTone = focusedEvent ? eventToneFromEvent(focusedEvent) : null
 
   useEffect(() => {
     if (activeEvents.length === 0) {
@@ -40,7 +41,7 @@ export function DashboardPage() {
         <FloorplanMonitoringMap
           activeLayout={layoutWorkspace.layout}
           className="absolute inset-0 z-0"
-          fitKey={eventRevision}
+          focusedEventTone={focusedEventTone}
           focusedSensorCode={focusedSensorCode}
         />
         <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(90deg,rgba(2,6,23,0.72),transparent_34%,transparent_67%,rgba(2,6,23,0.42)),linear-gradient(180deg,rgba(2,6,23,0.46),transparent_30%,rgba(2,6,23,0.22))]" />
@@ -197,6 +198,12 @@ function useActiveDashboardEvents(summary: DashboardSummary | null) {
 
 function sensorCodeFromEvent(event: DashboardEvent | null): SensorCode | null {
   return event?.sensor_code === "S1" || event?.sensor_code === "S2" ? event.sensor_code : null
+}
+
+function eventToneFromEvent(event: DashboardEvent): "alarm" | "preAlarm" | "trouble" {
+  if (event.event_type === "prediction_threshold") return "preAlarm"
+  if (event.event_type === "sensor_trouble" || event.event_type === "gateway_trouble") return "trouble"
+  return "alarm"
 }
 
 function getFocusedEventPresentation(event: DashboardEvent) {

@@ -1,4 +1,4 @@
-import L, { type DivIcon, type LatLngBoundsExpression, type Marker as LeafletMarker } from "leaflet"
+import L, { type DivIcon, type LatLngBoundsExpression, type Map as LeafletMap, type Marker as LeafletMarker } from "leaflet"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { resolveApiAssetUrl } from "@/lib/api"
@@ -11,16 +11,18 @@ import type { ActiveLayout, LayoutDevice, SensorCode } from "@/types/api"
 interface FloorplanMonitoringMapProps {
   activeLayout: ActiveLayout | null
   className?: string
-  fitKey?: number | string
+  focusedEventTone?: "alarm" | "preAlarm" | "trouble" | null
   focusedSensorCode?: SensorCode | null
 }
 
 const FALLBACK_WIDTH = 1200
 const FALLBACK_HEIGHT = 720
 
-export function FloorplanMonitoringMap({ activeLayout, className, fitKey, focusedSensorCode }: FloorplanMonitoringMapProps) {
+export function FloorplanMonitoringMap({ activeLayout, className, focusedEventTone, focusedSensorCode }: FloorplanMonitoringMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<LeafletMarker[]>([])
+  const lastFocusRef = useRef<string | null>(null)
   const [preparedImage, setPreparedImage] = useState<(PreparedFloorplanImage & { sourceUrl: string }) | null>(null)
 
   const dimensions = useMemo(() => {
@@ -63,8 +65,6 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey, focuse
     const map = L.map(container, {
       attributionControl: false,
       crs: L.CRS.Simple,
-      maxBounds: bounds,
-      maxBoundsViscosity: 0.65,
       maxZoom: 3,
       minZoom: -4,
       preferCanvas: true,
@@ -80,9 +80,24 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey, focuse
     }).addTo(map)
 
     map.fitBounds(bounds, { animate: false, padding: [72, 72] })
+    mapRef.current = map
+
+    return () => {
+      markersRef.current = []
+      mapRef.current = null
+      lastFocusRef.current = null
+      map.remove()
+    }
+  }, [activeLayout?.layout.name, dimensions.height, dimensions.width, preparedImage, sourceImageUrl])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !activeLayout) return
+
+    markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = activeLayout.devices.map((device) => {
       const marker = L.marker(deviceToLatLng(device, dimensions.width, dimensions.height), {
-        icon: sensorDivIcon(device, device.sensor_code === focusedSensorCode),
+        icon: sensorDivIcon(device, device.sensor_code === focusedSensorCode ? focusedEventTone : null),
         keyboard: true,
         title: `${device.sensor_code} ${formatStatus(device.final_status)}`,
       })
@@ -91,15 +106,17 @@ export function FloorplanMonitoringMap({ activeLayout, className, fitKey, focuse
     })
 
     const focusedDevice = activeLayout.devices.find((device) => device.sensor_code === focusedSensorCode)
-    if (focusedDevice) {
+    const nextFocus = focusedDevice ? `${focusedDevice.sensor_code}:${focusedEventTone ?? "none"}` : null
+    if (focusedDevice && nextFocus !== lastFocusRef.current) {
       map.setView(deviceToLatLng(focusedDevice, dimensions.width, dimensions.height), Math.max(map.getZoom(), -1), { animate: false })
     }
+    lastFocusRef.current = nextFocus
 
     return () => {
+      markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
-      map.remove()
     }
-  }, [activeLayout, dimensions.height, dimensions.width, fitKey, focusedSensorCode, preparedImage, sourceImageUrl])
+  }, [activeLayout, dimensions.height, dimensions.width, focusedEventTone, focusedSensorCode])
 
   return (
     <div className={cn("relative h-full min-h-[28rem] overflow-hidden bg-black", className)}>
@@ -124,7 +141,7 @@ function deviceToLatLng(device: LayoutDevice, width: number, height: number): [n
   return [height * (1 - device.position_y), width * device.position_x]
 }
 
-function sensorDivIcon(device: LayoutDevice, focused: boolean): DivIcon {
+function sensorDivIcon(device: LayoutDevice, focusTone: FloorplanMonitoringMapProps["focusedEventTone"]): DivIcon {
   const statusClass = statusToClass(device.final_status)
   const temperature = formatMeasurement(device.temperature ?? undefined, "°C")
   const humidity = formatMeasurement(device.humidity ?? undefined, "%")
@@ -133,7 +150,7 @@ function sensorDivIcon(device: LayoutDevice, focused: boolean): DivIcon {
   return L.divIcon({
     className: "ems-leaflet-marker-wrapper",
     html: `
-      <div class="ems-leaflet-marker ems-leaflet-marker--${statusClass}${focused ? " ems-leaflet-marker--focused" : ""}">
+      <div class="ems-leaflet-marker ems-leaflet-marker--${statusClass}${focusTone ? ` ems-leaflet-marker--focused ems-leaflet-marker--focus-${focusTone}` : ""}">
         <div class="ems-leaflet-marker__pin">${device.sensor_code}</div>
         <div class="ems-leaflet-marker__card">
           <div class="ems-leaflet-marker__topline">
