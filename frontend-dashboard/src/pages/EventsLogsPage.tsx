@@ -176,7 +176,7 @@ function AnomalyTable({ items }: { items: AnomalyEvent[] }) {
 }
 
 function EventBadge({ category }: { category: ReturnType<typeof getEventCategory> }) {
-  const variant = category === "Alarm" ? "danger" : category === "Pre-Alarm" ? "info" : category === "Trouble" ? "trouble" : category === "Recovery" ? "normal" : "inactive"
+  const variant = category === "Alarm" ? "alarm" : category === "Pre-Alarm" ? "preAlarm" : category === "Trouble" ? "troubleStrong" : category === "Recovery" ? "normal" : "inactive"
   return <Badge variant={variant}>{category}</Badge>
 }
 

@@ -82,8 +82,8 @@ export function MonitoringBottomSheet({ historyError, historyIsLoading, readings
         />
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <span className="shrink-0 rounded-md bg-danger px-2.5 py-1.5 text-xs font-bold text-destructive-foreground sm:text-sm">Alarm: {eventCounts.alarm}</span>
-          <span className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-bold text-primary-foreground sm:text-sm">Pre-Alarm: {eventCounts.preAlarm}</span>
-          <span className="shrink-0 rounded-md bg-warning px-2.5 py-1.5 text-xs font-bold text-foreground sm:text-sm">Trouble: {eventCounts.trouble}</span>
+          <span className="shrink-0 rounded-md bg-primary-hover px-2.5 py-1.5 text-xs font-bold text-destructive-foreground sm:text-sm">Pre-Alarm: {eventCounts.preAlarm}</span>
+          <span className="shrink-0 rounded-md bg-[var(--color-trouble)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-danger-ink)] sm:text-sm">Trouble: {eventCounts.trouble}</span>
           <span className="ml-auto hidden shrink-0 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 md:inline-flex">
             Readings today: {summary?.today_summary.total_readings ?? 0}
           </span>
@@ -212,7 +212,7 @@ function getEventPresentation(event: DashboardEvent) {
     return {
       category: getEventCategory(event.event_type, event.status),
       accentClassName: "border-warning",
-      categoryClassName: "bg-warning text-foreground",
+      categoryClassName: "bg-[var(--color-trouble)] text-[var(--color-danger-ink)]",
       rowClassName: "bg-warning-soft text-foreground",
     }
   }
@@ -228,7 +228,7 @@ function getEventPresentation(event: DashboardEvent) {
     return {
       category: getEventCategory(event.event_type, event.status),
       accentClassName: "border-primary",
-      categoryClassName: "bg-primary text-primary-foreground",
+      categoryClassName: "bg-primary-hover text-destructive-foreground",
       rowClassName: "bg-accent text-foreground",
     }
   }
