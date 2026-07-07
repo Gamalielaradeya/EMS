@@ -1205,3 +1205,79 @@ Verifikasi bottom sheet menampilkan maksimum satu Pre-Alarm aktif, menggantinya 
 Verifikasi Alarm/Trouble hilang dari bottom sheet setelah Recovery, sedangkan event Recovery tetap dapat ditemukan pada Events & Logs.
 
 Verifikasi marker S1 dan S2 serta card Sensors & Readings mengikuti status suhu aktual yang sama dengan dashboard; trouble hanya muncul ketika health bermasalah, dan Pre-Alarm tidak mengubah warna perangkat.
+
+---
+
+## 22. Early-Warning Validation Addendum
+
+### 22.1 Tujuan
+
+Pengujian ini membuktikan apakah model memberi peringatan sebelum S2 melewati threshold, bukan hanya membuktikan bahwa command inference dapat berjalan.
+
+### 22.2 Pembagian tanggung jawab
+
+| Aktivitas | Codex dapat mengerjakan | Membutuhkan user fisik |
+|---|:---:|:---:|
+| Audit kode inference, timestamp, scaler, dan model aktif | Ya | Tidak |
+| Membuat script replay dan laporan metrik transisi | Ya | Tidak |
+| Menambahkan test otomatis dan model-promotion gate | Ya | Tidak |
+| Menjalankan training/evaluation di laptop | Ya | Tidak, jika data sudah tersedia |
+| Memindahkan S2 ke/dekat sumber panas | Tidak | Ya |
+| Menjaga jarak/skenario panas tetap konsisten | Tidak | Ya |
+| Memastikan eksperimen aman bagi sensor dan lingkungan | Tidak | Ya |
+| Memberi label waktu mulai panas, berhenti panas, dan recovery | Tidak | Ya |
+| Menyetujui aktivasi model baru setelah hasil dibandingkan | Tidak | Ya |
+
+Codex dapat mengerjakan seluruh pipeline perangkat lunak. User tetap diperlukan untuk menghasilkan perubahan lingkungan fisik yang valid dan mencatat konteks eksperimen yang tidak dapat diketahui hanya dari angka sensor.
+
+### 22.3 Protokol eksperimen fisik minimum
+
+Lakukan sedikitnya 5 episode pemanasan dan recovery. Hindari sumber panas yang dapat merusak sensor, kabel, Raspberry Pi, atau perangkat lain.
+
+Untuk setiap episode:
+
+1. Pastikan S1 dan S2 stabil pada status normal minimal 10 menit.
+2. Catat timestamp mulai eksperimen dan jarak relatif S2 terhadap sumber panas.
+3. Dekatkan/paparkan S2 secara konsisten sampai melewati threshold waspada.
+4. Pertahankan kondisi beberapa menit agar tersedia contoh dinamika, bukan satu lonjakan reading.
+5. Jika aman, lakukan sebagian episode sampai anomali; langkah ini tidak wajib bila berisiko.
+6. Jauhkan sumber panas dan tunggu recovery ke normal.
+7. Catat timestamp akhir paparan dan recovery.
+8. Jangan mengubah threshold di tengah satu episode.
+
+Variasikan laju kenaikan secara terkontrol: lambat, sedang, dan cepat. Jangan menggabungkan perubahan threshold buatan dengan eksperimen panas fisik dalam evaluasi model karena itu mengubah label tanpa mengubah fenomena suhu.
+
+### 22.4 Data evidence per episode
+
+Simpan:
+
+- ID/tanggal episode.
+- Waktu mulai panas, threshold crossing, akhir panas, dan recovery.
+- Reading S1/S2 per menit.
+- Prediksi dan `predicted_for` yang berhubungan.
+- Model version dan threshold snapshot.
+- Apakah Pre-Alarm muncul sebelum crossing.
+- Lead time, false warning, atau missed warning.
+- Catatan jarak/sumber panas dan gangguan selama eksperimen.
+
+### 22.5 Acceptance criteria awal
+
+Sebelum dipakai sebagai early-warning aktif, kandidat model harus:
+
+1. Tidak kalah secara material dari persistence baseline pada dataset test yang sama.
+2. Mendeteksi mayoritas episode threshold pada validation/replay set.
+3. Tidak memiliki missed warning berulang pada pola pemanasan yang ada di dataset.
+4. Memberikan lead time positif pada episode yang berhasil dideteksi.
+5. Tidak meningkatkan false warning secara tidak terkendali.
+
+Nilai numerik final untuk recall dan false-warning rate harus ditetapkan setelah jumlah episode cukup. Jangan menetapkan target persentase dari dataset yang hanya memiliki satu atau dua episode.
+
+### 22.6 Regression case baru
+
+| ID | Skenario | Expected |
+|---|---|---|
+| ML-014 | Replay episode kenaikan cepat | Laporan menunjukkan prediksi, aktual, error, crossing, dan lead time |
+| ML-015 | LSTM dibandingkan baseline | Kandidat gagal promotion jika kalah dari baseline sesuai gate |
+| ML-016 | Aktual waspada tetapi prediksi normal | Alarm aktual tetap aktif; kasus dicatat sebagai missed Pre-Alarm |
+| ML-017 | Prediksi waspada tetapi aktual target normal | Dicatat sebagai false warning tanpa membuat Alarm aktual |
+| ML-018 | Pendinginan/recovery | Event recovery benar dan evaluasi tidak menghitung setiap reading sebagai episode baru |

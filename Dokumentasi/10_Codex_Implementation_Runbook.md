@@ -1429,3 +1429,61 @@ Sistem dianggap berhasil jika alur utama tersebut berjalan, dapat diuji, dan buk
 ## Approved Alert Category Change
 
 Implementasi alert memakai event transition canonical: Alarm aktual S1/S2, Pre-Alarm prediksi S2 non-stale, Trouble sensor/gateway, dan Recovery. Gunakan `anomaly_events.event_type`; jangan membuat microservice atau tabel event baru.
+
+---
+
+## 28. Corrective Work Package — Early-Warning Quality
+
+Work package ini dibuat setelah audit 7 Juli 2026 menemukan model aktif menghasilkan `29.42°C` untuk S2 `t+5` ketika S2 aktual telah berada di sekitar `31.0°C`. Pipeline inference aktif dan input window terbaru, sehingga fokus perbaikan adalah kualitas model/evaluasi, bukan frontend.
+
+Urutan pekerjaan:
+
+```text
+EW-1  Audit/replay report pada model aktif
+EW-2  Transition-aware metrics
+EW-3  Baseline model-promotion gate
+EW-4  Controlled physical heat dataset
+EW-5  Retrain and compare candidate LSTM
+EW-6  Activate only after review
+EW-7  Optional conservative fallback experiment
+```
+
+### EW-1 sampai EW-3 — dapat dikerjakan Codex
+
+Expected changes:
+
+```text
+ml-worker/src/ml_worker/
+ml-worker/tests/
+ml-worker/README.md
+Dokumentasi/06_ML_Worker_LSTM_Final.md
+Dokumentasi/09_Test_Plan_Final.md
+```
+
+Deliverable:
+
+- CLI/report untuk replay prediksi terhadap aktual.
+- Metrik global dan transition-aware.
+- Perbandingan LSTM, persistence, dan moving average.
+- Promotion decision yang eksplisit: pass/fail beserta alasan.
+- Tidak mengaktifkan/deaktivasi model tanpa persetujuan user.
+
+Verification:
+
+```bash
+cd ml-worker && python -m compileall src
+cd ml-worker && python -m unittest discover -s tests
+cd ml-worker && python -m ml_worker.cli evaluate
+```
+
+### EW-4 — membutuhkan user dan hardware
+
+User menjalankan protokol eksperimen pada Test Plan bagian 22. Codex dapat memonitor database/dashboard dan menyiapkan query evidence, tetapi tidak dapat memindahkan sensor atau menjamin kondisi fisik eksperimen.
+
+### EW-5 sampai EW-6 — kolaboratif
+
+Codex melakukan audit dataset, training, evaluasi, dan menghasilkan comparison report. User meninjau hasil dan menyetujui model version yang akan diaktifkan. Aktivasi tidak boleh hanya berdasarkan training selesai.
+
+### EW-7 — opsional setelah bukti cukup
+
+Fallback baseline/tren boleh diuji sebagai guardrail Pre-Alarm, tetapi LSTM tetap model utama penelitian. Alarm aktual tidak pernah bergantung pada fallback atau LSTM. Perubahan keputusan alert harus tetap berada di backend dan tidak menambah microservice baru.

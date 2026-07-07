@@ -1019,3 +1019,92 @@ Saat membuat ML Worker, Codex harus:
 ## Alert Category Documentation Lock Addendum
 
 ML Worker tetap hanya mengirim hasil inference ke backend. Backend mengklasifikasikan prediksi S2 non-stale sebagai Pre-Alarm (`event_type = prediction_threshold`) dan memiliki seluruh keputusan event, SSE, serta Telegram. ML Worker tidak membuat Alarm aktual atau Trouble.
+
+---
+
+## 36. Audit Model Aktif dan Kesiapan Early Warning
+
+### 36.1 Snapshot diagnosis 7 Juli 2026
+
+Audit dilakukan terhadap model aktif `v20260624_115955` ketika S2 dipindahkan mendekati sumber panas.
+
+| Item | Hasil observasi |
+|---|---|
+| S2 aktual terbaru | `31.0°C` (`waspada`) |
+| Akhir input window | 7 Juli 2026 12:38 WIB |
+| Target prediksi | 7 Juli 2026 12:43 WIB (`t+5`) |
+| Prediksi LSTM | `29.42°C` (`normal`) |
+| Selisih terhadap aktual di sekitar target | sekitar `-1.58°C` |
+| Status infer-loop | aktif, interval sekitar 60 detik |
+
+Input inference telah mengikuti data terbaru. Karena itu, kasus ini bukan bukti data macet atau worker berhenti. Model menghasilkan prediksi yang terlalu rendah saat terjadi kenaikan suhu cepat.
+
+Metrik test model saat training:
+
+| Metode | RMSE (°C) | MAE (°C) | MAPE (%) |
+|---|---:|---:|---:|
+| LSTM aktif | 0.1053 | 0.0854 | 0.3065 |
+| Persistence | 0.0479 | 0.0365 | 0.1310 |
+| Moving average | 0.0496 | 0.0357 | 0.1282 |
+
+Pada test set tersebut, LSTM kalah dari kedua baseline. Model dapat memiliki metrik global yang terlihat kecil karena dataset didominasi periode stabil, tetapi tetap gagal pada transisi yang penting bagi early warning.
+
+Dataset training model aktif mencakup 3 Juni–24 Juni 2026, memiliki 37.396 raw rows dan 3.267 usable resampled rows. Metadata juga mencatat missing value dalam jumlah besar. Angka ini harus diaudit lebih lanjut; angka missing saja belum cukup untuk menyimpulkan akar masalah tanpa melihat distribusi gap dan episode kenaikan suhu.
+
+### 36.2 Arti horizon yang digunakan
+
+Satu inference menghasilkan satu nilai untuk `t+5 menit`. Sistem menjalankan inference setiap menit, sehingga terbentuk deret target bergerak:
+
+```text
+12:38 membuat prediksi untuk 12:43
+12:39 membuat prediksi untuk 12:44
+12:40 membuat prediksi untuk 12:45
+```
+
+Implementasi saat ini bukan model multi-output yang sekaligus menghasilkan `t+1`, `t+2`, `t+3`, `t+4`, dan `t+5`.
+
+### 36.3 Kriteria aktivasi model
+
+Model tidak boleh dianggap layak hanya karena training selesai dan RMSE/MAE terlihat kecil. Sebelum diaktifkan untuk Pre-Alarm, model harus memenuhi seluruh kriteria berikut:
+
+1. Dievaluasi dengan chronological test set yang tidak dipakai training.
+2. Dibandingkan dengan persistence dan moving average pada test set yang sama.
+3. Tidak lebih buruk secara material dari baseline utama pada MAE/RMSE global.
+4. Lulus pengujian khusus episode transisi normal → waspada dan waspada → anomali.
+5. Memiliki tingkat deteksi threshold, missed warning, false warning, dan lead time yang dilaporkan.
+6. Lulus replay data historis sebelum aktivasi produksi.
+
+LSTM tetap model utama sesuai scope skripsi. Baseline berfungsi sebagai pembanding, quality gate, dan kandidat fallback aman; baseline tidak mengganti fokus penelitian LSTM.
+
+### 36.4 Evaluasi transition-aware
+
+Selain RMSE, MAE, dan MAPE global, laporan evaluasi harus mencatat:
+
+| Metrik | Makna |
+|---|---|
+| Threshold recall | Persentase episode aktual waspada/anomali yang diperingatkan sebelumnya |
+| Missed-warning count | Episode threshold aktual tanpa Pre-Alarm yang benar |
+| False-warning count | Pre-Alarm tetapi target aktual tetap normal |
+| Median lead time | Jarak waktu peringatan terhadap threshold aktual |
+| Transition MAE | MAE pada window sekitar kenaikan/pendinginan, bukan seluruh periode stabil |
+
+Episode tidak dihitung dari setiap reading. Satu episode dimulai saat status berubah dari normal ke waspada/anomali dan berakhir setelah recovery ke normal.
+
+### 36.5 Rencana perbaikan bertahap
+
+Urutan wajib agar perubahan dapat dipertanggungjawabkan:
+
+1. Buat laporan audit/replay model aktif tanpa mengubah model produksi.
+2. Tambahkan evaluasi transition-aware dan model-promotion gate.
+3. Kumpulkan episode pemanasan dan pendinginan fisik yang terkontrol.
+4. Audit gap data, distribusi suhu, dan cakupan episode threshold.
+5. Retrain LSTM menggunakan dataset yang telah diperbaiki.
+6. Bandingkan model baru dengan model aktif serta kedua baseline.
+7. Aktifkan hanya model yang lolos quality gate.
+8. Setelah evaluasi memadai, pertimbangkan fallback konservatif berbasis baseline/tren ketika output LSTM tidak kredibel.
+
+Fitur turunan tren, misalnya perubahan suhu 1, 3, dan 5 menit, adalah kandidat eksperimen. Penambahannya harus dicatat sebagai perubahan feature schema, menghasilkan artifact/scaler baru, dan diuji melalui ablation; tidak boleh disisipkan ke artifact lama.
+
+### 36.6 Guardrail operasional
+
+Alarm aktual tetap ditentukan oleh pembacaan sensor dan tidak boleh diturunkan menjadi normal hanya karena prediksi LSTM normal. Pre-Alarm adalah informasi masa depan, bukan pengganti Alarm aktual. Trouble tetap khusus kesehatan sensor/gateway/system.
