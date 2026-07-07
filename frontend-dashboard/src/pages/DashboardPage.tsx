@@ -1,4 +1,4 @@
-import { BrainCircuit, MapPinned, RefreshCw, ShieldCheck, Thermometer, Wifi, type LucideIcon } from "lucide-react"
+import { BrainCircuit, MapPinned, ShieldCheck, Thermometer, Wifi, type LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { MonitoringBottomSheet } from "@/components/dashboard/MonitoringBottomSheet"
@@ -6,7 +6,6 @@ import { FloorplanMonitoringMap } from "@/components/layout-map/FloorplanMonitor
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
 import { StatusBadge } from "@/components/status/StatusBadge"
-import { Button } from "@/components/ui/button"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useLayoutWorkspace } from "@/hooks/useLayoutWorkspace"
 import { useReadingHistory } from "@/hooks/useReadingHistory"
@@ -39,13 +38,6 @@ export function DashboardPage() {
           </span>
           <span className="text-slate-400">›</span>
           <span className="text-cyan-100">{layoutWorkspace.layout?.layout.name || "Server Testbed Layout"}</span>
-        </div>
-
-        <div className="absolute right-4 top-4 z-20 flex flex-wrap justify-end gap-2 md:right-6 md:top-6">
-          <Button className="border border-white/10 bg-white/90 text-slate-950 hover:bg-white" onClick={() => void refresh()} size="sm" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-4" />
-            Refresh
-          </Button>
         </div>
 
         <div className="absolute left-4 top-20 z-20 w-[min(26rem,calc(100%-2rem))] space-y-3 md:left-6 md:top-24">

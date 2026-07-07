@@ -41,8 +41,14 @@
 @layer components {
   .leaflet-container,
   .ems-floorplan-leaflet.leaflet-container {
-    background: #000 !important;
+    background: #020617 !important;
     font-family: var(--font-body);
+  }
+
+  .ems-floorplan-leaflet .leaflet-pane,
+  .ems-floorplan-leaflet .leaflet-map-pane,
+  .ems-floorplan-leaflet .leaflet-overlay-pane {
+    background: transparent !important;
   }
 
   .leaflet-control-zoom {
@@ -59,6 +65,16 @@
   .ems-floorplan-image-overlay {
     image-rendering: auto;
     user-select: none;
+  }
+
+  .ems-floorplan-image-overlay--fallback-dark {
+    filter: invert(1) brightness(0.72) contrast(0.96) saturate(0.74);
+    opacity: 0.9;
+  }
+
+  .ems-floorplan-image-overlay--prepared {
+    filter: contrast(0.96) brightness(0.92);
+    opacity: 0.92;
   }
 
   .ems-leaflet-marker-wrapper {
