@@ -61,11 +61,13 @@ python -m gateway.cli diagnose ports
 python -m gateway.cli diagnose raw --slave-id 1 --address 1 --count 2
 python -m gateway.cli diagnose sensor --sensor-code S1
 python -m gateway.cli send-test
+python -m gateway.cli simulate --scenario random-smooth --duration 30m
 python -m gateway.cli run
 ```
 
-Use `--config ./path/to/config.yaml` after `raw`, `sensor`, `send-test`, or `run`
-to override `GATEWAY_CONFIG`. Test S2 with `--slave-id 2` and `--sensor-code S2`.
+Use `--config ./path/to/config.yaml` after `raw`, `sensor`, `send-test`,
+`simulate`, or `run` to override `GATEWAY_CONFIG`. Test S2 with `--slave-id 2`
+and `--sensor-code S2`.
 Use `--register-type input` or `--register-type holding` with `diagnose raw` to
 override the configured default for a single diagnostic read.
 
@@ -133,6 +135,24 @@ short settling gap while keeping the 10-second sampling cycle intact.
 
 Gateway heartbeat/status reports are separate from readings and default to every
 60 seconds. Failed status reports are logged and retried on later cycles.
+
+## Realtime Simulator for End-to-End Tests
+
+`simulate` sends smooth S1/S2 readings to the backend as `source=simulator`.
+It does not read Modbus and should not run at the same time as the hardware
+gateway, otherwise dashboard/latest status will mix hardware and simulator rows.
+
+Examples:
+
+```bash
+python -m gateway.cli simulate --scenario random-smooth --duration 30m --interval 10
+python -m gateway.cli simulate --scenario heat-cycle --duration 20m
+python -m gateway.cli simulate --scenario normal --duration 10m
+python -m gateway.cli simulate --scenario random-smooth --duration 10m --drop-sensor S2 --drop-after 2m
+```
+
+Use it for frontend/backend/SSE/event/Telegram behavior tests. Do not use
+simulator rows as thesis hardware evidence or as validation/test data for ML.
 
 Runtime files default to:
 

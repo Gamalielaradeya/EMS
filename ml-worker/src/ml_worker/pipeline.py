@@ -8,6 +8,7 @@ from typing import Any
 import joblib
 from psycopg import Connection
 
+from ml_worker.augmentation import combine_training_windows, load_synthetic_training_csv, scale_augmented_data
 from ml_worker.baselines import evaluate_baselines
 from ml_worker.backend_client import build_prediction_payload, submit_prediction
 from ml_worker.config import Settings
@@ -175,6 +176,152 @@ def train(
     except Exception as exc:
         connection.rollback()
         _record_failure(connection, run_id, "training", exc)
+        raise
+
+
+def train_augmented(
+    connection: Connection,
+    settings: Settings,
+    start_at: datetime,
+    end_at: datetime,
+    synthetic_path: Path,
+    max_synthetic_ratio: float = 0.30,
+    seed: int = 42,
+) -> dict[str, Any]:
+    run_metadata = {
+        "start_at": start_at,
+        "end_at": end_at,
+        "training_mode": "hardware_plus_synthetic",
+        "synthetic_path": str(synthetic_path),
+        "max_synthetic_ratio": max_synthetic_ratio,
+        "seed": seed,
+    }
+    run_id = create_prediction_run(connection, "training", run_metadata)
+    connection.commit()
+    try:
+        raw = load_raw_readings(connection, settings, start_at, end_at)
+        prepared, stats = prepare_training_dataset(raw, settings)
+        if len(prepared) < settings.minimum_resampled_rows:
+            raise InsufficientDataError(
+                f"Need at least {settings.minimum_resampled_rows} hardware resampled rows; received {len(prepared)}."
+            )
+        split = chronological_split(prepared, settings)
+        synthetic = load_synthetic_training_csv(synthetic_path, settings)
+        scaled = scale_augmented_data(split, synthetic)
+
+        real_train_x, real_train_y = build_windows(scaled.real.train, settings.window_size)
+        synthetic_x, synthetic_y = build_windows(scaled.synthetic, settings.window_size)
+        train_x, train_y, augmentation = combine_training_windows(
+            real_train_x,
+            real_train_y,
+            synthetic_x,
+            synthetic_y,
+            max_synthetic_ratio,
+            seed,
+        )
+        validation_x, validation_y = build_windows(scaled.real.validation, settings.window_size)
+        test_x, _ = build_windows(scaled.real.test, settings.window_size)
+        raw_test_x, raw_test_y = build_windows(split.test, settings.window_size)
+        baselines = evaluate_baselines(raw_test_x, raw_test_y, settings.moving_average_window)
+
+        tf = tensorflow()
+        tf.keras.utils.set_random_seed(seed)
+        model = build_lstm_model(settings.window_size, len(FEATURE_COLUMNS), settings.learning_rate)
+        callbacks = [
+            tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss",
+                patience=settings.early_stopping_patience,
+                restore_best_weights=True,
+            )
+        ]
+        history = model.fit(
+            train_x,
+            train_y,
+            validation_data=(validation_x, validation_y),
+            epochs=settings.epochs,
+            batch_size=settings.batch_size,
+            callbacks=callbacks,
+            verbose=0,
+        )
+        predicted_scaled = model.predict(test_x, verbose=0)
+        predicted_celsius = scaled.target_scaler.inverse_transform(predicted_scaled).reshape(-1)
+        actual_celsius = raw_test_y.reshape(-1)
+        metrics = calculate_metrics(actual_celsius, predicted_celsius)
+        promotion_gate = evaluate_promotion_gate(
+            {
+                "lstm": metrics.to_dict(),
+                "baselines": {name: value.to_dict() for name, value in baselines.items()},
+            }
+        )
+
+        version = datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
+        split_sizes = (len(split.train), len(split.validation), len(split.test))
+        artifacts = _save_artifacts(
+            settings,
+            version,
+            model,
+            scaled.feature_scaler,
+            scaled.target_scaler,
+            {
+                "version": version,
+                "features": FEATURE_COLUMNS,
+                "target": TARGET_COLUMN,
+                "trained_at": datetime.now(timezone.utc),
+                "training_mode": "hardware_plus_synthetic",
+                "hardware_dataset_start_at": prepared.index.min(),
+                "hardware_dataset_end_at": prepared.index.max(),
+                "hardware_resample_stats": stats.to_dict(),
+                "hardware_split_sizes": split_sizes,
+                "validation_source": "hardware",
+                "test_source": "hardware",
+                "synthetic_source_path": str(synthetic_path.resolve()),
+                "synthetic_rows": len(synthetic),
+                "augmentation": augmentation,
+                "window_size": settings.window_size,
+                "horizon_minutes": settings.horizon_minutes,
+                "epochs_completed": len(history.history.get("loss", [])),
+                "metrics_celsius_hardware_test": metrics.to_dict(),
+                "baselines_celsius_hardware_test": {
+                    name: value.to_dict() for name, value in baselines.items()
+                },
+                "promotion_gate": promotion_gate,
+            },
+        )
+        model_version_id = insert_model_version(
+            connection,
+            settings,
+            version,
+            artifacts,
+            {
+                "epochs": settings.epochs,
+                "batch_size": settings.batch_size,
+                "learning_rate": settings.learning_rate,
+                "early_stopping_patience": settings.early_stopping_patience,
+                "training_mode": "hardware_plus_synthetic",
+                "augmentation": augmentation,
+            },
+            False,
+        )
+        insert_model_metrics(connection, model_version_id, prepared.index.min().to_pydatetime(), prepared.index.max().to_pydatetime(), split_sizes, metrics)
+        insert_baseline_results(connection, model_version_id, baselines, settings.moving_average_window)
+        result = {
+            "model_version_id": model_version_id,
+            "version": version,
+            "training_mode": "hardware_plus_synthetic",
+            "metrics_celsius_hardware_test": metrics.to_dict(),
+            "baselines_celsius_hardware_test": {name: value.to_dict() for name, value in baselines.items()},
+            "promotion_gate": promotion_gate,
+            "augmentation": augmentation,
+            "activated": False,
+            "artifacts": {name: str(path) for name, path in artifacts.items()},
+        }
+        finish_prediction_run(connection, run_id, "success", f"Trained augmented candidate {version}.", result, model_version_id)
+        insert_system_log(connection, "info", f"Augmented ML candidate completed for {version}.", result)
+        connection.commit()
+        return result
+    except Exception as exc:
+        connection.rollback()
+        _record_failure(connection, run_id, "augmented training", exc)
         raise
 
 

@@ -700,6 +700,7 @@ python -m gateway.cli diagnose ports
 python -m gateway.cli diagnose raw --slave-id 1 --address 1 --count 2
 python -m gateway.cli diagnose sensor --sensor-code S1
 python -m gateway.cli send-test
+python -m gateway.cli simulate --scenario random-smooth --duration 30m
 python -m gateway.cli run
 ```
 

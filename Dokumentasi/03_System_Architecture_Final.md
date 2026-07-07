@@ -645,6 +645,21 @@ Logger
 
 Gateway simulator bukan mode utama. Jika dibuat, tempatkan sebagai alat bantu development terpisah.
 
+Development-only realtime simulator:
+
+```bash
+python -m gateway.cli simulate --scenario random-smooth --duration 30m --interval 10
+```
+
+Aturan:
+
+1. Simulator mengirim payload readings dengan `source=simulator`.
+2. Simulator tidak membaca Modbus dan tidak menggantikan mode hardware.
+3. Jangan menjalankan simulator bersamaan dengan gateway hardware untuk S1/S2 yang sama.
+4. Scenario minimal: normal stabil, heat-cycle, random-smooth, dan drop sensor untuk uji trouble timeout.
+5. Data simulator hanya untuk uji dashboard, backend, SSE, event, Telegram, dan eksperimen augmentasi training.
+6. Data simulator tidak boleh menjadi bukti hardware skripsi atau validation/test ML final.
+
 ---
 
 ## 16. Database Architecture Overview

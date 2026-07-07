@@ -1110,3 +1110,36 @@ Fitur turunan tren, misalnya perubahan suhu 1, 3, dan 5 menit, adalah kandidat e
 ### 36.6 Guardrail operasional
 
 Alarm aktual tetap ditentukan oleh pembacaan sensor dan tidak boleh diturunkan menjadi normal hanya karena prediksi LSTM normal. Pre-Alarm adalah informasi masa depan, bukan pengganti Alarm aktual. Trouble tetap khusus kesehatan sensor/gateway/system.
+
+### 36.7 Synthetic augmentation development tool
+
+ML Worker menyediakan command development:
+
+```powershell
+python -m ml_worker.cli generate-synthetic --output ./reports/synthetic-run-01 --minutes 1440 --seed 42
+```
+
+Aturan penggunaannya:
+
+1. Generator tidak menulis ke PostgreSQL dan tidak mengirim payload ke backend.
+2. Output selalu ditandai `source=simulator` dan `quality_status=simulated`.
+3. Pola meliputi normal stabil, heating perlahan/cepat, hot hold, dan recovery.
+4. Seed dan konfigurasi disimpan pada manifest agar eksperimen dapat direproduksi.
+5. Data sintetis hanya boleh menjadi kandidat augmentasi partition training.
+6. Validation, test, early-warning evidence, dan hasil utama skripsi tetap memakai data hardware.
+7. Model augmented wajib dibandingkan dengan model real-only serta persistence/moving-average baseline.
+8. Generator tidak boleh digunakan untuk memicu Alarm, Pre-Alarm, Telegram, atau menggantikan bukti hardware.
+
+Training eksperimen menggunakan:
+
+```powershell
+python -m ml_worker.cli train-augmented `
+  --synthetic ./reports/synthetic-run-01/synthetic_ml_wide.csv `
+  --max-synthetic-ratio 0.30 `
+  --seed 42
+```
+
+Command membagi data hardware secara kronologis terlebih dahulu. Window sintetis
+hanya ditambahkan ke training dan dibatasi maksimal 30% secara default.
+Validation, test, dan perhitungan baseline tetap 100% hardware. Kandidat hasil
+training selalu disimpan inactive dan memerlukan review sebelum aktivasi.

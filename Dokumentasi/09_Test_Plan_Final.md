@@ -1281,3 +1281,7 @@ Nilai numerik final untuk recall dan false-warning rate harus ditetapkan setelah
 | ML-016 | Aktual waspada tetapi prediksi normal | Alarm aktual tetap aktif; kasus dicatat sebagai missed Pre-Alarm |
 | ML-017 | Prediksi waspada tetapi aktual target normal | Dicatat sebagai false warning tanpa membuat Alarm aktual |
 | ML-018 | Pendinginan/recovery | Event recovery benar dan evaluasi tidak menghitung setiap reading sebagai episode baru |
+| ML-019 | Generate dataset sintetis dengan seed sama | CSV dan manifest identik, memiliki fase heating/recovery dan label simulator |
+| ML-020 | Evaluasi model augmented | Validation/test tetap 100% hardware dan hasil dibandingkan dengan real-only serta baseline |
+| ML-021 | Synthetic ratio 30% | Jumlah window sintetis tidak melebihi 30% dari combined training windows |
+| ML-022 | Training augmented selesai | Kandidat tersimpan inactive meskipun promotion gate pass |
