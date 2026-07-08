@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import { MonitoringBottomSheet } from "@/components/dashboard/MonitoringBottomSheet"
 import { FloorplanMonitoringMap } from "@/components/layout-map/FloorplanMonitoringMap"
 import { ErrorState } from "@/components/states/ErrorState"
-import { LoadingState } from "@/components/states/LoadingState"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useLayoutWorkspace } from "@/hooks/useLayoutWorkspace"
@@ -85,11 +84,7 @@ export function DashboardPage() {
           </div>
         ) : null}
         {(isLoading && !summary) || (layoutWorkspace.isLoading && !layoutWorkspace.layout) ? (
-          <div className="absolute inset-0 z-50 grid place-items-center bg-black/35 backdrop-blur-sm">
-            <div className="w-[min(28rem,calc(100%-2rem))] rounded-lg border border-white/10 bg-white text-slate-950 shadow-floating">
-              <LoadingState />
-            </div>
-          </div>
+          <div aria-label="Loading dashboard data" className="absolute inset-0 z-50 bg-black/35 backdrop-blur-sm" />
         ) : null}
 
         <MonitoringBottomSheet
