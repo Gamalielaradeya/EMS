@@ -3,6 +3,19 @@ import { useCallback, useEffect, useState } from "react"
 import { ApiError, api } from "@/lib/api"
 import type { NotificationLog, Setting } from "@/types/api"
 
+/** Editable settings collected from the page form, saved as one unit. */
+export interface SettingsDraft {
+  normalMax: string
+  anomalyMin: string
+  timeoutMinutes: string
+  telegramEnabled: boolean
+  cooldown: string
+  /** Blank = keep stored secret. */
+  botToken: string
+  /** Blank = keep stored secret. */
+  chatId: string
+}
+
 export function useSettingsWorkspace() {
   const [settings, setSettings] = useState<Setting[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -64,6 +77,38 @@ export function useSettingsWorkspace() {
     }, "Telegram settings saved. Blank sensitive fields kept their stored values.")
   }, [run])
 
+  const saveAll = useCallback(async (draft: SettingsDraft) => {
+    const current = new Map(settings.map((setting) => [setting.key, setting.value]))
+    const changed = (key: string, value: string) => current.get(key) !== value
+    const currentAnomaly = Number(current.get("threshold_anomaly_min"))
+
+    await run(async () => {
+      // Write thresholds in an order that never trips the backend's
+      // normal_max < anomaly_min invariant during the intermediate state.
+      if (changed("threshold_normal_max", draft.normalMax) || changed("threshold_anomaly_min", draft.anomalyMin)) {
+        if (Number(draft.normalMax) >= currentAnomaly) {
+          await api.updateSetting("threshold_anomaly_min", draft.anomalyMin)
+          await api.updateSetting("threshold_normal_max", draft.normalMax)
+        } else {
+          await api.updateSetting("threshold_normal_max", draft.normalMax)
+          await api.updateSetting("threshold_anomaly_min", draft.anomalyMin)
+        }
+      }
+      if (changed("sensor_timeout_minutes", draft.timeoutMinutes)) {
+        await api.updateSetting("sensor_timeout_minutes", draft.timeoutMinutes)
+      }
+      if (changed("telegram_enabled", String(draft.telegramEnabled))) {
+        await api.updateSetting("telegram_enabled", String(draft.telegramEnabled))
+      }
+      if (changed("telegram_cooldown_minutes", draft.cooldown)) {
+        await api.updateSetting("telegram_cooldown_minutes", draft.cooldown)
+      }
+      // Secrets: only push when the user typed a replacement. Blank keeps the stored value.
+      if (draft.botToken.trim()) await api.updateSetting("telegram_bot_token", draft.botToken.trim())
+      if (draft.chatId.trim()) await api.updateSetting("telegram_chat_id", draft.chatId.trim())
+    }, "Settings saved. Blank sensitive fields kept their stored values.")
+  }, [run, settings])
+
   const testNotification = useCallback(async () => {
     let notification: NotificationLog | null = null
     await run(async () => {
@@ -72,5 +117,5 @@ export function useSettingsWorkspace() {
     return notification
   }, [run])
 
-  return { settings, error, message, isLoading, isSaving, refresh, saveThresholds, saveTelegram, testNotification }
+  return { settings, error, message, isLoading, isSaving, refresh, saveThresholds, saveTelegram, saveAll, testNotification }
 }
