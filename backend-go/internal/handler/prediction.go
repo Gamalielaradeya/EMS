@@ -113,6 +113,18 @@ func (h *Handler) UpdateModelVersion(w http.ResponseWriter, r *http.Request) {
 	apiresponse.Success(w, http.StatusOK, "model updated successfully", item)
 }
 
+func (h *Handler) DeleteModelVersion(w http.ResponseWriter, r *http.Request) {
+	id, ok := resourceID(w, r)
+	if !ok {
+		return
+	}
+	if err := h.service.DeleteModelVersion(r.Context(), id); err != nil {
+		writeServiceError(w, err, nil)
+		return
+	}
+	apiresponse.Success(w, http.StatusOK, "model deleted successfully", map[string]any{"id": id})
+}
+
 func (h *Handler) LatestModelMetrics(w http.ResponseWriter, r *http.Request) {
 	item, err := h.service.LatestModelMetrics(r.Context())
 	if err != nil {

@@ -282,7 +282,7 @@ function ModelMetrics({ summary }: { summary: DashboardSummary | null }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <InfoBox icon={BrainCircuit} label="Active model" value={activeModel?.version || prediction?.model_version || "Not ready"} />
+        <InfoBox icon={BrainCircuit} label="Active model" value={activeModel?.model_name || prediction?.model_version || "Not ready"} />
         <InfoBox icon={CalendarClock} label="Trained at" value={activeModel?.trained_at ? formatDateTime(activeModel.trained_at) : "Not available"} />
       </div>
 

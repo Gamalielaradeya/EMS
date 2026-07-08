@@ -1,4 +1,4 @@
-import { Check, Pencil, X } from "lucide-react"
+import { Check, Pencil, Trash2, X } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -13,14 +13,17 @@ interface ModelDetailModalProps {
   fullMetrics?: ModelMetrics | null
   comparison?: ModelComparison | null
   onClose: () => void
+  onDeleted?: () => void
   onRenamed?: () => void
 }
 
-export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onRenamed }: ModelDetailModalProps) {
+export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onDeleted, onRenamed }: ModelDetailModalProps) {
   const [displayName, setDisplayName] = useState(model.model_name)
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState(model.model_name)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [renameError, setRenameError] = useState<string | null>(null)
 
   // Close on Escape key
@@ -57,6 +60,23 @@ export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onRe
       setRenameError(err instanceof ApiError ? err.message : "Failed to rename model.")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (model.is_active) return
+    const confirmed = window.confirm(`Delete inactive model "${displayName}"? Prediction history remains, but this model version record will be removed.`)
+    if (!confirmed) return
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await api.deleteModelVersion(model.id)
+      onDeleted?.()
+      onClose()
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Failed to delete model.")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -235,10 +255,19 @@ export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onRe
           ) : null}
 
           {!model.is_active ? (
-            <p className="rounded-md border bg-muted/50 px-4 py-3 text-xs text-muted-foreground">
-              Full dataset details and baseline comparison are only available for the active model.
-              Activate this model to see complete training data.
-            </p>
+            <div className="rounded-md border bg-muted/50 px-4 py-3">
+              <p className="text-xs leading-5 text-muted-foreground">
+                Full dataset details and baseline comparison are only available for the active model.
+                Activate this model to see complete training data.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                {deleteError ? <span className="text-xs text-danger">{deleteError}</span> : <span className="text-xs text-muted-foreground">Inactive model can be deleted from the registry.</span>}
+                <Button className="text-destructive hover:text-destructive" disabled={isDeleting} onClick={() => void handleDelete()} size="sm" variant="ghost">
+                  <Trash2 aria-hidden="true" className="size-4" />
+                  {isDeleting ? "Deleting..." : "Delete model"}
+                </Button>
+              </div>
+            </div>
           ) : null}
         </div>
       </div>

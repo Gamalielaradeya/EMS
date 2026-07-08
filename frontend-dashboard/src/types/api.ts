@@ -55,6 +55,7 @@ export interface Prediction extends PredictionSummary {
 
 export interface ActiveModelSummary {
   id: number
+  model_name: string
   version: string
   trained_at: string | null
 }

@@ -15,7 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrNotFound = errors.New("record not found")
+var (
+	ErrNotFound = errors.New("record not found")
+	ErrConflict = errors.New("record conflict")
+)
 
 type Repository struct {
 	db *pgxpool.Pool
@@ -729,11 +732,11 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 
 	var activeModel model.ActiveModelSummary
 	err = r.db.QueryRow(ctx, `
-		SELECT id, version, trained_at
+		SELECT id, model_name, version, trained_at
 		FROM model_versions
 		WHERE is_active = TRUE
 		LIMIT 1`,
-	).Scan(&activeModel.ID, &activeModel.Version, &activeModel.TrainedAt)
+	).Scan(&activeModel.ID, &activeModel.ModelName, &activeModel.Version, &activeModel.TrainedAt)
 	if err == nil {
 		summary.ActiveModel = &activeModel
 	} else if !errors.Is(err, pgx.ErrNoRows) {

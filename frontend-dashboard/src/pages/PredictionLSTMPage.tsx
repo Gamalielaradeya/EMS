@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { usePredictionWorkspace } from "@/hooks/usePredictionWorkspace"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
+import { formatStatus } from "@/lib/status"
 import { useAdminToken } from "@/hooks/useAdminToken"
 
 export function PredictionLSTMPage() {
@@ -53,7 +54,7 @@ export function PredictionLSTMPage() {
               detail={workspace.latest ? `Created ${formatDateTime(workspace.latest.created_at)}` : "Awaiting backend prediction bridge."}
               icon={ShieldAlert}
               label="Prediction status"
-              value={workspace.latest?.final_status || "No prediction"}
+              value={workspace.latest ? formatStatus(workspace.latest.final_status) : "No prediction"}
             />
             <SummaryMetric
               detail={activeModel ? `Trained ${formatDateTime(activeModel.trained_at)}` : "Activation required before ML inference."}
@@ -119,6 +120,7 @@ export function PredictionLSTMPage() {
           fullMetrics={workspace.metrics}
           comparison={workspace.comparison}
           onClose={() => setSelectedModelId(null)}
+          onDeleted={() => void workspace.refresh()}
           onRenamed={() => void workspace.refresh()}
         />
       ) : null}

@@ -68,6 +68,14 @@ func (s *Service) UpdateModelVersionName(ctx context.Context, id int64, name str
 	return s.repository.UpdateModelVersionName(ctx, id, name)
 }
 
+func (s *Service) DeleteModelVersion(ctx context.Context, id int64) error {
+	systemLog, err := s.repository.DeleteModelVersion(ctx, id)
+	if err == nil {
+		s.publish(sse.EventSystemLog, systemLog)
+	}
+	return err
+}
+
 func (s *Service) ActivateModelVersion(ctx context.Context, id int64) (model.ModelVersion, error) {
 	item, systemLog, err := s.repository.ActivateModelVersion(ctx, id)
 	if err == nil {

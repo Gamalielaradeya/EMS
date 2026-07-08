@@ -156,6 +156,11 @@ export const api = {
       headers: { "Content-Type": "application/json", ...adminHeaders() },
       body: JSON.stringify({ model_name: name }),
     }),
+  deleteModelVersion: (id: number) =>
+    request<{ id: number }>(`/model-versions/${id}`, {
+      method: "DELETE",
+      headers: adminHeaders(),
+    }),
   getLatestModelMetrics: () => request<ModelMetrics | null>("/model-metrics/latest"),
   getLatestModelComparison: () => request<ModelComparison | null>("/model-comparison/latest"),
   getAnomalyEvents: (filters: OperationalLogFilters) =>

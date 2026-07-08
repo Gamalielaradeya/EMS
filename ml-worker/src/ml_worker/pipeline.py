@@ -92,6 +92,7 @@ def train(
         activation_allowed = activate and promotion_gate["passed"]
 
         version = datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
+        model_name = _display_model_name(settings, version)
         artifacts = _save_artifacts(
             settings,
             version,
@@ -100,6 +101,7 @@ def train(
             scaled.target_scaler,
             {
                 "version": version,
+                "model_name": model_name,
                 "features": FEATURE_COLUMNS,
                 "target": TARGET_COLUMN,
                 "trained_at": datetime.now(timezone.utc),
@@ -118,6 +120,7 @@ def train(
             connection,
             settings,
             version,
+            model_name,
             artifacts,
             {
                 "epochs": settings.epochs,
@@ -255,6 +258,7 @@ def train_augmented(
         )
 
         version = datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
+        model_name = _display_model_name(settings, version)
         split_sizes = (len(split.train), len(split.validation), len(split.test))
         artifacts = _save_artifacts(
             settings,
@@ -264,6 +268,7 @@ def train_augmented(
             scaled.target_scaler,
             {
                 "version": version,
+                "model_name": model_name,
                 "features": FEATURE_COLUMNS,
                 "target": TARGET_COLUMN,
                 "trained_at": datetime.now(timezone.utc),
@@ -291,6 +296,7 @@ def train_augmented(
             connection,
             settings,
             version,
+            model_name,
             artifacts,
             {
                 "epochs": settings.epochs,
@@ -444,6 +450,10 @@ def _save_artifacts(
     artifacts["metadata"].write_text(serialized + "\n", encoding="utf-8")
     artifacts["report"].write_text(serialized + "\n", encoding="utf-8")
     return artifacts
+
+
+def _display_model_name(settings: Settings, version: str) -> str:
+    return f"{settings.model_name} {version}"
 
 
 def _require_model_version(connection: Connection, version: str | None) -> dict[str, Any]:

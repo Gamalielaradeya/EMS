@@ -70,6 +70,7 @@ def insert_model_version(
     connection: Connection,
     settings: Settings,
     version: str,
+    model_name: str,
     artifacts: dict[str, Path],
     parameters: dict[str, Any],
     activate: bool,
@@ -90,7 +91,7 @@ def insert_model_version(
             RETURNING id
             """,
             (
-                settings.model_name,
+                model_name,
                 version,
                 json.dumps(FEATURE_COLUMNS),
                 TARGET_COLUMN,

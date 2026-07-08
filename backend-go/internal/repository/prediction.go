@@ -279,6 +279,41 @@ func (r *Repository) UpdateModelVersionName(ctx context.Context, id int64, name 
 	return r.GetModelVersion(ctx, id)
 }
 
+func (r *Repository) DeleteModelVersion(ctx context.Context, id int64) (model.SystemLog, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return model.SystemLog{}, fmt.Errorf("begin model delete transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var modelName string
+	var isActive bool
+	err = tx.QueryRow(ctx, `SELECT model_name, is_active FROM model_versions WHERE id = $1`, id).Scan(&modelName, &isActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.SystemLog{}, ErrNotFound
+	}
+	if err != nil {
+		return model.SystemLog{}, fmt.Errorf("get model before delete: %w", err)
+	}
+	if isActive {
+		return model.SystemLog{}, fmt.Errorf("%w: active model cannot be deleted", ErrConflict)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM model_versions WHERE id = $1`, id); err != nil {
+		return model.SystemLog{}, fmt.Errorf("delete model version: %w", err)
+	}
+	systemLog, err := insertSystemLogTx(ctx, tx, "backend", "info", "Inactive model version deleted", map[string]any{
+		"model_version_id": id,
+		"model_name":       modelName,
+	})
+	if err != nil {
+		return model.SystemLog{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return model.SystemLog{}, err
+	}
+	return systemLog, nil
+}
+
 func (r *Repository) ActivateModelVersion(ctx context.Context, id int64) (model.ModelVersion, model.SystemLog, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {

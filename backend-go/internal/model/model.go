@@ -111,6 +111,7 @@ type PredictionSummary struct {
 
 type ActiveModelSummary struct {
 	ID        int64      `json:"id"`
+	ModelName string     `json:"model_name"`
 	Version   string     `json:"version"`
 	TrainedAt *time.Time `json:"trained_at"`
 }
