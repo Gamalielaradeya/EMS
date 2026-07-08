@@ -1,4 +1,4 @@
-import { ImageUp, MapPinned, MousePointer2, Trash2 } from "lucide-react"
+import { FileImage, ImageUp, MapPinned, MousePointer2, Trash2 } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import { LayoutCanvas } from "@/components/layout-map/LayoutCanvas"
@@ -36,21 +36,35 @@ export function LayoutPage() {
       {workspace.message ? <p className="rounded-md border border-normal/30 bg-normal-muted px-4 py-3 text-sm text-normal">{workspace.message}</p> : null}
       {!hasToken ? <p className="rounded-md border bg-muted px-4 py-3 text-sm text-muted-foreground">Set the admin token in Settings to upload images and save marker positions.</p> : null}
 
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b bg-muted/50">
           <CardTitle>{workspace.layout ? "Replace active layout" : "Upload testbed layout"}</CardTitle>
           <CardDescription>PNG, JPG, JPEG, or WebP. Maximum file size: 5 MB. If the image is already dark, leave invert off.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(15rem,0.7fr)_auto] xl:items-end" onSubmit={submitUpload}>
+        <CardContent className="pt-5">
+          <form className="grid gap-4 xl:grid-cols-[minmax(14rem,1fr)_minmax(16rem,1.05fr)_minmax(14rem,0.9fr)_auto] xl:items-end" onSubmit={submitUpload}>
             <label className="grid gap-2 text-sm font-semibold">
               Layout name
               <input className={controlClassName} onChange={(event) => setLayoutName(event.target.value)} placeholder="Server Testbed Layout" value={layoutName} />
             </label>
-            <label className="grid gap-2 text-sm font-semibold">
-              Image file
-              <input accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" className={controlClassName} onChange={(event) => setImage(event.target.files?.[0] || null)} type="file" />
-            </label>
+            <div className="grid gap-2 text-sm font-semibold">
+              <span>Image file</span>
+              <label className="flex h-11 min-w-0 cursor-pointer overflow-hidden rounded-md border bg-card text-sm transition-[border-color] hover:border-input focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+                <span className="inline-flex h-full shrink-0 items-center gap-2 border-r bg-muted px-3 font-bold text-foreground">
+                  <FileImage aria-hidden="true" className="size-4" />
+                  Browse
+                </span>
+                <span className={`min-w-0 truncate px-3 py-3 font-semibold ${image ? "text-foreground" : "text-muted-foreground"}`}>
+                  {image?.name || "No file selected"}
+                </span>
+                <input
+                  accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={(event) => setImage(event.target.files?.[0] || null)}
+                  type="file"
+                />
+              </label>
+            </div>
             <label className="flex min-h-11 items-center gap-3 rounded-md border bg-card px-3 py-2 text-sm font-semibold transition-[border-color] hover:border-input">
               <input
                 checked={invertToDark}
@@ -63,7 +77,7 @@ export function LayoutPage() {
                 <span className="block text-xs font-medium text-muted-foreground">Use only for white CAD images.</span>
               </span>
             </label>
-            <Button disabled={!hasToken || !image || workspace.isSaving} type="submit">
+            <Button className="h-11 xl:min-w-36" disabled={!hasToken || !image || workspace.isSaving} type="submit">
               <ImageUp aria-hidden="true" className="size-4" />
               {workspace.isSaving ? "Saving..." : "Upload image"}
             </Button>
@@ -87,6 +101,7 @@ export function LayoutPage() {
                 activeLayout={workspace.layout}
                 disabled={!hasToken || workspace.isSaving}
                 onPositionChange={(sensorCode, positionX, positionY) => void workspace.saveMarker(sensorCode, positionX, positionY)}
+                onSensorSelect={setSelectedSensor}
                 selectedSensor={selectedSensor}
               />
             </CardContent>
