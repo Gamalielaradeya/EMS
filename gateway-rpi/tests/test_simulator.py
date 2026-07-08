@@ -47,6 +47,31 @@ class SimulatorTests(unittest.TestCase):
         self.assertEqual({reading.sensor_code for reading in first}, {"S1", "S2"})
         self.assertEqual({reading.sensor_code for reading in second}, {"S1"})
 
+    def test_drop_sensor_cycle_recovers_and_drops_again(self) -> None:
+        simulator = SmoothThermalSimulator(
+            SimulatorOptions(
+                duration_seconds=120,
+                interval_seconds=10,
+                drop_sensor="S2",
+                drop_after_seconds=10,
+                drop_for_seconds=20,
+                recover_for_seconds=30,
+            )
+        )
+        sensor_sets = []
+        for _ in range(8):
+            readings, _ = simulator.next_readings()
+            sensor_sets.append({reading.sensor_code for reading in readings})
+
+        self.assertEqual(sensor_sets[0], {"S1", "S2"})
+        self.assertEqual(sensor_sets[1], {"S1"})
+        self.assertEqual(sensor_sets[2], {"S1"})
+        self.assertEqual(sensor_sets[3], {"S1", "S2"})
+        self.assertEqual(sensor_sets[4], {"S1", "S2"})
+        self.assertEqual(sensor_sets[5], {"S1", "S2"})
+        self.assertEqual(sensor_sets[6], {"S1"})
+        self.assertEqual(sensor_sets[7], {"S1"})
+
     def test_duration_parser(self) -> None:
         self.assertEqual(duration_to_seconds("10s"), 10)
         self.assertEqual(duration_to_seconds("2m"), 120)

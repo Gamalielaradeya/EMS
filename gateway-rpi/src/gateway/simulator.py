@@ -20,6 +20,8 @@ class SimulatorOptions:
     seed: int = 42
     drop_sensor: str | None = None
     drop_after_seconds: float | None = None
+    drop_for_seconds: float | None = None
+    recover_for_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -93,8 +95,23 @@ class SmoothThermalSimulator:
             return readings
         if self._elapsed < self._options.drop_after_seconds:
             return readings
+        if not self._drop_active():
+            return readings
         dropped = self._options.drop_sensor.upper()
         return [reading for reading in readings if reading.sensor_code != dropped]
+
+    def _drop_active(self) -> bool:
+        if self._options.drop_for_seconds is None and self._options.recover_for_seconds is None:
+            return True
+        if not self._options.drop_for_seconds or not self._options.recover_for_seconds:
+            raise ValueError("drop cycle requires both drop_for_seconds and recover_for_seconds")
+        if self._options.drop_for_seconds <= 0 or self._options.recover_for_seconds <= 0:
+            raise ValueError("drop_for_seconds and recover_for_seconds must be positive")
+
+        cycle_elapsed = (self._elapsed - (self._options.drop_after_seconds or 0.0)) % (
+            self._options.drop_for_seconds + self._options.recover_for_seconds
+        )
+        return cycle_elapsed < self._options.drop_for_seconds
 
     def _build_segments(self, scenario: str) -> list[Segment]:
         if scenario == "normal":

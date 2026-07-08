@@ -150,10 +150,15 @@ python -m gateway.cli simulate --scenario heat-cycle --duration 20m
 python -m gateway.cli simulate --scenario normal --duration 10m
 python -m gateway.cli simulate --scenario random-smooth --duration forever
 python -m gateway.cli simulate --scenario random-smooth --duration 10m --drop-sensor S2 --drop-after 2m
+python -m gateway.cli simulate --scenario random-smooth --duration forever --drop-sensor S2 --drop-after 30s --drop-for 90s --recover-for 120s
 ```
 
 Use it for frontend/backend/SSE/event/Telegram behavior tests. Do not use
 simulator rows as thesis hardware evidence or as validation/test data for ML.
+
+For repeated Trouble/Recovery testing, use `--drop-for` and `--recover-for`.
+Without those two options, `--drop-sensor` keeps the selected sensor omitted
+after `--drop-after`.
 
 Runtime files default to:
 

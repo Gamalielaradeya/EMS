@@ -54,6 +54,8 @@ def build_parser() -> argparse.ArgumentParser:
     simulate_parser.add_argument("--seed", type=int, default=42)
     simulate_parser.add_argument("--drop-sensor", choices=("S1", "S2"), help="omit one sensor after --drop-after")
     simulate_parser.add_argument("--drop-after", default="0s", help="when to start dropping --drop-sensor")
+    simulate_parser.add_argument("--drop-for", help="cycle mode: how long to omit --drop-sensor each cycle")
+    simulate_parser.add_argument("--recover-for", help="cycle mode: how long to restore --drop-sensor each cycle")
     return parser
 
 
@@ -93,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
                 seed=args.seed,
                 drop_sensor=args.drop_sensor,
                 drop_after_seconds=duration_to_seconds(args.drop_after) if args.drop_sensor else None,
+                drop_for_seconds=duration_to_seconds(args.drop_for) if args.drop_for else None,
+                recover_for_seconds=duration_to_seconds(args.recover_for) if args.recover_for else None,
             ),
         )
     return 2
