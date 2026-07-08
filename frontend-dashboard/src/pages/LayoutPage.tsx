@@ -1,8 +1,7 @@
-import { ImageUp, MapPinned, MousePointer2, RefreshCw, Trash2 } from "lucide-react"
+import { ImageUp, MapPinned, MousePointer2, Trash2 } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import { LayoutCanvas } from "@/components/layout-map/LayoutCanvas"
-import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/states/EmptyState"
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
@@ -33,17 +32,6 @@ export function LayoutPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        actions={
-          <Button onClick={() => void workspace.refresh()} size="sm" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-4" />
-            Refresh
-          </Button>
-        }
-        description="Place S1 ambient and S2 hotspot markers on one active server-testbed image. Upload a ready dark floorplan as-is, or invert a white AutoCAD export during upload."
-        title="Layout"
-      />
-
       {workspace.error ? <ErrorState message={workspace.error} onRetry={() => void workspace.refresh()} title="Layout API unavailable" /> : null}
       {workspace.message ? <p className="rounded-md border border-normal/30 bg-normal-muted px-4 py-3 text-sm text-normal">{workspace.message}</p> : null}
       {!hasToken ? <p className="rounded-md border bg-muted px-4 py-3 text-sm text-muted-foreground">Set the admin token in Settings to upload images and save marker positions.</p> : null}

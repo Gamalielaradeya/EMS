@@ -1,8 +1,7 @@
-import { RadioTower, RefreshCw } from "lucide-react"
+import { RadioTower } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { ReadingsChart } from "@/components/charts/ReadingsChart"
-import { PageHeader } from "@/components/layout/PageHeader"
 import { ReadingsFilters } from "@/components/readings/ReadingsFilters"
 import { ReadingsTable } from "@/components/readings/ReadingsTable"
 import { SensorMetadata } from "@/components/readings/SensorMetadata"
@@ -10,7 +9,6 @@ import { SensorWorkspaceCard } from "@/components/readings/SensorWorkspaceCard"
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
 import { StatusBadge } from "@/components/status/StatusBadge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useSensorReadings } from "@/hooks/useSensorReadings"
@@ -29,17 +27,6 @@ export function SensorsReadingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        actions={
-          <Button onClick={() => void refresh()} size="sm" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-4" />
-            Refresh
-          </Button>
-        }
-        description="Inspect live S1 ambient and S2 hotspot measurements, backend sensor health, and bounded historical acquisition data."
-        title="Sensors & Readings"
-      />
-
       {error ? (
         <ErrorState
           message={error}

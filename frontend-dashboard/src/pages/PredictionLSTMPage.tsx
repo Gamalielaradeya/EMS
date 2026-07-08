@@ -1,10 +1,9 @@
-import { Activity, BrainCircuit, Database, Eye, RefreshCw, ShieldAlert } from "lucide-react"
+import { Activity, BrainCircuit, Database, Eye, ShieldAlert } from "lucide-react"
 import { useState } from "react"
 
 import { PredictionChart } from "@/components/charts/PredictionChart"
 import { SummaryMetric } from "@/components/dashboard/SummaryMetric"
 import { ModelDetailModal } from "@/components/prediction/ModelDetailModal"
-import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/states/EmptyState"
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
@@ -26,17 +25,6 @@ export function PredictionLSTMPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        actions={
-          <Button onClick={() => void workspace.refresh()} size="sm" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-4" />
-            Refresh
-          </Button>
-        }
-        description="Inspect active LSTM readiness, five-minute S2 forecasts, and evaluation evidence from backend APIs."
-        title="Prediction & LSTM"
-      />
-
       {workspace.error ? (
         <ErrorState message={workspace.error} onRetry={() => void workspace.refresh()} title="Prediction API unavailable" />
       ) : null}
