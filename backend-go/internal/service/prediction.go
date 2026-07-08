@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
@@ -231,34 +232,97 @@ func descriptionForStatus(status string) string {
 }
 
 func eventAlertMessage(event model.AnomalyEvent) string {
-	category := "TROUBLE"
+	category := alertCategory(event.EventType)
 	valueLabel := "Detail"
-	value := "Technical health transition"
+	value := eventDetail(event)
 	switch event.EventType {
 	case "actual_threshold":
-		category = "ALARM"
-		valueLabel = "Actual temperature"
+		valueLabel = "Actual"
 		if event.ActualTemperature != nil {
 			value = fmt.Sprintf("%.2f C", *event.ActualTemperature)
 		}
 	case "prediction_threshold":
-		category = "PRE-ALARM"
-		valueLabel = "Predicted temperature"
+		valueLabel = "Forecast"
 		if event.PredictedTemperature != nil {
 			value = fmt.Sprintf("%.2f C", *event.PredictedTemperature)
 		}
 	}
-	sensor := "Gateway"
+	source := "Gateway"
 	if event.SensorCode != nil {
-		sensor = *event.SensorCode
+		source = "Sensor " + *event.SensorCode
 	}
 	return fmt.Sprintf(
-		"[EMS THERMAL %s]\n\nStatus: %s\nSource: %s\n%s: %s\nDetected at: %s",
+		"[EMS THERMAL - %s]\n\nStatus : %s\nSource : %s\nType   : %s\n%s : %s\nTime   : %s\nAction : %s",
 		category,
-		event.Status,
-		sensor,
+		strings.ToUpper(event.Status),
+		source,
+		alertType(event.EventType),
 		valueLabel,
 		value,
-		event.DetectedAt.Format(time.RFC3339),
+		formatAlertTime(event.DetectedAt),
+		alertAction(event),
 	)
+}
+
+func alertCategory(eventType string) string {
+	switch eventType {
+	case "actual_threshold":
+		return "ALARM"
+	case "prediction_threshold":
+		return "PRE-ALARM"
+	default:
+		return "TROUBLE"
+	}
+}
+
+func alertType(eventType string) string {
+	switch eventType {
+	case "actual_threshold":
+		return "Actual threshold"
+	case "prediction_threshold":
+		return "Prediction threshold"
+	case "gateway_trouble":
+		return "Gateway health"
+	case "sensor_trouble":
+		return "Sensor health"
+	default:
+		return "System event"
+	}
+}
+
+func eventDetail(event model.AnomalyEvent) string {
+	if event.Description != nil && strings.TrimSpace(*event.Description) != "" {
+		return strings.TrimSpace(*event.Description)
+	}
+	switch event.EventType {
+	case "gateway_trouble":
+		return "Gateway changed to trouble state."
+	case "sensor_trouble":
+		return "Sensor changed to trouble state."
+	default:
+		return "Thermal status transition detected."
+	}
+}
+
+func formatAlertTime(value time.Time) string {
+	wib := time.FixedZone("WIB", 7*60*60)
+	return value.In(wib).Format("02 Jan 2006 15:04:05 MST")
+}
+
+func alertAction(event model.AnomalyEvent) string {
+	switch event.EventType {
+	case "actual_threshold":
+		if event.Status == "anomali" {
+			return "Inspect hotspot area and verify the current S2 reading."
+		}
+		return "Monitor temperature trend and confirm room airflow."
+	case "prediction_threshold":
+		return "Monitor the 5-minute forecast and prepare thermal response."
+	case "gateway_trouble":
+		return "Check gateway power, network, and backend heartbeat."
+	case "sensor_trouble":
+		return "Check sensor wiring, RS485 connection, and latest gateway readings."
+	default:
+		return "Review dashboard events and system logs."
+	}
 }
