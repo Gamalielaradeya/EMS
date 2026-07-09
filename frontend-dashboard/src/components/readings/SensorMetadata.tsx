@@ -4,9 +4,14 @@ import { EmptyState } from "@/components/states/EmptyState"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDateTime } from "@/lib/format"
-import type { Sensor } from "@/types/api"
+import type { Sensor, SensorCode } from "@/types/api"
 
-export function SensorMetadata({ sensors }: { sensors: Sensor[] }) {
+interface SensorMetadataProps {
+  placements: Record<SensorCode, string>
+  sensors: Sensor[]
+}
+
+export function SensorMetadata({ placements, sensors }: SensorMetadataProps) {
   return (
     <Card>
       <CardHeader>
@@ -40,7 +45,10 @@ export function SensorMetadata({ sensors }: { sensors: Sensor[] }) {
                   <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
                     <MetadataItem label="Role" value={sensor.sensor_role} />
                     <MetadataItem label="Slave ID" value={String(sensor.modbus_slave_id ?? "--")} />
-                    <MetadataItem label="Location" value={sensor.location || "Not set"} />
+                    <MetadataItem
+                      label="Layout"
+                      value={placements[sensor.sensor_code]}
+                    />
                     <MetadataItem label="Last seen" value={formatDateTime(sensor.last_seen_at)} />
                   </dl>
                 </article>
@@ -53,7 +61,7 @@ export function SensorMetadata({ sensors }: { sensors: Sensor[] }) {
                   <tr>
                     <th className="pb-3 font-bold">Sensor</th>
                     <th className="pb-3 font-bold">Role</th>
-                    <th className="pb-3 font-bold">Location</th>
+                    <th className="pb-3 font-bold">Layout</th>
                     <th className="pb-3 font-bold">Slave ID</th>
                     <th className="pb-3 font-bold">Health</th>
                     <th className="pb-3 font-bold">Last seen</th>
@@ -67,7 +75,9 @@ export function SensorMetadata({ sensors }: { sensors: Sensor[] }) {
                         <p className="mt-1 text-muted-foreground">{sensor.name}</p>
                       </td>
                       <td className="py-3 pr-4 capitalize">{sensor.sensor_role}</td>
-                      <td className="py-3 pr-4 text-muted-foreground">{sensor.location || "Not set"}</td>
+                      <td className="py-3 pr-4 text-muted-foreground">
+                        {placements[sensor.sensor_code]}
+                      </td>
                       <td className="py-3 pr-4 font-mono text-xs">{sensor.modbus_slave_id ?? "--"}</td>
                       <td className="py-3 pr-4">
                         <StatusBadge

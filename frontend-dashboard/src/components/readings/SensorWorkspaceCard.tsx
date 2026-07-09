@@ -4,11 +4,11 @@ import { StatusBadge } from "@/components/status/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
-import type { FinalStatus, Sensor, SensorReading } from "@/types/api"
+import type { FinalStatus, SensorReading } from "@/types/api"
 
 interface SensorWorkspaceCardProps {
   reading?: SensorReading
-  sensor?: Sensor
+  placement: string
   sensorCode: "S1" | "S2"
   sensorRole: "Ambient" | "Hotspot"
   status: FinalStatus | "inactive"
@@ -16,7 +16,7 @@ interface SensorWorkspaceCardProps {
 
 export function SensorWorkspaceCard({
   reading,
-  sensor,
+  placement,
   sensorCode,
   sensorRole,
   status,
@@ -49,7 +49,7 @@ export function SensorWorkspaceCard({
           <Badge variant="info">{reading?.quality_status || "no reading"}</Badge>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <MapPin aria-hidden="true" className="size-3.5" />
-            {sensor?.location || "Location not set"}
+            {placement}
           </span>
         </div>
         <p className="mt-3 text-xs leading-5 text-muted-foreground">

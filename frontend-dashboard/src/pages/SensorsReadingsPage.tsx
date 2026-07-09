@@ -13,16 +13,24 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useSensorReadings } from "@/hooks/useSensorReadings"
 import { formatDateTime } from "@/lib/format"
-import type { DashboardReading, FinalStatus, ReadingHistoryFilters } from "@/types/api"
+import type {
+  ActiveLayout,
+  DashboardReading,
+  FinalStatus,
+  ReadingHistoryFilters,
+  SensorCode,
+} from "@/types/api"
 
 export function SensorsReadingsPage() {
   const [filters, setFilters] = useState<ReadingHistoryFilters>({ limit: 100 })
   const stableFilters = useMemo(() => filters, [filters])
   const { eventRevision, sseStatus, summary } = useDashboardContext()
-  const { sensors, latestReadings, history, meta, error, isLoading, refresh } =
+  const { sensors, latestReadings, history, activeLayout, meta, error, isLoading, refresh } =
     useSensorReadings(stableFilters, eventRevision)
-  const s1 = sensors.find((sensor) => sensor.sensor_code === "S1")
-  const s2 = sensors.find((sensor) => sensor.sensor_code === "S2")
+  const sensorPlacements = {
+    S1: resolveSensorPlacement(activeLayout, "S1"),
+    S2: resolveSensorPlacement(activeLayout, "S2"),
+  }
   const displaySseStatus = sseStatus === "connecting" ? "checking" : sseStatus
 
   return (
@@ -67,16 +75,16 @@ export function SensorsReadingsPage() {
           <section aria-label="Latest sensor readings" className="grid gap-4 xl:grid-cols-2">
             <SensorWorkspaceCard
               reading={latestReadings.S1}
-              sensor={s1}
               sensorCode="S1"
               sensorRole="Ambient"
+              placement={sensorPlacements.S1}
               status={resolveSensorStatus(summary?.latest_readings.S1)}
             />
             <SensorWorkspaceCard
               reading={latestReadings.S2}
-              sensor={s2}
               sensorCode="S2"
               sensorRole="Hotspot"
+              placement={sensorPlacements.S2}
               status={resolveSensorStatus(summary?.latest_readings.S2)}
             />
           </section>
@@ -100,7 +108,7 @@ export function SensorsReadingsPage() {
             />
           </section>
 
-          <SensorMetadata sensors={sensors} />
+          <SensorMetadata placements={sensorPlacements} sensors={sensors} />
           <ReadingsFilters filters={filters} onApply={setFilters} />
           <ReadingsTable meta={meta} readings={history} />
 
@@ -111,6 +119,12 @@ export function SensorsReadingsPage() {
       )}
     </div>
   )
+}
+
+function resolveSensorPlacement(layout: ActiveLayout | null, sensorCode: SensorCode) {
+  if (!layout) return "No active layout"
+  const isPlaced = layout.devices.some((device) => device.sensor_code === sensorCode)
+  return isPlaced ? layout.layout.name : "Not placed on active layout"
 }
 
 function resolveSensorStatus(reading?: DashboardReading): FinalStatus | "inactive" {

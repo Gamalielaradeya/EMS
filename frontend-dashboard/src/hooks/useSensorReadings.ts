@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { ApiError, api } from "@/lib/api"
 import type {
+  ActiveLayout,
   ReadingHistoryFilters,
   ReadingHistoryMeta,
   Sensor,
@@ -16,6 +17,7 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
     Partial<Record<"S1" | "S2", SensorReading>>
   >({})
   const [history, setHistory] = useState<SensorReading[]>([])
+  const [activeLayout, setActiveLayout] = useState<ActiveLayout | null>(null)
   const [meta, setMeta] = useState<ReadingHistoryMeta>(emptyMeta)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -23,11 +25,13 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
   const refresh = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [nextSensors, nextLatestReadings, nextHistory] = await fetchSensorReadings(filters)
+      const [nextSensors, nextLatestReadings, nextHistory, nextLayout] =
+        await fetchSensorReadings(filters)
       setSensors(nextSensors)
       setLatestReadings(nextLatestReadings)
       setHistory(nextHistory.readings)
       setMeta(nextHistory.meta)
+      setActiveLayout(nextLayout)
       setError(null)
     } catch (requestError) {
       setError(sensorReadingsError(requestError))
@@ -40,12 +44,13 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
     let active = true
 
     void fetchSensorReadings(filters)
-      .then(([nextSensors, nextLatestReadings, nextHistory]) => {
+      .then(([nextSensors, nextLatestReadings, nextHistory, nextLayout]) => {
         if (!active) return
         setSensors(nextSensors)
         setLatestReadings(nextLatestReadings)
         setHistory(nextHistory.readings)
         setMeta(nextHistory.meta)
+        setActiveLayout(nextLayout)
         setError(null)
       })
       .catch((requestError: unknown) => {
@@ -60,7 +65,7 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
     }
   }, [eventRevision, filters])
 
-  return { sensors, latestReadings, history, meta, error, isLoading, refresh }
+  return { sensors, latestReadings, history, activeLayout, meta, error, isLoading, refresh }
 }
 
 async function fetchSensorReadings(filters: ReadingHistoryFilters) {
@@ -68,6 +73,7 @@ async function fetchSensorReadings(filters: ReadingHistoryFilters) {
     api.getSensors(),
     api.getLatestReadings(),
     api.getReadingHistory(filters),
+    api.getLayout(),
   ])
 }
 
