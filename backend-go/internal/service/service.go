@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
@@ -19,12 +20,23 @@ import (
 
 var ErrValidation = errors.New("validation failed")
 
+const notificationQueueCapacity = 64
+
+type notificationJob struct {
+	event model.AnomalyEvent
+}
+
 type Service struct {
-	repository        *repository.Repository
-	activeGatewayCode string
-	events            eventPublisher
-	telegram          TelegramSender
-	layoutUploadDir   string
+	repository         *repository.Repository
+	activeGatewayCode  string
+	events             eventPublisher
+	telegram           TelegramSender
+	layoutUploadDir    string
+	notificationQueue  chan notificationJob
+	notificationWG     sync.WaitGroup
+	notificationClose  sync.Once
+	notificationMu     sync.RWMutex
+	notificationClosed bool
 }
 
 type eventPublisher interface {
@@ -38,6 +50,37 @@ func New(repository *repository.Repository, activeGatewayCode, uploadDir string,
 		layoutUploadDir:   filepath.Join(uploadDir, "layouts"),
 		events:            events,
 		telegram:          telegram,
+		notificationQueue: make(chan notificationJob, notificationQueueCapacity),
+	}
+}
+
+func (s *Service) StartNotificationWorker() {
+	s.notificationWG.Add(1)
+	go func() {
+		defer s.notificationWG.Done()
+		for job := range s.notificationQueue {
+			s.deliverEventNotification(context.Background(), &job.event)
+		}
+	}()
+}
+
+func (s *Service) ShutdownNotifications(ctx context.Context) error {
+	s.notificationClose.Do(func() {
+		s.notificationMu.Lock()
+		s.notificationClosed = true
+		close(s.notificationQueue)
+		s.notificationMu.Unlock()
+	})
+	done := make(chan struct{})
+	go func() {
+		s.notificationWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 

@@ -29,6 +29,7 @@ from ml_worker.repository import (
     create_prediction_run,
     finish_prediction_run,
     get_model_version,
+    latest_prediction_window_end,
     insert_baseline_results,
     insert_model_metrics,
     insert_model_version,
@@ -380,12 +381,24 @@ def infer(
     version: str | None = None,
 ) -> dict[str, Any]:
     model_version = _require_model_version(connection, version)
-    run_id = create_prediction_run(connection, "inference", model_version_id=model_version["id"])
-    connection.commit()
+    run_id: int | None = None
     try:
         start_at = end_at - timedelta(hours=settings.history_hours)
         raw = load_raw_readings(connection, settings, start_at, end_at)
         features, _ = prepare_feature_dataset(raw, settings)
+        input_window_end = features.index[-1].to_pydatetime()
+        previous_window_end = latest_prediction_window_end(connection, model_version["id"])
+        predicted_for = input_window_end + timedelta(minutes=settings.horizon_minutes)
+        if previous_window_end is not None and input_window_end <= previous_window_end:
+            return {
+                "version": model_version["version"],
+                "predicted_for": predicted_for.isoformat(),
+                "input_window_end_at": input_window_end.isoformat(),
+                "mode": "skipped_no_new_input",
+                "backend_prediction": None,
+            }
+        run_id = create_prediction_run(connection, "inference", model_version_id=model_version["id"])
+        connection.commit()
         feature_scaler = joblib.load(model_version["feature_scaler_path"])
         target_scaler = joblib.load(model_version["target_scaler_path"])
         scaled_features = features.astype({column: "float64" for column in FEATURE_COLUMNS})
@@ -400,14 +413,13 @@ def infer(
                 load_model(model_version["model_path"]).predict(window, verbose=0)
             ).reshape(-1)[0]
         )
-        predicted_for = features.index.max().to_pydatetime() + timedelta(minutes=settings.horizon_minutes)
         payload = build_prediction_payload(
             model_version_id=model_version["id"],
             model_version=model_version["version"],
             prediction_run_id=run_id,
             predicted_temperature=prediction,
             input_window_start_at=features.index[-settings.window_size].to_pydatetime().isoformat(),
-            input_window_end_at=features.index[-1].to_pydatetime().isoformat(),
+            input_window_end_at=input_window_end.isoformat(),
             predicted_for=predicted_for.isoformat(),
         )
         backend_prediction = submit_prediction(settings, payload)
@@ -424,7 +436,8 @@ def infer(
         return result
     except Exception as exc:
         connection.rollback()
-        _record_failure(connection, run_id, "inference", exc)
+        if run_id is not None:
+            _record_failure(connection, run_id, "inference", exc)
         raise
 
 

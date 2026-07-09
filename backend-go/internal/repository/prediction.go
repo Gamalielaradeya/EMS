@@ -102,10 +102,10 @@ func (r *Repository) InsertPrediction(
 	finalStatus string,
 	settings model.PredictionSettings,
 	now time.Time,
-) (model.Prediction, []model.SystemLog, error) {
+) (model.Prediction, []model.SystemLog, bool, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return model.Prediction{}, nil, fmt.Errorf("begin prediction transaction: %w", err)
+		return model.Prediction{}, nil, false, fmt.Errorf("begin prediction transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -120,10 +120,10 @@ func (r *Repository) InsertPrediction(
 		input.TargetSensorCode,
 	).Scan(&sensorID, &sensorHealth, &gatewayStatus)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return model.Prediction{}, nil, fmt.Errorf("%w: sensor %s", ErrNotFound, input.TargetSensorCode)
+		return model.Prediction{}, nil, false, fmt.Errorf("%w: sensor %s", ErrNotFound, input.TargetSensorCode)
 	}
 	if err != nil {
-		return model.Prediction{}, nil, fmt.Errorf("find prediction sensor: %w", err)
+		return model.Prediction{}, nil, false, fmt.Errorf("find prediction sensor: %w", err)
 	}
 	if sensorHealth != "normal" || gatewayStatus == "offline" || gatewayStatus == "trouble" {
 		finalStatus = "trouble"
@@ -131,7 +131,7 @@ func (r *Repository) InsertPrediction(
 
 	modelVersionID, modelVersion, warningLog, err := resolveModelVersion(ctx, tx, input)
 	if err != nil {
-		return model.Prediction{}, nil, err
+		return model.Prediction{}, nil, false, err
 	}
 	systemLogs := make([]model.SystemLog, 0, 1)
 	if warningLog != nil {
@@ -142,6 +142,26 @@ func (r *Repository) InsertPrediction(
 	inputWindowEndAt, _ := time.Parse(time.RFC3339, input.InputWindowEndAt)
 	predictedFor, _ := time.Parse(time.RFC3339, input.PredictedFor)
 	isStale := predictedFor.Before(now.Add(-time.Duration(settings.PredictionStaleTTLMinutes) * time.Minute))
+	if modelVersionID != nil {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, *modelVersionID); err != nil {
+			return model.Prediction{}, nil, false, fmt.Errorf("lock prediction model: %w", err)
+		}
+		existing, err := scanPrediction(tx.QueryRow(ctx,
+			predictionSelect+`
+			WHERE predictions.model_version_id = $1
+			  AND predictions.input_window_end_at = $2
+			ORDER BY predictions.created_at DESC
+			LIMIT 1`,
+			*modelVersionID,
+			inputWindowEndAt,
+		))
+		if err == nil {
+			return existing, nil, false, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return model.Prediction{}, nil, false, fmt.Errorf("find duplicate prediction: %w", err)
+		}
+	}
 
 	var actualTemperature *float64
 	err = tx.QueryRow(ctx, `
@@ -156,7 +176,7 @@ func (r *Repository) InsertPrediction(
 		settings.ActualMatchToleranceSeconds,
 	).Scan(&actualTemperature)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return model.Prediction{}, nil, fmt.Errorf("find actual prediction temperature: %w", err)
+		return model.Prediction{}, nil, false, fmt.Errorf("find actual prediction temperature: %w", err)
 	}
 
 	prediction := model.Prediction{
@@ -200,12 +220,12 @@ func (r *Repository) InsertPrediction(
 		prediction.IsStale,
 	).Scan(&prediction.ID, &prediction.CreatedAt)
 	if err != nil {
-		return model.Prediction{}, nil, fmt.Errorf("insert prediction: %w", err)
+		return model.Prediction{}, nil, false, fmt.Errorf("insert prediction: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return model.Prediction{}, nil, fmt.Errorf("commit prediction transaction: %w", err)
+		return model.Prediction{}, nil, false, fmt.Errorf("commit prediction transaction: %w", err)
 	}
-	return prediction, systemLogs, nil
+	return prediction, systemLogs, true, nil
 }
 
 func (r *Repository) LatestPrediction(ctx context.Context) (*model.Prediction, error) {

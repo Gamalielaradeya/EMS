@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -20,9 +21,12 @@ func (s *Service) InsertPrediction(ctx context.Context, input model.PredictionIn
 		return model.Prediction{}, nil, err
 	}
 	thermalStatus := classifyThermalStatus(*input.PredictedTemperature, settings)
-	prediction, systemLogs, err := s.repository.InsertPrediction(ctx, input, thermalStatus, thermalStatus, settings, time.Now())
+	prediction, systemLogs, created, err := s.repository.InsertPrediction(ctx, input, thermalStatus, thermalStatus, settings, time.Now())
 	if err != nil {
 		return model.Prediction{}, nil, err
+	}
+	if !created {
+		return prediction, nil, nil
 	}
 	for _, systemLog := range systemLogs {
 		s.publish(sse.EventSystemLog, systemLog)
@@ -117,11 +121,7 @@ func (s *Service) TestNotification(ctx context.Context) (model.NotificationLog, 
 		Metadata: map[string]any{"type": "manual_test"},
 	}
 	s.sendTelegram(ctx, &item, settings)
-	item, err = s.repository.InsertNotificationLog(ctx, item)
-	if err == nil {
-		s.publish(sse.EventNotificationSent, item)
-	}
-	return item, err
+	return s.persistNotificationLog(ctx, item)
 }
 
 func (s *Service) refreshPredictions(ctx context.Context) error {
@@ -136,10 +136,43 @@ func (s *Service) processEventNotification(ctx context.Context, event *model.Ano
 	if event == nil || event.Status == "normal" {
 		return
 	}
-	settings, err := s.repository.TelegramSettings(ctx)
-	if err != nil {
+	if s.tryQueueNotification(notificationJob{event: *event}) {
 		return
 	}
+	reason := "notification queue is full"
+	item := model.NotificationLog{
+		AnomalyEventID: &event.ID,
+		Channel:        "telegram",
+		Message:        eventAlertMessage(*event),
+		Status:         "failed",
+		ErrorMessage:   &reason,
+		Metadata: map[string]any{
+			"event_type":  event.EventType,
+			"sensor_code": event.SensorCode,
+			"status":      event.Status,
+		},
+	}
+	if _, err := s.persistNotificationLog(ctx, item); err != nil {
+		log.Printf("persist full notification queue failure: %v", err)
+	}
+}
+
+func (s *Service) tryQueueNotification(job notificationJob) bool {
+	s.notificationMu.RLock()
+	defer s.notificationMu.RUnlock()
+	if s.notificationClosed {
+		return false
+	}
+	select {
+	case s.notificationQueue <- job:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *Service) deliverEventNotification(ctx context.Context, event *model.AnomalyEvent) {
+	settings, err := s.repository.TelegramSettings(ctx)
 	message := eventAlertMessage(*event)
 	item := model.NotificationLog{
 		AnomalyEventID: &event.ID,
@@ -151,9 +184,21 @@ func (s *Service) processEventNotification(ctx context.Context, event *model.Ano
 			"status":      event.Status,
 		},
 	}
+	if err != nil {
+		reason := "load Telegram settings: " + err.Error()
+		item.Status = "failed"
+		item.ErrorMessage = &reason
+		if _, persistErr := s.persistNotificationLog(ctx, item); persistErr != nil {
+			log.Printf("persist Telegram settings failure: %v", persistErr)
+		}
+		log.Printf("process Telegram notification: %v", err)
+		return
+	}
 	if event.EventType == "prediction_threshold" {
 		lastSentAt, lookupErr := s.repository.LastSentNotificationAt(ctx, event.SensorID, event.EventType, event.Status)
-		if lookupErr == nil && lastSentAt != nil && time.Since(*lastSentAt) < time.Duration(settings.CooldownMinutes)*time.Minute {
+		if lookupErr != nil {
+			log.Printf("lookup Telegram cooldown: %v", lookupErr)
+		} else if lastSentAt != nil && time.Since(*lastSentAt) < time.Duration(settings.CooldownMinutes)*time.Minute {
 			reason := "notification skipped during cooldown"
 			item.Status = "skipped"
 			item.ErrorMessage = &reason
@@ -162,10 +207,18 @@ func (s *Service) processEventNotification(ctx context.Context, event *model.Ano
 	if item.Status == "" {
 		s.sendTelegram(ctx, &item, settings)
 	}
-	item, err = s.repository.InsertNotificationLog(ctx, item)
-	if err == nil {
-		s.publish(sse.EventNotificationSent, item)
+	if _, err := s.persistNotificationLog(ctx, item); err != nil {
+		log.Printf("persist Telegram notification: %v", err)
 	}
+}
+
+func (s *Service) persistNotificationLog(ctx context.Context, item model.NotificationLog) (model.NotificationLog, error) {
+	stored, err := s.repository.InsertNotificationLog(ctx, item)
+	if err != nil {
+		return model.NotificationLog{}, err
+	}
+	s.publish(sse.EventNotificationSent, stored)
+	return stored, nil
 }
 
 func (s *Service) sendTelegram(ctx context.Context, item *model.NotificationLog, settings model.TelegramSettings) {

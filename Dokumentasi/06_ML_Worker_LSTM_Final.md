@@ -797,10 +797,12 @@ Flow:
 9. Predict.
 10. Inverse transform.
 11. Tentukan `predicted_for = latest_timestamp + 5 minutes`.
-12. Kirim hasil inference ke protected `POST /api/v1/ml/predictions`.
-13. Backend mengklasifikasikan status final.
-14. Backend menyimpan `predictions`, membuat `anomaly_events` jika perlu, mengirim SSE, dan menjalankan keputusan Telegram.
-15. Catat `prediction_runs`.
+12. Bandingkan `input_window_end_at` dengan prediction terakhir untuk model yang sama.
+13. Jika window belum berubah, hasilkan `skipped_no_new_input` tanpa membuat prediction run baru.
+14. Kirim hasil inference baru ke protected `POST /api/v1/ml/predictions`.
+15. Backend mengklasifikasikan status final dan menerapkan deduplikasi kedua.
+16. Backend menyimpan `predictions`, membuat `anomaly_events` jika perlu, mengirim SSE, dan menjalankan keputusan Telegram.
+17. Catat `prediction_runs` hanya untuk inference yang benar-benar dijalankan.
 
 ---
 
@@ -815,13 +817,13 @@ python -m ml_worker.cli infer
 Dengan loop:
 
 ```bash
-python -m ml_worker.cli infer --loop --interval-seconds 60
+python -m ml_worker.cli infer-loop
 ```
 
 Dengan model tertentu:
 
 ```bash
-python -m ml_worker.cli infer --model-version-id 1
+python -m ml_worker.cli infer --version v20260117_143000
 ```
 
 Jika tidak ada model aktif:
@@ -837,6 +839,25 @@ ERROR: Not enough resampled data for inference. Required=30, available=18.
 ```
 
 Semua error harus dicatat di `system_logs`.
+
+### 27.1 Artifact Cleanup
+
+Penghapusan model melalui backend menghapus metadata database, bukan file milik
+ML Worker. Audit artifact yatim terlebih dahulu:
+
+```bash
+python -m ml_worker.cli cleanup-artifacts
+```
+
+Setelah path diperiksa:
+
+```bash
+python -m ml_worker.cli cleanup-artifacts --apply
+```
+
+Cleanup hanya boleh menghapus direct child directory dengan pola
+`<model_name>_v*` di root `models/` dan `reports/`. Path di luar root dan dataset
+synthetic tidak boleh dipilih.
 
 ---
 

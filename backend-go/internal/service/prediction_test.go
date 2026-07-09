@@ -98,3 +98,15 @@ func TestPredictionTransitionEligibility(t *testing.T) {
 		})
 	}
 }
+
+func TestNotificationQueueIsNonBlockingWhenFull(t *testing.T) {
+	service := &Service{notificationQueue: make(chan notificationJob, 1)}
+	job := notificationJob{event: model.AnomalyEvent{ID: 1}}
+
+	if !service.tryQueueNotification(job) {
+		t.Fatal("expected first notification to be queued")
+	}
+	if service.tryQueueNotification(job) {
+		t.Fatal("expected full queue to reject notification without blocking")
+	}
+}

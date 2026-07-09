@@ -4,7 +4,12 @@ import unittest
 from pathlib import Path
 
 from ml_worker.config import PROJECT_ROOT
-from ml_worker.repository import _resolved_path, _stored_path, get_model_version
+from ml_worker.repository import (
+    _resolved_path,
+    _stored_path,
+    get_model_version,
+    latest_prediction_window_end,
+)
 
 
 class FakeCursor:
@@ -60,6 +65,15 @@ class RepositoryTests(unittest.TestCase):
         self.assertIn("WHERE version = %s", cursor.query)
         self.assertNotIn("is_active = TRUE", cursor.query)
         self.assertEqual(cursor.params, ("v20260709",))
+
+    def test_latest_prediction_window_is_scoped_to_model(self) -> None:
+        cursor = FakeCursor((None,))
+
+        result = latest_prediction_window_end(FakeConnection(cursor), 17)  # type: ignore[arg-type]
+
+        self.assertIsNone(result)
+        self.assertIn("WHERE model_version_id = %s", cursor.query)
+        self.assertEqual(cursor.params, (17,))
 
 
 if __name__ == "__main__":

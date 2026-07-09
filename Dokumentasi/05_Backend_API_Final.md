@@ -583,13 +583,13 @@ Wajib Bearer internal token.
 ### Backend Behavior
 
 1. Validate internal token and payload.
-2. Reject or mark duplicate prediction safely.
+2. Treat `(model_version_id, input_window_end_at)` as an idempotency key and return the existing prediction for duplicates.
 3. Determine `thermal_status`: `normal`, `waspada`, or `anomali`.
 4. Read `sensor_health_status`: `normal`, `trouble`, or `inactive`.
 5. Assemble `final_status` with priority `trouble > anomali > waspada > normal`.
 6. Mark prediction stale when older than 10 minutes.
 7. Save prediction.
-8. If prediction is not stale, create anomaly event, emit SSE, and evaluate Telegram rule.
+8. If prediction is not stale, create anomaly event, emit SSE, and enqueue the Telegram decision without blocking ingestion.
 9. Stale prediction remains queryable in history but cannot drive active dashboard status or Telegram.
 
 ---

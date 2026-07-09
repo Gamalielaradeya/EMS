@@ -190,6 +190,38 @@ def get_model_version(connection: Connection, version: str | None = None) -> dic
     }
 
 
+def latest_prediction_window_end(connection: Connection, model_version_id: int) -> datetime | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT MAX(input_window_end_at)
+            FROM predictions
+            WHERE model_version_id = %s
+            """,
+            (model_version_id,),
+        )
+        row = cursor.fetchone()
+    return row[0] if row and row[0] else None
+
+
+def referenced_model_artifact_paths(connection: Connection) -> list[Path]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT model_path, feature_scaler_path, target_scaler_path, metadata_path
+            FROM model_versions
+            """,
+            (),
+        )
+        rows = cursor.fetchall()
+    return [
+        _resolved_path(value)
+        for row in rows
+        for value in row
+        if value
+    ]
+
+
 def get_model_quality_metrics(connection: Connection, model_version_id: int) -> dict[str, Any] | None:
     with connection.cursor() as cursor:
         cursor.execute(

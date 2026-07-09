@@ -43,6 +43,7 @@ func main() {
 
 	appCtx, appCancel := context.WithCancel(context.Background())
 	defer appCancel()
+	svc.StartNotificationWorker()
 	go svc.RunOfflineChecker(appCtx, cfg.OfflineCheckEvery)
 
 	apiHandler := handler.New(svc, eventHub)
@@ -68,5 +69,8 @@ func main() {
 	defer shutdownCancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Printf("graceful shutdown failed: %v", err)
+	}
+	if err := svc.ShutdownNotifications(shutdownCtx); err != nil {
+		log.Printf("notification shutdown failed: %v", err)
 	}
 }

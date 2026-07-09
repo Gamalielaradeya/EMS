@@ -930,6 +930,26 @@ Payload:
 
 ---
 
+## 13.14 ML-014 — Unchanged Inference Window
+
+| Field | Detail |
+|---|---|
+| Kondisi | Jalankan infer-loop dua kali tanpa reading baru |
+| Expected | Cycle kedua `skipped_no_new_input`; tidak ada prediction atau prediction_run baru |
+| Evidence | Terminal output dan query database |
+| Status | Pending |
+
+## 13.15 ML-015 — Safe Artifact Cleanup
+
+| Field | Detail |
+|---|---|
+| Command | `python -m ml_worker.cli cleanup-artifacts` |
+| Expected | Dry-run hanya mencantumkan folder model yatim dengan pola resmi |
+| Evidence | Terminal output dan file listing |
+| Status | Pending |
+
+---
+
 # 14. Test Case Status dan Alert
 
 ## 14.1 ALERT-001 — Status Normal
@@ -1002,6 +1022,26 @@ Payload:
 | Kondisi | Status anomali sama berulang dalam cooldown |
 | Expected | Notifikasi ulang skipped |
 | Evidence | notification_logs |
+| Status | Pending |
+
+---
+
+## 14.9 ALERT-009 — Notification Queue Saturation
+
+| Field | Detail |
+|---|---|
+| Kondisi | Queue notifikasi penuh |
+| Expected | Ingestion tetap merespons; notification log tercatat `failed` |
+| Evidence | Backend test dan notification_logs |
+| Status | Pending |
+
+## 14.10 ALERT-010 — Telegram Settings Failure
+
+| Field | Detail |
+|---|---|
+| Kondisi | Settings Telegram tidak dapat dibaca |
+| Expected | Backend tetap berjalan dan kegagalan terlihat di backend log/notification log |
+| Evidence | Backend log dan notification_logs |
 | Status | Pending |
 
 ---

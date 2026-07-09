@@ -585,6 +585,8 @@ Tanggung jawab:
 2. Cek cooldown.
 3. Cek Telegram enabled.
 4. Tentukan sent/skipped.
+5. Proses event melalui bounded in-memory queue agar ingestion tidak menunggu Telegram.
+6. Queue penuh harus dicatat sebagai `failed`, bukan memblokir request.
 
 ### 15.4 TelegramService
 
@@ -594,6 +596,12 @@ Tanggung jawab:
 2. Send request ke Telegram API.
 3. Return status sent/failed.
 4. Tidak boleh panic.
+5. Timeout Telegram tidak boleh menahan request readings, gateway status, atau prediction.
+
+Worker notifikasi memproses queue secara berurutan agar keputusan cooldown
+konsisten. Saat shutdown, backend berhenti menerima request lalu mencoba
+menghabiskan queue dalam batas graceful shutdown. Endpoint test notification
+tetap sinkron karena pengguna membutuhkan hasil tes langsung.
 
 ---
 

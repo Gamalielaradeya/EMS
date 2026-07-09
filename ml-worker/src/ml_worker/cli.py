@@ -7,6 +7,8 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from ml_worker.artifact_cleanup import cleanup_orphan_artifacts
 from ml_worker.config import Settings, load_settings
 from ml_worker.database import connect
 from ml_worker.early_warning import build_early_warning_report
@@ -73,6 +75,11 @@ def build_parser() -> argparse.ArgumentParser:
     synthetic_parser.add_argument("--minutes", type=int, default=1440, help="number of one-minute rows")
     synthetic_parser.add_argument("--seed", type=int, default=42, help="reproducible random seed")
     synthetic_parser.add_argument("--start", help="ISO-8601 first timestamp; defaults to 2026-01-01T00:00:00Z")
+    cleanup_parser = subparsers.add_parser(
+        "cleanup-artifacts",
+        help="list orphaned model/report directories; use --apply to delete them",
+    )
+    cleanup_parser.add_argument("--apply", action="store_true", help="delete validated orphan directories")
     return parser
 
 
@@ -121,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
                     version=args.version,
                     max_baseline_ratio=args.max_baseline_ratio,
                 )
+            elif args.command == "cleanup-artifacts":
+                result = cleanup_orphan_artifacts(connection, settings, apply=args.apply)
             else:
                 result = infer(connection, settings, _parse_datetime(args.end) or _now(), version=args.version)
     except (MLWorkerError, OSError, ValueError) as exc:
@@ -151,13 +160,16 @@ def run_infer_loop(settings: Settings, version: str | None = None) -> int:
                     "backend_final_status": backend_prediction.get("final_status"),
                     "submit_result": result.get("mode"),
                 }
-                logger.info(
-                    "Inference submitted predicted_for=%s predicted_s2=%.4f thermal_status=%s final_status=%s",
-                    cycle["predicted_for"],
-                    cycle["predicted_temperature_s2"],
-                    cycle["backend_thermal_status"],
-                    cycle["backend_final_status"],
-                )
+                if cycle["submit_result"] == "skipped_no_new_input":
+                    logger.info("Inference skipped; no new input window ending at %s", result.get("input_window_end_at"))
+                else:
+                    logger.info(
+                        "Inference submitted predicted_for=%s predicted_s2=%.4f thermal_status=%s final_status=%s",
+                        cycle["predicted_for"],
+                        cycle["predicted_temperature_s2"],
+                        cycle["backend_thermal_status"],
+                        cycle["backend_final_status"],
+                    )
                 print(json.dumps(cycle, default=str), flush=True)
             except (MLWorkerError, OSError, ValueError) as exc:
                 logger.warning("Inference cycle failed: %s", exc)

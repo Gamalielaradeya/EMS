@@ -65,6 +65,7 @@ metrics are not thesis results.
 ./.venv/Scripts/python.exe -m ml_worker.cli generate-synthetic
 ./.venv/Scripts/python.exe -m ml_worker.cli infer
 ./.venv/Scripts/python.exe -m ml_worker.cli infer-loop
+./.venv/Scripts/python.exe -m ml_worker.cli cleanup-artifacts
 ```
 
 All commands accept PostgreSQL settings through environment variables.
@@ -74,11 +75,12 @@ model and fail safely when no model is active. `infer` submits its final S2 pred
 `POST /api/v1/ml/predictions`; it fails safely when backend or token is
 unavailable.
 
-`infer-loop` uses the same active-model and backend bridge behavior, but repeats
-inference every `ML_INFER_INTERVAL_SECONDS` seconds until stopped. Each cycle
-loads latest valid hardware readings, submits a prediction, logs the predicted
-timestamp, predicted S2 value, backend thermal status, and continues on the next
-cycle if one inference fails. Stop it with `Ctrl+C`.
+`infer-loop` checks for a new resampled input window every
+`ML_INFER_INTERVAL_SECONDS` seconds until stopped. It submits only when
+`input_window_end_at` is newer than the latest stored prediction for that model;
+unchanged input is reported as `skipped_no_new_input`. This check survives
+worker restarts because it reads the latest window timestamp from PostgreSQL.
+Stop it with `Ctrl+C`.
 
 Example runtime validation:
 
@@ -101,6 +103,12 @@ activates or deactivates a model.
 `train --activate` also applies the same baseline gate. A candidate that is
 worse than the best baseline is still saved for audit, but remains inactive and
 the command output explains the failed MAE/RMSE checks.
+
+`cleanup-artifacts` lists generated model/report directories that are no longer
+referenced by `model_versions`. It is a dry-run by default. Review the listed
+paths, then use `cleanup-artifacts --apply` to delete them. Cleanup is restricted
+to direct child directories named `<ML_MODEL_NAME>_v*`; synthetic datasets and
+paths outside configured model/report roots are never selected.
 
 `generate-synthetic` creates deterministic development-only temperature
 patterns without writing to PostgreSQL or calling the backend. It produces a
