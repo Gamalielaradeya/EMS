@@ -81,8 +81,6 @@ export function SensorsReadingsPage() {
             />
           </section>
 
-          <ReadingsFilters filters={filters} onApply={setFilters} />
-
           <section aria-label="Sensor history charts" className="grid gap-4 xl:grid-cols-2">
             <ReadingsChart
               description="Filtered S1 and S2 temperature history from the backend."
@@ -103,6 +101,7 @@ export function SensorsReadingsPage() {
           </section>
 
           <SensorMetadata sensors={sensors} />
+          <ReadingsFilters filters={filters} onApply={setFilters} />
           <ReadingsTable meta={meta} readings={history} />
 
           <p className="text-xs leading-5 text-muted-foreground">
