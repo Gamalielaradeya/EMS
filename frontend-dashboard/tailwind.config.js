@@ -34,10 +34,15 @@ export default {
         success: {
           DEFAULT: "var(--color-success)",
           soft: "var(--color-success-soft)",
+          foreground: "var(--color-success-ink)",
         },
         warning: {
           DEFAULT: "var(--color-warning)",
           soft: "var(--color-warning-soft)",
+        },
+        trouble: {
+          DEFAULT: "var(--color-trouble)",
+          soft: "var(--color-trouble-soft)",
         },
         danger: {
           DEFAULT: "var(--color-danger)",

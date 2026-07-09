@@ -22,6 +22,7 @@ dist/
 
 # Go
 build/
+bin/
 *.exe
 
 # ML artifacts

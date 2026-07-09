@@ -8,10 +8,13 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        normal: "border-border bg-success-soft text-success",
-        warning: "border-border bg-warning-soft text-warning",
-        danger: "border-border bg-danger-soft text-danger",
-        trouble: "border-border bg-danger-soft text-danger",
+        normal: "border-success bg-success-soft text-success",
+        warning: "border-warning bg-warning-soft text-warning",
+        danger: "border-danger bg-danger-soft text-danger",
+        trouble: "border-trouble bg-trouble-soft text-trouble",
+        alarm: "border-transparent bg-danger text-destructive-foreground",
+        preAlarm: "border-transparent bg-primary-hover text-destructive-foreground",
+        troubleStrong: "border-transparent bg-[var(--color-trouble)] text-[var(--color-danger-ink)]",
         inactive: "border-border bg-neutral-soft text-muted-foreground",
         info: "border-border bg-accent text-accent-foreground",
       },

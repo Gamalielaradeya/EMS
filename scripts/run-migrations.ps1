@@ -14,7 +14,7 @@ $migrations = Get-ChildItem -Path "$rootDir/backend-go/migrations" -Filter "*.sq
 
 foreach ($migration in $migrations) {
     Write-Host "Applying $($migration.Name)"
-    & psql $DatabaseUrl -v ON_ERROR_STOP=1 -f $migration.FullName
+    & psql -v ON_ERROR_STOP=1 -f $migration.FullName $DatabaseUrl
 
     if ($LASTEXITCODE -ne 0) {
         throw "Migration failed: $($migration.Name)"

@@ -12,6 +12,10 @@ stable as API/database contracts. Milestone `8` adds filtered system logs and
 masked settings management. Milestone `9` adds one active testbed layout image
 and ratio-based sensor markers.
 
+Alert events are transition-based: actual S1/S2 threshold changes are Alarm,
+non-stale S2 prediction changes are Pre-Alarm, and sensor/gateway health changes
+are Trouble. Recovery is recorded when a source returns to normal.
+
 ## Database Migrations
 
 PostgreSQL migrations are stored in `migrations/` and run in filename order:
@@ -23,6 +27,7 @@ PostgreSQL migrations are stored in `migrations/` and run in filename order:
 004_create_event_notification_tables.sql
 005_create_layout_settings_logs.sql
 006_seed_initial_data.sql
+007_add_alert_event_categories.sql
 ```
 
 The seed creates:

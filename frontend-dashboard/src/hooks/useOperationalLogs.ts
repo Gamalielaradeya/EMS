@@ -13,6 +13,8 @@ export function useOperationalLogs(tab: OperationalTab, filters: OperationalLogF
 
   const refresh = useCallback(async () => {
     setIsLoading(true)
+    setItems([])
+    setTotal(0)
     try {
       const result = tab === "anomalies"
         ? await api.getAnomalyEvents(filters)

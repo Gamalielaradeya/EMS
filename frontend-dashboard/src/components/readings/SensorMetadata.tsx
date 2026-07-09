@@ -32,7 +32,10 @@ export function SensorMetadata({ sensors }: { sensors: Sensor[] }) {
                       <p className="font-mono text-xs font-bold">{sensor.sensor_code}</p>
                       <p className="mt-1 font-display text-sm font-bold">{sensor.name}</p>
                     </div>
-                    <StatusBadge status={sensor.sensor_health_status} />
+                    <StatusBadge
+                      label={sensor.sensor_health_status === "normal" ? "Online" : undefined}
+                      status={sensor.sensor_health_status}
+                    />
                   </div>
                   <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
                     <MetadataItem label="Role" value={sensor.sensor_role} />
@@ -67,7 +70,10 @@ export function SensorMetadata({ sensors }: { sensors: Sensor[] }) {
                       <td className="py-3 pr-4 text-muted-foreground">{sensor.location || "Not set"}</td>
                       <td className="py-3 pr-4 font-mono text-xs">{sensor.modbus_slave_id ?? "--"}</td>
                       <td className="py-3 pr-4">
-                        <StatusBadge status={sensor.sensor_health_status} />
+                        <StatusBadge
+                          label={sensor.sensor_health_status === "normal" ? "Online" : undefined}
+                          status={sensor.sensor_health_status}
+                        />
                       </td>
                       <td className="py-3 text-muted-foreground">{formatDateTime(sensor.last_seen_at)}</td>
                     </tr>

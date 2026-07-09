@@ -63,6 +63,10 @@ final_status        : trouble > anomali > waspada > normal
 6. Backend offline checker setiap 30 detik.
 7. Sensor atau gateway trouble jika tidak ada data lebih dari 5 menit.
 8. Prediction stale setelah 10 menit dan tidak boleh menjadi active dashboard status atau Telegram trigger.
+9. `anomaly_events.event_type` membedakan `actual_threshold`, `prediction_threshold`, `sensor_trouble`, dan `gateway_trouble`; kategori UI-nya adalah Alarm, Pre-Alarm, Trouble, atau Recovery.
+10. Event disimpan hanya pada transisi status/eskalasi. Reading mentah tetap disimpan setiap 10 detik.
+11. Alarm aktual berlaku untuk S1 dan S2. Pre-Alarm hanya berlaku untuk prediksi target S2 yang tidak stale.
+12. Status perangkat pada Dashboard, Sensors & Readings, dan Layout memakai health trouble sebagai prioritas; bila health normal, status mengikuti threshold suhu aktual. Pre-Alarm tidak mengubah status atau warna perangkat.
 
 ---
 
@@ -640,6 +644,22 @@ Logger
 | `run` | Menjalankan gateway service utama |
 
 Gateway simulator bukan mode utama. Jika dibuat, tempatkan sebagai alat bantu development terpisah.
+
+Development-only realtime simulator:
+
+```bash
+python -m gateway.cli simulate --scenario random-smooth --duration 30m --interval 10
+python -m gateway.cli simulate --scenario random-smooth --duration forever --interval 10
+```
+
+Aturan:
+
+1. Simulator mengirim payload readings dengan `source=simulator`.
+2. Simulator tidak membaca Modbus dan tidak menggantikan mode hardware.
+3. Jangan menjalankan simulator bersamaan dengan gateway hardware untuk S1/S2 yang sama.
+4. Scenario minimal: normal stabil, heat-cycle, random-smooth, dan drop sensor untuk uji trouble timeout.
+5. Data simulator hanya untuk uji dashboard, backend, SSE, event, Telegram, dan eksperimen augmentasi training.
+6. Data simulator tidak boleh menjadi bukti hardware skripsi atau validation/test ML final.
 
 ---
 

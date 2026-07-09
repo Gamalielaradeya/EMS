@@ -11,8 +11,12 @@ import (
 )
 
 func (r *Repository) ActiveLayout(ctx context.Context) (*model.ActiveLayout, error) {
+	settings, err := r.PredictionSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
 	var layout model.Layout
-	err := r.db.QueryRow(ctx, `
+	err = r.db.QueryRow(ctx, `
 		SELECT id, name, image_path, COALESCE(image_width, 0), COALESCE(image_height, 0), created_at, updated_at
 		FROM layouts
 		WHERE is_active = TRUE
@@ -40,18 +44,6 @@ func (r *Repository) ActiveLayout(ctx context.Context) (*model.ActiveLayout, err
 			COALESCE(layout_devices.label, sensors.name),
 			layout_devices.position_x::FLOAT8,
 			layout_devices.position_y::FLOAT8,
-			CASE
-				WHEN sensors.sensor_health_status <> 'normal' THEN 'trouble'
-				WHEN sensors.sensor_code = 'S2' THEN COALESCE((
-					SELECT predictions.final_status
-					FROM predictions
-					WHERE predictions.target_sensor_id = sensors.id
-					  AND predictions.is_stale = FALSE
-					ORDER BY predictions.created_at DESC
-					LIMIT 1
-				), 'normal')
-				ELSE 'normal'
-			END,
 			latest.temperature::FLOAT8,
 			latest.humidity::FLOAT8,
 			sensors.last_seen_at,
@@ -83,7 +75,6 @@ func (r *Repository) ActiveLayout(ctx context.Context) (*model.ActiveLayout, err
 			&device.Label,
 			&device.PositionX,
 			&device.PositionY,
-			&device.FinalStatus,
 			&device.Temperature,
 			&device.Humidity,
 			&device.LastSeenAt,
@@ -91,12 +82,20 @@ func (r *Repository) ActiveLayout(ctx context.Context) (*model.ActiveLayout, err
 		); err != nil {
 			return nil, fmt.Errorf("scan layout device: %w", err)
 		}
+		device.FinalStatus = layoutDeviceStatus(device.SensorHealthStatus, device.Temperature, settings)
 		devices = append(devices, device)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate layout devices: %w", err)
 	}
 	return &model.ActiveLayout{Layout: layout, Devices: devices}, nil
+}
+
+func layoutDeviceStatus(healthStatus string, temperature *float64, settings model.PredictionSettings) string {
+	if healthStatus != "normal" || temperature == nil {
+		return "trouble"
+	}
+	return classifyCurrentThermalStatus(*temperature, settings)
 }
 
 func (r *Repository) CreateLayout(ctx context.Context, name, imageURL string, width, height int) (model.Layout, model.SystemLog, error) {

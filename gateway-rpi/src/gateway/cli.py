@@ -10,6 +10,7 @@ from gateway.logger import configure_logging
 from gateway.main import GatewayRuntime
 from gateway.models import AppConfig
 from gateway.payload_builder import build_send_test_payload
+from gateway.simulator import SimulatorOptions, duration_to_seconds, run_simulator
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,6 +41,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = subparsers.add_parser("run", help="run the periodic hardware gateway loop")
     _add_config_argument(run_parser)
+
+    simulate_parser = subparsers.add_parser("simulate", help="run realtime simulator readings for end-to-end tests")
+    _add_config_argument(simulate_parser)
+    simulate_parser.add_argument(
+        "--scenario",
+        choices=("random-smooth", "heat-cycle", "normal"),
+        default="random-smooth",
+    )
+    simulate_parser.add_argument("--interval", type=float, default=10.0, help="send interval in seconds")
+    simulate_parser.add_argument("--duration", default="30m", help="duration, for example 300s, 30m, 1h, or forever")
+    simulate_parser.add_argument("--seed", type=int, default=42)
+    simulate_parser.add_argument("--drop-sensor", choices=("S1", "S2"), help="omit one sensor after --drop-after")
+    simulate_parser.add_argument("--drop-after", default="0s", help="when to start dropping --drop-sensor")
+    simulate_parser.add_argument("--drop-for", help="cycle mode: how long to omit --drop-sensor each cycle")
+    simulate_parser.add_argument("--recover-for", help="cycle mode: how long to restore --drop-sensor each cycle")
     return parser
 
 
@@ -68,6 +84,21 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             print("Gateway stopped.")
         return 0
+    if args.command == "simulate":
+        configure_logging(config.logging)
+        return run_simulator(
+            config,
+            SimulatorOptions(
+                scenario=args.scenario,
+                interval_seconds=args.interval,
+                duration_seconds=duration_to_seconds(args.duration),
+                seed=args.seed,
+                drop_sensor=args.drop_sensor,
+                drop_after_seconds=duration_to_seconds(args.drop_after) if args.drop_sensor else None,
+                drop_for_seconds=duration_to_seconds(args.drop_for) if args.drop_for else None,
+                recover_for_seconds=duration_to_seconds(args.recover_for) if args.recover_for else None,
+            ),
+        )
     return 2
 
 

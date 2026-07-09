@@ -876,3 +876,16 @@ Saat membuat frontend, Codex harus:
 8. Menggunakan Chart.js untuk grafik.
 9. Menjaga UI bersih dan presentable untuk skripsi.
 10. Menjalankan `npm run build` sebelum milestone frontend dianggap selesai.
+## Alert Category Documentation Lock Addendum
+
+Monitoring bottom sheet menampilkan ringkasan `Alarm`, `Pre-Alarm`, dan `Trouble`. Alarm/Trouble memakai event backend, sedangkan Pre-Alarm memakai prediksi masa depan aktif. Kategori tabel diturunkan dari `event_type`, bukan ditebak dari `status`. Recovery ditampilkan untuk event berstatus `normal` setelah kondisi non-normal.
+
+Counter Pre-Alarm menunjukkan kondisi aktif 0/1 dari prediksi masa depan, bukan jumlah event prediksi dalam histori.
+
+Bottom sheet hanya menampilkan satu baris Pre-Alarm aktif dari `active_pre_alarm`. Histori `prediction_threshold` tidak dicampur ke tabel bottom sheet dan tetap tersedia pada halaman Events & Logs serta Prediction & LSTM. Baris aktif hilang otomatis setelah waktu `predicted_for` terlewati.
+
+Alarm dan Trouble pada bottom sheet berasal dari `active_events`. Event Recovery/normal dan event lama yang sudah pulih tidak ditampilkan di bottom sheet, tetapi tetap tersedia pada Events & Logs sebagai histori audit.
+
+Semua tampilan status perangkat (Dashboard, Sensors & Readings, Layout card, dan marker map) memakai aturan yang sama: trouble hanya untuk health perangkat, sedangkan waspada/anomali berasal dari suhu aktual. Pre-Alarm ditampilkan terpisah dan tidak mengubah warna marker.
+
+Color code status berlaku konsisten di seluruh halaman: normal/recovery hijau, waspada kuning, anomali merah, dan trouble oranye. Pada Events & Logs, warna diterapkan pada badge Event dan Condition; latar baris tabel tetap netral.

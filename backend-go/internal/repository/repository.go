@@ -15,7 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrNotFound = errors.New("record not found")
+var (
+	ErrNotFound = errors.New("record not found")
+	ErrConflict = errors.New("record conflict")
+)
 
 type Repository struct {
 	db *pgxpool.Pool
@@ -96,33 +99,43 @@ func (r *Repository) InsertReadings(
 	source string,
 	readings []model.ReadingInsert,
 	rawPayload []byte,
-) (int64, error) {
+	settings model.PredictionSettings,
+) (int64, []model.AnomalyEvent, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("begin readings transaction: %w", err)
+		return 0, nil, fmt.Errorf("begin readings transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	gatewayID, err := lookupGatewayID(ctx, tx, gatewayCode)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
+	var previousGatewayStatus string
+	var previousGatewayLastSeen *time.Time
+	if err := tx.QueryRow(ctx, `SELECT status, last_seen_at FROM gateways WHERE id = $1`, gatewayID).Scan(&previousGatewayStatus, &previousGatewayLastSeen); err != nil {
+		return 0, nil, fmt.Errorf("get gateway status before readings: %w", err)
+	}
+	isLatestGatewayReading := previousGatewayLastSeen == nil || !recordedAt.Before(*previousGatewayLastSeen)
 
 	var storedCount int64
+	events := make([]model.AnomalyEvent, 0)
 	for _, reading := range readings {
 		var sensorID int64
+		var previousSensorHealth string
+		var previousSensorLastSeen *time.Time
 		err := tx.QueryRow(ctx, `
-			SELECT id
+			SELECT id, sensor_health_status, last_seen_at
 			FROM sensors
 			WHERE gateway_id = $1 AND sensor_code = $2`,
 			gatewayID,
 			reading.SensorCode,
-		).Scan(&sensorID)
+		).Scan(&sensorID, &previousSensorHealth, &previousSensorLastSeen)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, fmt.Errorf("%w: sensor %s", ErrNotFound, reading.SensorCode)
+			return 0, nil, fmt.Errorf("%w: sensor %s", ErrNotFound, reading.SensorCode)
 		}
 		if err != nil {
-			return 0, fmt.Errorf("find sensor %s: %w", reading.SensorCode, err)
+			return 0, nil, fmt.Errorf("find sensor %s: %w", reading.SensorCode, err)
 		}
 
 		commandTag, err := tx.Exec(ctx, `
@@ -141,56 +154,117 @@ func (r *Repository) InsertReadings(
 			rawPayload,
 		)
 		if err != nil {
-			return 0, fmt.Errorf("insert sensor reading: %w", err)
+			return 0, nil, fmt.Errorf("insert sensor reading: %w", err)
 		}
+		inserted := commandTag.RowsAffected() > 0
 		storedCount += commandTag.RowsAffected()
+		isLatestSensorReading := previousSensorLastSeen == nil || !recordedAt.Before(*previousSensorLastSeen)
 
 		if _, err := tx.Exec(ctx, `
 			UPDATE sensors
 			SET last_seen_at = GREATEST(COALESCE(last_seen_at, $2), $2),
-			    sensor_health_status = 'normal',
+			    sensor_health_status = CASE WHEN last_seen_at IS NULL OR $2 >= last_seen_at THEN 'normal' ELSE sensor_health_status END,
 			    updated_at = NOW()
 			WHERE id = $1`,
 			sensorID,
 			recordedAt,
 		); err != nil {
-			return 0, fmt.Errorf("update sensor last seen: %w", err)
+			return 0, nil, fmt.Errorf("update sensor last seen: %w", err)
+		}
+
+		sensorCode := reading.SensorCode
+		sensorIDCopy := sensorID
+		if inserted && isLatestSensorReading {
+			description := fmt.Sprintf("Actual %s temperature entered %s range.", sensorCode, reading.ThermalStatus)
+			if reading.ThermalStatus == "normal" {
+				description = fmt.Sprintf("Actual %s temperature recovered to normal.", sensorCode)
+			}
+			event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+				SensorID:            &sensorIDCopy,
+				SensorCode:          &sensorCode,
+				EventType:           "actual_threshold",
+				Status:              reading.ThermalStatus,
+				Severity:            statusSeverity(reading.ThermalStatus),
+				ActualTemperature:   floatPointer(reading.Temperature),
+				ThresholdNormalMax:  floatPointer(settings.ThresholdNormalMax),
+				ThresholdAnomalyMin: floatPointer(settings.ThresholdAnomalyMin),
+				Description:         description,
+				DetectedAt:          recordedAt,
+			})
+			if err != nil {
+				return 0, nil, err
+			}
+			if event != nil {
+				events = append(events, *event)
+			}
+		}
+		if isLatestSensorReading && previousSensorHealth == "trouble" {
+			event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+				SensorID:    &sensorIDCopy,
+				SensorCode:  &sensorCode,
+				EventType:   "sensor_trouble",
+				Status:      "normal",
+				Severity:    "info",
+				Description: fmt.Sprintf("Sensor %s recovered and is reporting readings.", sensorCode),
+				DetectedAt:  recordedAt,
+			})
+			if err != nil {
+				return 0, nil, err
+			}
+			if event != nil {
+				events = append(events, *event)
+			}
 		}
 	}
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE gateways
 		SET last_seen_at = GREATEST(COALESCE(last_seen_at, $2), $2),
-		    status = 'active',
+		    status = CASE WHEN last_seen_at IS NULL OR $2 >= last_seen_at THEN 'active' ELSE status END,
 		    updated_at = NOW()
 		WHERE id = $1`,
 		gatewayID,
 		recordedAt,
 	); err != nil {
-		return 0, fmt.Errorf("update gateway last seen: %w", err)
+		return 0, nil, fmt.Errorf("update gateway last seen: %w", err)
+	}
+	if isLatestGatewayReading && (previousGatewayStatus == "offline" || previousGatewayStatus == "trouble") {
+		event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+			EventType:   "gateway_trouble",
+			Status:      "normal",
+			Severity:    "info",
+			Description: fmt.Sprintf("Gateway %s recovered and is reporting readings.", gatewayCode),
+			DetectedAt:  recordedAt,
+		})
+		if err != nil {
+			return 0, nil, err
+		}
+		if event != nil {
+			events = append(events, *event)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("commit readings transaction: %w", err)
+		return 0, nil, fmt.Errorf("commit readings transaction: %w", err)
 	}
-	return storedCount, nil
+	return storedCount, events, nil
 }
 
-func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.GatewayStatusInput, reportedAt time.Time) ([]model.SystemLog, error) {
+func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.GatewayStatusInput, reportedAt time.Time) ([]model.SystemLog, []model.AnomalyEvent, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("begin gateway status transaction: %w", err)
+		return nil, nil, fmt.Errorf("begin gateway status transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	gatewayID, err := lookupGatewayID(ctx, tx, input.GatewayID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var previousGatewayStatus string
 	if err := tx.QueryRow(ctx, `SELECT status FROM gateways WHERE id = $1`, gatewayID).Scan(&previousGatewayStatus); err != nil {
-		return nil, fmt.Errorf("get gateway status: %w", err)
+		return nil, nil, fmt.Errorf("get gateway status: %w", err)
 	}
 
 	if _, err := tx.Exec(ctx, `
@@ -203,12 +277,12 @@ func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.Gatewa
 		input.Status,
 		reportedAt,
 	); err != nil {
-		return nil, fmt.Errorf("update gateway status: %w", err)
+		return nil, nil, fmt.Errorf("update gateway status: %w", err)
 	}
 
 	payload, err := json.Marshal(input)
 	if err != nil {
-		return nil, fmt.Errorf("marshal gateway status payload: %w", err)
+		return nil, nil, fmt.Errorf("marshal gateway status payload: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO gateway_status_logs (gateway_id, status, message, payload, reported_at)
@@ -219,10 +293,11 @@ func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.Gatewa
 		payload,
 		reportedAt,
 	); err != nil {
-		return nil, fmt.Errorf("insert gateway status log: %w", err)
+		return nil, nil, fmt.Errorf("insert gateway status log: %w", err)
 	}
 
 	systemLogs := make([]model.SystemLog, 0)
+	events := make([]model.AnomalyEvent, 0)
 	if previousGatewayStatus != input.Status && (input.Status == "offline" || input.Status == "trouble") {
 		systemLog, err := insertSystemLogTx(ctx, tx, "backend", "error", "Gateway status changed to "+input.Status, map[string]any{
 			"entity":       "gateway",
@@ -230,9 +305,35 @@ func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.Gatewa
 			"status":       input.Status,
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		systemLogs = append(systemLogs, systemLog)
+	}
+	if previousGatewayStatus != input.Status {
+		status := ""
+		description := ""
+		if input.Status == "offline" || input.Status == "trouble" {
+			status = "trouble"
+			description = "Gateway " + input.GatewayID + " changed to " + input.Status + "."
+		} else if input.Status == "active" {
+			status = "normal"
+			description = "Gateway " + input.GatewayID + " recovered to active."
+		}
+		if status != "" {
+			event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+				EventType:   "gateway_trouble",
+				Status:      status,
+				Severity:    statusSeverity(status),
+				Description: description,
+				DetectedAt:  reportedAt,
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if event != nil {
+				events = append(events, *event)
+			}
+		}
 	}
 
 	for _, sensor := range input.Sensors {
@@ -245,10 +346,10 @@ func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.Gatewa
 			sensor.SensorCode,
 		).Scan(&previousSensorStatus)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%w: sensor %s", ErrNotFound, sensor.SensorCode)
+			return nil, nil, fmt.Errorf("%w: sensor %s", ErrNotFound, sensor.SensorCode)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("get sensor status: %w", err)
+			return nil, nil, fmt.Errorf("get sensor status: %w", err)
 		}
 
 		commandTag, err := tx.Exec(ctx, `
@@ -261,10 +362,10 @@ func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.Gatewa
 			sensor.Status,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("update sensor status: %w", err)
+			return nil, nil, fmt.Errorf("update sensor status: %w", err)
 		}
 		if commandTag.RowsAffected() == 0 {
-			return nil, fmt.Errorf("%w: sensor %s", ErrNotFound, sensor.SensorCode)
+			return nil, nil, fmt.Errorf("%w: sensor %s", ErrNotFound, sensor.SensorCode)
 		}
 		if previousSensorStatus != sensor.Status && sensor.Status == "trouble" {
 			systemLog, err := insertSystemLogTx(ctx, tx, "backend", "error", "Sensor "+sensor.SensorCode+" status changed to trouble", map[string]any{
@@ -274,16 +375,43 @@ func (r *Repository) RecordGatewayStatus(ctx context.Context, input model.Gatewa
 				"message":     sensor.Message,
 			})
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			systemLogs = append(systemLogs, systemLog)
+		}
+		if previousSensorStatus != sensor.Status && (sensor.Status == "trouble" || sensor.Status == "normal") {
+			sensorCode := sensor.SensorCode
+			var sensorID int64
+			if err := tx.QueryRow(ctx, `SELECT id FROM sensors WHERE gateway_id = $1 AND sensor_code = $2`, gatewayID, sensor.SensorCode).Scan(&sensorID); err != nil {
+				return nil, nil, fmt.Errorf("get sensor id for event: %w", err)
+			}
+			status := sensor.Status
+			description := "Sensor " + sensor.SensorCode + " changed to trouble."
+			if status == "normal" {
+				description = "Sensor " + sensor.SensorCode + " recovered to normal."
+			}
+			event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+				SensorID:    &sensorID,
+				SensorCode:  &sensorCode,
+				EventType:   "sensor_trouble",
+				Status:      status,
+				Severity:    statusSeverity(status),
+				Description: description,
+				DetectedAt:  reportedAt,
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if event != nil {
+				events = append(events, *event)
+			}
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit gateway status transaction: %w", err)
+		return nil, nil, fmt.Errorf("commit gateway status transaction: %w", err)
 	}
-	return systemLogs, nil
+	return systemLogs, events, nil
 }
 
 func (r *Repository) ListSensors(ctx context.Context) ([]model.Sensor, error) {
@@ -460,6 +588,7 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 	summary := model.DashboardSummary{
 		LatestReadings:              make(map[string]model.DashboardReading),
 		OverallCurrentThermalStatus: "normal",
+		ActiveEvents:                make([]model.DashboardEvent, 0),
 		RecentEvents:                make([]model.DashboardEvent, 0),
 	}
 
@@ -537,7 +666,8 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 			predictions.thermal_status,
 			predictions.final_status,
 			model_versions.version,
-			predictions.is_stale
+			predictions.is_stale,
+			predictions.created_at
 		FROM predictions
 		LEFT JOIN sensors ON sensors.id = predictions.target_sensor_id
 		LEFT JOIN model_versions ON model_versions.id = predictions.model_version_id
@@ -553,6 +683,7 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 		&prediction.FinalStatus,
 		&prediction.ModelVersion,
 		&prediction.IsStale,
+		&prediction.CreatedAt,
 	)
 	if err == nil {
 		summary.LatestPrediction = &prediction
@@ -561,13 +692,51 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 		return model.DashboardSummary{}, fmt.Errorf("get dashboard latest prediction: %w", err)
 	}
 
+	var activePreAlarm model.PredictionSummary
+	err = r.db.QueryRow(ctx, `
+		SELECT
+			predictions.id,
+			COALESCE(sensors.sensor_code, 'S2'),
+			predictions.predicted_temperature::FLOAT8,
+			predictions.predicted_for,
+			predictions.thermal_status,
+			predictions.final_status,
+			model_versions.version,
+			predictions.is_stale,
+			predictions.created_at
+		FROM predictions
+		LEFT JOIN sensors ON sensors.id = predictions.target_sensor_id
+		LEFT JOIN model_versions ON model_versions.id = predictions.model_version_id
+		WHERE predictions.is_stale = FALSE
+		  AND predictions.predicted_for > NOW()
+		  AND predictions.thermal_status IN ('waspada', 'anomali')
+		  AND predictions.final_status IN ('waspada', 'anomali')
+		ORDER BY predictions.created_at DESC
+		LIMIT 1`,
+	).Scan(
+		&activePreAlarm.ID,
+		&activePreAlarm.TargetSensor,
+		&activePreAlarm.PredictedTemperature,
+		&activePreAlarm.PredictedFor,
+		&activePreAlarm.ThermalStatus,
+		&activePreAlarm.FinalStatus,
+		&activePreAlarm.ModelVersion,
+		&activePreAlarm.IsStale,
+		&activePreAlarm.CreatedAt,
+	)
+	if err == nil {
+		summary.ActivePreAlarm = &activePreAlarm
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return model.DashboardSummary{}, fmt.Errorf("get active pre-alarm: %w", err)
+	}
+
 	var activeModel model.ActiveModelSummary
 	err = r.db.QueryRow(ctx, `
-		SELECT id, version, trained_at
+		SELECT id, model_name, version, trained_at
 		FROM model_versions
 		WHERE is_active = TRUE
 		LIMIT 1`,
-	).Scan(&activeModel.ID, &activeModel.Version, &activeModel.TrainedAt)
+	).Scan(&activeModel.ID, &activeModel.ModelName, &activeModel.Version, &activeModel.TrainedAt)
 	if err == nil {
 		summary.ActiveModel = &activeModel
 	} else if !errors.Is(err, pgx.ErrNoRows) {
@@ -594,14 +763,19 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 			(SELECT COUNT(*) FROM sensor_readings WHERE recorded_at >= date_trunc('day', NOW())),
 			(SELECT COUNT(*) FROM anomaly_events WHERE status = 'waspada' AND detected_at >= date_trunc('day', NOW())),
 			(SELECT COUNT(*) FROM anomaly_events WHERE status = 'anomali' AND detected_at >= date_trunc('day', NOW())),
-			(SELECT COUNT(*) FROM anomaly_events WHERE status = 'trouble' AND detected_at >= date_trunc('day', NOW()))`,
+			(SELECT COUNT(*) FROM anomaly_events WHERE event_type = 'actual_threshold' AND status IN ('waspada', 'anomali') AND detected_at >= date_trunc('day', NOW())),
+			(SELECT COUNT(*) FROM anomaly_events WHERE event_type IN ('sensor_trouble', 'gateway_trouble') AND status = 'trouble' AND detected_at >= date_trunc('day', NOW()))`,
 	).Scan(
 		&summary.TodaySummary.TotalReadings,
 		&summary.TodaySummary.TotalWaspada,
 		&summary.TodaySummary.TotalAnomali,
+		&summary.TodaySummary.TotalAlarm,
 		&summary.TodaySummary.TotalTrouble,
 	); err != nil {
 		return model.DashboardSummary{}, fmt.Errorf("get dashboard today summary: %w", err)
+	}
+	if summary.ActivePreAlarm != nil {
+		summary.TodaySummary.TotalPreAlarm = 1
 	}
 
 	var telegramEnabled string
@@ -622,7 +796,7 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 	}
 
 	rows, err = r.db.Query(ctx, `
-		SELECT anomaly_events.id, sensors.sensor_code, anomaly_events.status, anomaly_events.severity,
+		SELECT anomaly_events.id, sensors.sensor_code, anomaly_events.event_type, anomaly_events.status, anomaly_events.severity,
 		       anomaly_events.description, anomaly_events.detected_at
 		FROM anomaly_events
 		LEFT JOIN sensors ON sensors.id = anomaly_events.sensor_id
@@ -637,6 +811,7 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 		if err := rows.Scan(
 			&event.ID,
 			&event.SensorCode,
+			&event.EventType,
 			&event.Status,
 			&event.Severity,
 			&event.Description,
@@ -648,6 +823,47 @@ func (r *Repository) DashboardSummary(ctx context.Context, gatewayCode string) (
 	}
 	if err := rows.Err(); err != nil {
 		return model.DashboardSummary{}, fmt.Errorf("iterate dashboard events: %w", err)
+	}
+	rows.Close()
+
+	rows, err = r.db.Query(ctx, `
+		SELECT latest.id, latest.sensor_code, latest.event_type, latest.status,
+		       latest.severity, latest.description, latest.detected_at
+		FROM (
+			SELECT DISTINCT ON (anomaly_events.event_type, anomaly_events.sensor_id)
+			       anomaly_events.id, sensors.sensor_code, anomaly_events.sensor_id,
+			       anomaly_events.event_type, anomaly_events.status, anomaly_events.severity,
+			       anomaly_events.description, anomaly_events.detected_at
+			FROM anomaly_events
+			LEFT JOIN sensors ON sensors.id = anomaly_events.sensor_id
+			WHERE anomaly_events.event_type IN ('actual_threshold', 'sensor_trouble', 'gateway_trouble')
+			ORDER BY anomaly_events.event_type, anomaly_events.sensor_id,
+			         anomaly_events.detected_at DESC, anomaly_events.id DESC
+		) AS latest
+		WHERE latest.status <> 'normal'
+		ORDER BY latest.detected_at DESC
+		LIMIT 10`)
+	if err != nil {
+		return model.DashboardSummary{}, fmt.Errorf("get dashboard active events: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var event model.DashboardEvent
+		if err := rows.Scan(
+			&event.ID,
+			&event.SensorCode,
+			&event.EventType,
+			&event.Status,
+			&event.Severity,
+			&event.Description,
+			&event.DetectedAt,
+		); err != nil {
+			return model.DashboardSummary{}, fmt.Errorf("scan dashboard active event: %w", err)
+		}
+		summary.ActiveEvents = append(summary.ActiveEvents, event)
+	}
+	if err := rows.Err(); err != nil {
+		return model.DashboardSummary{}, fmt.Errorf("iterate dashboard active events: %w", err)
 	}
 
 	return summary, nil
@@ -734,7 +950,17 @@ func (r *Repository) MarkOfflineStatuses(ctx context.Context, now time.Time, fal
 			rows.Close()
 			return nil, err
 		}
-		changes = append(changes, model.StatusChange{Entity: "gateway", Code: gatewayCode, Status: "offline", Log: systemLog})
+		event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+			EventType:   "gateway_trouble",
+			Status:      "trouble",
+			Severity:    "error",
+			Description: "Gateway " + gatewayCode + " changed to offline after timeout.",
+			DetectedAt:  now,
+		})
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, model.StatusChange{Entity: "gateway", Code: gatewayCode, Status: "offline", Log: systemLog, Event: event})
 	}
 
 	rows, err = tx.Query(ctx, `
@@ -743,30 +969,34 @@ func (r *Repository) MarkOfflineStatuses(ctx context.Context, now time.Time, fal
 		WHERE last_seen_at IS NOT NULL
 		  AND last_seen_at < $1
 		  AND sensor_health_status = 'normal'
-		RETURNING sensor_code`,
+		RETURNING id, sensor_code`,
 		cutoff,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("mark sensors trouble: %w", err)
 	}
-	troubleSensors := make([]string, 0)
+	type troubleSensor struct {
+		id   int64
+		code string
+	}
+	troubleSensors := make([]troubleSensor, 0)
 	for rows.Next() {
-		var sensorCode string
-		if err := rows.Scan(&sensorCode); err != nil {
+		var sensor troubleSensor
+		if err := rows.Scan(&sensor.id, &sensor.code); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan trouble sensor: %w", err)
 		}
-		troubleSensors = append(troubleSensors, sensorCode)
+		troubleSensors = append(troubleSensors, sensor)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
 		return nil, fmt.Errorf("iterate trouble sensors: %w", err)
 	}
 	rows.Close()
-	for _, sensorCode := range troubleSensors {
-		systemLog, err := insertSystemLogTx(ctx, tx, "backend", "error", "Sensor "+sensorCode+" changed to trouble after timeout", map[string]any{
+	for _, sensor := range troubleSensors {
+		systemLog, err := insertSystemLogTx(ctx, tx, "backend", "error", "Sensor "+sensor.code+" changed to trouble after timeout", map[string]any{
 			"entity":          "sensor",
-			"sensor_code":     sensorCode,
+			"sensor_code":     sensor.code,
 			"status":          "trouble",
 			"timeout_minutes": timeoutMinutes,
 		})
@@ -774,7 +1004,20 @@ func (r *Repository) MarkOfflineStatuses(ctx context.Context, now time.Time, fal
 			rows.Close()
 			return nil, err
 		}
-		changes = append(changes, model.StatusChange{Entity: "sensor", Code: sensorCode, Status: "trouble", Log: systemLog})
+		sensorCode := sensor.code
+		event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+			SensorID:    &sensor.id,
+			SensorCode:  &sensorCode,
+			EventType:   "sensor_trouble",
+			Status:      "trouble",
+			Severity:    "error",
+			Description: "Sensor " + sensor.code + " changed to trouble after timeout.",
+			DetectedAt:  now,
+		})
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, model.StatusChange{Entity: "sensor", Code: sensor.code, Status: "trouble", Log: systemLog, Event: event})
 	}
 
 	if err := tx.Commit(ctx); err != nil {

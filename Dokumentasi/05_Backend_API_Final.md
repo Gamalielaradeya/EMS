@@ -665,6 +665,8 @@ Opsional:
       "total_readings": 720,
       "total_waspada": 4,
       "total_anomali": 1,
+      "total_alarm": 2,
+      "total_pre_alarm": 3,
       "total_trouble": 0
     },
     "telegram": {
@@ -1506,3 +1508,23 @@ Saat membuat backend, Codex harus:
 9. Membuat README backend.
 10. Menyediakan contoh curl untuk endpoint utama.
 11. Menjalankan build/test setelah milestone backend.
+## Alert Category Documentation Lock Addendum
+
+Kontrak event dashboard dan `/anomaly-events` wajib menyertakan `event_type`. Mapping kategori:
+
+| `event_type` | Kategori UI | Sumber |
+|---|---|---|
+| `actual_threshold` | Alarm | Reading aktual S1/S2 |
+| `prediction_threshold` | Pre-Alarm | Prediksi S2 non-stale |
+| `sensor_trouble` | Trouble | Status/timeout sensor |
+| `gateway_trouble` | Trouble | Status/timeout gateway |
+
+Status `normal` setelah status non-normal ditampilkan sebagai Recovery. Backend membuat event dan `anomaly.created` hanya pada transisi atau eskalasi.
+
+`today_summary.total_pre_alarm` adalah indikator aktif 0/1, bukan jumlah histori harian. Nilainya 1 hanya jika terdapat prediksi S2 non-stale berstatus waspada/anomali dengan `predicted_for` masih lebih besar dari waktu sekarang.
+
+Dashboard summary juga mengembalikan `active_pre_alarm`, yaitu prediksi threshold masa depan terbaru. Prediksi threshold yang lebih baru menggantikan nilai sebelumnya. Prediksi normal tidak menghapus Pre-Alarm lama sebelum waktu targetnya lewat; setelah `predicted_for <= now`, nilai menjadi `null`.
+
+Dashboard summary mengembalikan `active_events` untuk kondisi Alarm/Trouble yang status terakhirnya masih non-normal. Recovery tetap berada di `recent_events` dan `/anomaly-events`, tetapi tidak masuk `active_events`.
+
+`GET /layout` menghitung `final_status` setiap marker dari kesehatan sensor dan suhu aktual terbaru untuk S1 maupun S2: trouble bila health tidak normal, selain itu normal/waspada/anomali berdasarkan threshold aktif. Prediction/Pre-Alarm tidak mengubah `final_status` marker.

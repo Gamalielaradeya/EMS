@@ -70,6 +70,7 @@ def insert_model_version(
     connection: Connection,
     settings: Settings,
     version: str,
+    model_name: str,
     artifacts: dict[str, Path],
     parameters: dict[str, Any],
     activate: bool,
@@ -90,7 +91,7 @@ def insert_model_version(
             RETURNING id
             """,
             (
-                settings.model_name,
+                model_name,
                 version,
                 json.dumps(FEATURE_COLUMNS),
                 TARGET_COLUMN,
@@ -187,6 +188,74 @@ def get_model_version(connection: Connection, version: str | None = None) -> dic
         "target_scaler_path": _resolved_path(row[4]),
         "metadata_path": _resolved_path(row[5]) if row[5] else None,
     }
+
+
+def get_model_quality_metrics(connection: Connection, model_version_id: int) -> dict[str, Any] | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT rmse, mae, mape
+            FROM model_metrics
+            WHERE model_version_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (model_version_id,),
+        )
+        model_row = cursor.fetchone()
+        cursor.execute(
+            """
+            SELECT DISTINCT ON (baseline_type) baseline_type, rmse, mae, mape
+            FROM baseline_results
+            WHERE model_version_id = %s
+            ORDER BY baseline_type, created_at DESC, id DESC
+            """,
+            (model_version_id,),
+        )
+        baseline_rows = cursor.fetchall()
+    if not model_row:
+        return None
+    return {
+        "lstm": {"rmse": float(model_row[0]), "mae": float(model_row[1]), "mape": float(model_row[2])},
+        "baselines": {
+            row[0]: {"rmse": float(row[1]), "mae": float(row[2]), "mape": float(row[3])}
+            for row in baseline_rows
+        },
+    }
+
+
+def load_matched_predictions(
+    connection: Connection,
+    model_version_id: int,
+    start_at: datetime,
+    end_at: datetime,
+) -> list[dict[str, Any]]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT predicted_temperature, actual_temperature, predicted_for, created_at,
+                   threshold_normal_max, threshold_anomaly_min
+            FROM predictions
+            WHERE model_version_id = %s
+              AND predicted_for >= %s
+              AND predicted_for <= %s
+              AND actual_temperature IS NOT NULL
+            ORDER BY predicted_for ASC, id ASC
+            """,
+            (model_version_id, start_at, end_at),
+        )
+        rows = cursor.fetchall()
+    return [
+        {
+            "predicted_temperature": float(row[0]),
+            "actual_temperature": float(row[1]),
+            "predicted_for": row[2],
+            "created_at": row[3],
+            "threshold_normal_max": float(row[4]),
+            "threshold_anomaly_min": float(row[5]),
+        }
+        for row in rows
+    ]
 
 
 def _json(value: dict[str, Any] | None) -> str | None:

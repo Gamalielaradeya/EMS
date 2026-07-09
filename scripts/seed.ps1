@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
 $rootDir = Split-Path -Parent $PSScriptRoot
 $seedFile = "$rootDir/backend-go/migrations/006_seed_initial_data.sql"
 
-& psql $DatabaseUrl -v ON_ERROR_STOP=1 -f $seedFile
+& psql -v ON_ERROR_STOP=1 -f $seedFile $DatabaseUrl
 
 if ($LASTEXITCODE -ne 0) {
     throw "Seed failed."

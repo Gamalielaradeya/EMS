@@ -216,6 +216,8 @@ func writeServiceError(w http.ResponseWriter, err error, validationErrors valida
 		apiresponse.Error(w, http.StatusUnprocessableEntity, "validation failed", validationErrors)
 	case errors.Is(err, repository.ErrNotFound):
 		apiresponse.Error(w, http.StatusNotFound, "requested record was not found", nil)
+	case errors.Is(err, repository.ErrConflict):
+		apiresponse.Error(w, http.StatusConflict, err.Error(), nil)
 	default:
 		apiresponse.Error(w, http.StatusInternalServerError, "internal server error", nil)
 	}

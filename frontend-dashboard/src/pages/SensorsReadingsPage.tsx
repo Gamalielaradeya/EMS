@@ -1,8 +1,7 @@
-import { RadioTower, RefreshCw } from "lucide-react"
+import { RadioTower } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { ReadingsChart } from "@/components/charts/ReadingsChart"
-import { PageHeader } from "@/components/layout/PageHeader"
 import { ReadingsFilters } from "@/components/readings/ReadingsFilters"
 import { ReadingsTable } from "@/components/readings/ReadingsTable"
 import { SensorMetadata } from "@/components/readings/SensorMetadata"
@@ -10,12 +9,11 @@ import { SensorWorkspaceCard } from "@/components/readings/SensorWorkspaceCard"
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
 import { StatusBadge } from "@/components/status/StatusBadge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useSensorReadings } from "@/hooks/useSensorReadings"
 import { formatDateTime } from "@/lib/format"
-import type { ReadingHistoryFilters } from "@/types/api"
+import type { DashboardReading, FinalStatus, ReadingHistoryFilters } from "@/types/api"
 
 export function SensorsReadingsPage() {
   const [filters, setFilters] = useState<ReadingHistoryFilters>({ limit: 100 })
@@ -29,17 +27,6 @@ export function SensorsReadingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        actions={
-          <Button onClick={() => void refresh()} size="sm" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-4" />
-            Refresh
-          </Button>
-        }
-        description="Inspect live S1 ambient and S2 hotspot measurements, backend sensor health, and bounded historical acquisition data."
-        title="Sensors & Readings"
-      />
-
       {error ? (
         <ErrorState
           message={error}
@@ -83,16 +70,16 @@ export function SensorsReadingsPage() {
               sensor={s1}
               sensorCode="S1"
               sensorRole="Ambient"
+              status={resolveSensorStatus(summary?.latest_readings.S1)}
             />
             <SensorWorkspaceCard
               reading={latestReadings.S2}
               sensor={s2}
               sensorCode="S2"
               sensorRole="Hotspot"
+              status={resolveSensorStatus(summary?.latest_readings.S2)}
             />
           </section>
-
-          <ReadingsFilters filters={filters} onApply={setFilters} />
 
           <section aria-label="Sensor history charts" className="grid gap-4 xl:grid-cols-2">
             <ReadingsChart
@@ -114,6 +101,7 @@ export function SensorsReadingsPage() {
           </section>
 
           <SensorMetadata sensors={sensors} />
+          <ReadingsFilters filters={filters} onApply={setFilters} />
           <ReadingsTable meta={meta} readings={history} />
 
           <p className="text-xs leading-5 text-muted-foreground">
@@ -123,4 +111,10 @@ export function SensorsReadingsPage() {
       )}
     </div>
   )
+}
+
+function resolveSensorStatus(reading?: DashboardReading): FinalStatus | "inactive" {
+  if (!reading) return "inactive" as const
+  if (reading.sensor_health_status !== "normal") return reading.sensor_health_status
+  return reading.current_thermal_status
 }

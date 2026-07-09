@@ -1,7 +1,9 @@
 package service
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
 )
@@ -13,6 +15,45 @@ func TestClassifyThermalStatusBoundaries(t *testing.T) {
 		if actual := classifyThermalStatus(temperature, settings); actual != expected {
 			t.Fatalf("temperature %.1f: expected %s, got %s", temperature, expected, actual)
 		}
+	}
+}
+
+func TestEventAlertMessageCategories(t *testing.T) {
+	sensor := "S2"
+	temperature := 31.5
+	description := "Sensor S2 changed to trouble after timeout."
+	detectedAt := time.Date(2026, 7, 7, 1, 0, 0, 0, time.UTC)
+	tests := []struct {
+		eventType string
+		expected  string
+		event     model.AnomalyEvent
+	}{
+		{eventType: "actual_threshold", expected: "EMS THERMAL - ALARM", event: model.AnomalyEvent{ActualTemperature: &temperature}},
+		{eventType: "prediction_threshold", expected: "EMS THERMAL - PRE-ALARM", event: model.AnomalyEvent{PredictedTemperature: &temperature}},
+		{eventType: "sensor_trouble", expected: "EMS THERMAL - TROUBLE", event: model.AnomalyEvent{Description: &description}},
+	}
+	for _, test := range tests {
+		t.Run(test.eventType, func(t *testing.T) {
+			test.event.EventType = test.eventType
+			test.event.Status = "waspada"
+			test.event.SensorCode = &sensor
+			test.event.DetectedAt = detectedAt
+			message := eventAlertMessage(test.event)
+			for _, expected := range []string{
+				test.expected,
+				"Status : WASPADA",
+				"Source : Sensor S2",
+				"Time   : 07 Jul 2026 08:00:00 WIB",
+				"Action :",
+			} {
+				if !strings.Contains(message, expected) {
+					t.Fatalf("expected %q in %q", expected, message)
+				}
+			}
+			if test.eventType == "sensor_trouble" && !strings.Contains(message, "Detail : Sensor S2 changed to trouble after timeout.") {
+				t.Fatalf("expected formatted detail in %q", message)
+			}
+		})
 	}
 }
 

@@ -61,14 +61,19 @@ func (r *Repository) RefreshPredictions(ctx context.Context, settings model.Pred
 	); err != nil {
 		return fmt.Errorf("mark stale predictions: %w", err)
 	}
+	// Use range condition instead of ABS(EXTRACT(EPOCH...)) so that
+	// idx_sensor_readings_sensor_recorded(sensor_id, recorded_at) can be used.
+	// ABS() on recorded_at prevents index scans (O(N×M) full scan).
 	if _, err := r.db.Exec(ctx, `
 		UPDATE predictions AS prediction
 		SET actual_temperature = (
-			SELECT sensor_readings.temperature
+			SELECT sensor_readings.temperature::FLOAT8
 			FROM sensor_readings
 			JOIN sensors ON sensors.id = sensor_readings.sensor_id
 			WHERE sensors.sensor_code = 'S2'
-			  AND ABS(EXTRACT(EPOCH FROM (sensor_readings.recorded_at - prediction.predicted_for))) <= $1
+			  AND sensor_readings.recorded_at BETWEEN
+			      prediction.predicted_for - make_interval(secs => $1::int)
+			      AND prediction.predicted_for + make_interval(secs => $1::int)
 			ORDER BY ABS(EXTRACT(EPOCH FROM (sensor_readings.recorded_at - prediction.predicted_for))) ASC
 			LIMIT 1
 		)
@@ -79,7 +84,9 @@ func (r *Repository) RefreshPredictions(ctx context.Context, settings model.Pred
 			FROM sensor_readings
 			JOIN sensors ON sensors.id = sensor_readings.sensor_id
 			WHERE sensors.sensor_code = 'S2'
-			  AND ABS(EXTRACT(EPOCH FROM (sensor_readings.recorded_at - prediction.predicted_for))) <= $1
+			  AND sensor_readings.recorded_at BETWEEN
+			      prediction.predicted_for - make_interval(secs => $1::int)
+			      AND prediction.predicted_for + make_interval(secs => $1::int)
 		  )`,
 		settings.ActualMatchToleranceSeconds,
 	); err != nil {
@@ -261,6 +268,52 @@ func (r *Repository) GetModelVersion(ctx context.Context, id int64) (model.Model
 	return item, err
 }
 
+func (r *Repository) UpdateModelVersionName(ctx context.Context, id int64, name string) (model.ModelVersion, error) {
+	commandTag, err := r.db.Exec(ctx, `UPDATE model_versions SET model_name = $1 WHERE id = $2`, strings.TrimSpace(name), id)
+	if err != nil {
+		return model.ModelVersion{}, fmt.Errorf("update model name: %w", err)
+	}
+	if commandTag.RowsAffected() == 0 {
+		return model.ModelVersion{}, ErrNotFound
+	}
+	return r.GetModelVersion(ctx, id)
+}
+
+func (r *Repository) DeleteModelVersion(ctx context.Context, id int64) (model.SystemLog, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return model.SystemLog{}, fmt.Errorf("begin model delete transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var modelName string
+	var isActive bool
+	err = tx.QueryRow(ctx, `SELECT model_name, is_active FROM model_versions WHERE id = $1`, id).Scan(&modelName, &isActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.SystemLog{}, ErrNotFound
+	}
+	if err != nil {
+		return model.SystemLog{}, fmt.Errorf("get model before delete: %w", err)
+	}
+	if isActive {
+		return model.SystemLog{}, fmt.Errorf("%w: active model cannot be deleted", ErrConflict)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM model_versions WHERE id = $1`, id); err != nil {
+		return model.SystemLog{}, fmt.Errorf("delete model version: %w", err)
+	}
+	systemLog, err := insertSystemLogTx(ctx, tx, "backend", "info", "Inactive model version deleted", map[string]any{
+		"model_version_id": id,
+		"model_name":       modelName,
+	})
+	if err != nil {
+		return model.SystemLog{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return model.SystemLog{}, err
+	}
+	return systemLog, nil
+}
+
 func (r *Repository) ActivateModelVersion(ctx context.Context, id int64) (model.ModelVersion, model.SystemLog, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -340,50 +393,56 @@ func (r *Repository) LatestModelComparison(ctx context.Context) (*model.ModelCom
 	return comparison, rows.Err()
 }
 
-func (r *Repository) InsertAnomalyEvent(ctx context.Context, prediction model.Prediction, severity, description string) (model.AnomalyEvent, error) {
-	event := model.AnomalyEvent{
-		PredictionID:         &prediction.ID,
-		SensorID:             prediction.TargetSensorID,
-		Status:               prediction.FinalStatus,
-		Severity:             severity,
-		EventType:            "thermal_status",
-		PredictedTemperature: &prediction.PredictedTemperature,
-		ActualTemperature:    prediction.ActualTemperature,
-		Description:          &description,
-		DetectedAt:           prediction.CreatedAt,
-	}
-	err := r.db.QueryRow(ctx, `
-		INSERT INTO anomaly_events (
-			prediction_id, sensor_id, event_type, status, severity, predicted_temperature,
-			actual_temperature, threshold_normal_max, threshold_anomaly_min, description, detected_at
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING id, created_at`,
-		event.PredictionID, event.SensorID, event.EventType, event.Status, event.Severity,
-		event.PredictedTemperature, event.ActualTemperature, prediction.ThresholdNormalMax,
-		prediction.ThresholdAnomalyMin, event.Description, event.DetectedAt,
-	).Scan(&event.ID, &event.CreatedAt)
+func (r *Repository) InsertPredictionTransitionEvent(ctx context.Context, prediction model.Prediction) (*model.AnomalyEvent, error) {
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return model.AnomalyEvent{}, fmt.Errorf("insert anomaly event: %w", err)
+		return nil, fmt.Errorf("begin prediction event transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	status := prediction.ThermalStatus
+	description := "Predicted S2 temperature entered " + status + " range."
+	if status == "normal" {
+		description = "Predicted S2 temperature recovered to normal range."
 	}
 	code := prediction.TargetSensor
-	event.SensorCode = &code
+	event, err := insertTransitionEventTx(ctx, tx, transitionEventInput{
+		PredictionID:         &prediction.ID,
+		SensorID:             prediction.TargetSensorID,
+		SensorCode:           &code,
+		EventType:            "prediction_threshold",
+		Status:               status,
+		Severity:             statusSeverity(status),
+		PredictedTemperature: &prediction.PredictedTemperature,
+		ActualTemperature:    prediction.ActualTemperature,
+		ThresholdNormalMax:   &prediction.ThresholdNormalMax,
+		ThresholdAnomalyMin:  &prediction.ThresholdAnomalyMin,
+		Description:          description,
+		DetectedAt:           prediction.CreatedAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit prediction event transaction: %w", err)
+	}
 	return event, nil
 }
 
-func (r *Repository) LastSentNotificationAt(ctx context.Context, sensorID int64, status string) (*time.Time, error) {
+func (r *Repository) LastSentNotificationAt(ctx context.Context, sensorID *int64, eventType, status string) (*time.Time, error) {
 	var sentAt time.Time
 	err := r.db.QueryRow(ctx, `
 		SELECT notification_logs.sent_at
 		FROM notification_logs
 		JOIN anomaly_events ON anomaly_events.id = notification_logs.anomaly_event_id
-		WHERE anomaly_events.sensor_id = $1
-		  AND anomaly_events.status = $2
+		WHERE anomaly_events.sensor_id IS NOT DISTINCT FROM $1
+		  AND anomaly_events.event_type = $2
+		  AND anomaly_events.status = $3
 		  AND notification_logs.channel = 'telegram'
 		  AND notification_logs.status = 'sent'
 		ORDER BY notification_logs.sent_at DESC
 		LIMIT 1`,
-		sensorID, status,
+		sensorID, eventType, status,
 	).Scan(&sentAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

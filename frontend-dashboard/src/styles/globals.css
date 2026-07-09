@@ -1,4 +1,5 @@
 @import "./tokens.css";
+@import "leaflet/dist/leaflet.css";
 
 @tailwind base;
 @tailwind components;
@@ -34,6 +35,200 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@layer components {
+  .leaflet-container,
+  .ems-floorplan-leaflet.leaflet-container {
+    background: #000 !important;
+    font-family: var(--font-body);
+  }
+
+  .leaflet-control-zoom {
+    border: 0 !important;
+    box-shadow: 0 12px 28px rgb(0 0 0 / 0.35);
+  }
+
+  .leaflet-control-zoom a {
+    border: 0 !important;
+    color: #020617 !important;
+    font-weight: 800;
+  }
+
+  .ems-floorplan-image-overlay {
+    image-rendering: auto;
+    user-select: none;
+  }
+
+  .ems-leaflet-marker-wrapper {
+    background: transparent;
+    border: 0;
+  }
+
+  .ems-leaflet-marker {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  .ems-leaflet-marker::before,
+  .ems-leaflet-marker::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 1;
+    width: 36px;
+    height: 36px;
+    pointer-events: none;
+    border: 2px solid rgb(34 211 238 / 0.48);
+    border-radius: 9999px;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center;
+  }
+
+  .ems-leaflet-marker__pin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    transform: translate(-50%, -50%);
+    place-items: center;
+    border: 2px solid rgb(255 255 255 / 0.92);
+    border-radius: 9999px;
+    background: #0891b2;
+    color: white;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 900;
+    box-shadow: 0 0 0 5px rgb(8 145 178 / 0.2), 0 12px 24px rgb(0 0 0 / 0.48);
+  }
+
+  .ems-leaflet-marker__card {
+    position: absolute;
+    left: 2.25rem;
+    top: 50%;
+    min-width: 10rem;
+    transform: translateY(-50%);
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 0.65rem;
+    background: rgb(2 6 23 / 0.82);
+    padding: 0.55rem 0.65rem;
+    color: #f8fafc;
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.44);
+    backdrop-filter: blur(10px);
+  }
+
+  .ems-leaflet-marker__topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .ems-leaflet-marker__role {
+    margin-top: 0.2rem;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .ems-leaflet-marker__value {
+    margin-top: 0.25rem;
+    color: #e2e8f0;
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .ems-leaflet-marker--normal .ems-leaflet-marker__pin {
+    background: #16a34a;
+    box-shadow: 0 0 0 5px rgb(22 163 74 / 0.22), 0 12px 24px rgb(0 0 0 / 0.48);
+  }
+
+  .ems-leaflet-marker--warning .ems-leaflet-marker__pin {
+    background: #d97706;
+    box-shadow: 0 0 0 5px rgb(217 119 6 / 0.22), 0 12px 24px rgb(0 0 0 / 0.48);
+  }
+
+  .ems-leaflet-marker--danger .ems-leaflet-marker__pin {
+    background: #dc2626;
+    box-shadow: 0 0 0 5px rgb(220 38 38 / 0.22), 0 12px 24px rgb(0 0 0 / 0.48);
+  }
+
+  .ems-leaflet-marker--trouble .ems-leaflet-marker__pin {
+    background: #7f1d1d;
+    box-shadow: 0 0 0 5px rgb(239 68 68 / 0.24), 0 12px 24px rgb(0 0 0 / 0.48);
+  }
+
+  .ems-leaflet-marker--focused .ems-leaflet-marker__pin {
+    border-color: #fff;
+    box-shadow: 0 0 0 7px rgb(255 255 255 / 0.24), 0 0 0 13px rgb(34 211 238 / 0.22), 0 16px 32px rgb(0 0 0 / 0.56);
+  }
+
+  .ems-leaflet-marker--focused::before,
+  .ems-leaflet-marker--focused::after {
+    animation: ems-marker-ripple 2.35s ease-out infinite;
+  }
+
+  .ems-leaflet-marker--focused::after {
+    animation-delay: 0.82s;
+  }
+
+  .ems-leaflet-marker--focus-alarm .ems-leaflet-marker__pin {
+    box-shadow: 0 0 0 7px rgb(255 255 255 / 0.2), 0 0 0 13px rgb(220 38 38 / 0.36), 0 16px 32px rgb(0 0 0 / 0.56);
+  }
+
+  .ems-leaflet-marker--focus-alarm::before,
+  .ems-leaflet-marker--focus-alarm::after {
+    border-color: rgb(248 113 113 / 0.52);
+  }
+
+  .ems-leaflet-marker--focus-preAlarm .ems-leaflet-marker__pin {
+    box-shadow: 0 0 0 7px rgb(255 255 255 / 0.22), 0 0 0 13px rgb(34 211 238 / 0.28), 0 16px 32px rgb(0 0 0 / 0.56);
+  }
+
+  .ems-leaflet-marker--focus-preAlarm::before,
+  .ems-leaflet-marker--focus-preAlarm::after {
+    border-color: rgb(34 211 238 / 0.48);
+  }
+
+  .ems-leaflet-marker--focus-trouble .ems-leaflet-marker__pin {
+    box-shadow: 0 0 0 7px rgb(255 255 255 / 0.2), 0 0 0 13px rgb(249 115 22 / 0.38), 0 16px 32px rgb(0 0 0 / 0.56);
+  }
+
+  .ems-leaflet-marker--focus-trouble::before,
+  .ems-leaflet-marker--focus-trouble::after {
+    border-color: rgb(251 146 60 / 0.52);
+  }
+
+  .ems-leaflet-marker--focused .ems-leaflet-marker__card {
+    border-color: rgb(255 255 255 / 0.34);
+  }
+
+  @keyframes ems-marker-ripple {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    12% {
+      opacity: 0.62;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.65);
+    }
   }
 }
 

@@ -25,7 +25,8 @@ import type {
 
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 export const API_BASE_URL = (configuredApiUrl || "http://localhost:8080/api/v1").replace(/\/$/, "")
-export const HAS_ADMIN_TOKEN = Boolean(import.meta.env.VITE_ADMIN_TOKEN?.trim())
+import { getRuntimeAdminToken } from "@/lib/adminToken"
+
 export const resolveApiAssetUrl = (path: string) => new URL(path, API_BASE_URL).toString()
 
 export class ApiError extends Error {
@@ -93,8 +94,9 @@ function readingHistoryQuery(filters: ReadingHistoryFilters) {
 }
 
 function adminHeaders() {
-  const token = import.meta.env.VITE_ADMIN_TOKEN?.trim()
-  if (!token) throw new ApiError("Set VITE_ADMIN_TOKEN locally to perform this protected action.")
+  const token =
+    import.meta.env.VITE_ADMIN_TOKEN?.trim() || getRuntimeAdminToken()
+  if (!token) throw new ApiError("Admin token required. Set it in Settings → Admin Token.")
   return { Authorization: `Bearer ${token}` }
 }
 
@@ -146,6 +148,17 @@ export const api = {
   activateModelVersion: (id: number) =>
     request<ModelVersion>(`/model-versions/${id}/activate`, {
       method: "PUT",
+      headers: adminHeaders(),
+    }),
+  updateModelVersion: (id: number, name: string) =>
+    request<ModelVersion>(`/model-versions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify({ model_name: name }),
+    }),
+  deleteModelVersion: (id: number) =>
+    request<{ id: number }>(`/model-versions/${id}`, {
+      method: "DELETE",
       headers: adminHeaders(),
     }),
   getLatestModelMetrics: () => request<ModelMetrics | null>("/model-metrics/latest"),

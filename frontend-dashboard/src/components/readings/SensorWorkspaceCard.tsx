@@ -4,13 +4,14 @@ import { StatusBadge } from "@/components/status/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
-import type { Sensor, SensorReading } from "@/types/api"
+import type { FinalStatus, Sensor, SensorReading } from "@/types/api"
 
 interface SensorWorkspaceCardProps {
   reading?: SensorReading
   sensor?: Sensor
   sensorCode: "S1" | "S2"
   sensorRole: "Ambient" | "Hotspot"
+  status: FinalStatus | "inactive"
 }
 
 export function SensorWorkspaceCard({
@@ -18,6 +19,7 @@ export function SensorWorkspaceCard({
   sensor,
   sensorCode,
   sensorRole,
+  status,
 }: SensorWorkspaceCardProps) {
   return (
     <Card>
@@ -28,7 +30,7 @@ export function SensorWorkspaceCard({
           </p>
           <CardTitle className="mt-1">{sensorRole} sensor</CardTitle>
         </div>
-        <StatusBadge status={sensor?.sensor_health_status || "inactive"} />
+        <StatusBadge status={status} />
       </CardHeader>
       <CardContent className="pt-5">
         <div className="grid grid-cols-2 gap-3">

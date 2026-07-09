@@ -11,7 +11,7 @@ export type DisplayStatus =
   | "not-ready"
   | "stale"
 
-export type StatusVariant = "normal" | "warning" | "danger" | "trouble" | "inactive" | "info"
+export type StatusVariant = "normal" | "warning" | "danger" | "trouble" | "troubleStrong" | "inactive" | "info"
 
 export function getStatusVariant(status: DisplayStatus): StatusVariant {
   switch (status) {
@@ -30,7 +30,7 @@ export function getStatusVariant(status: DisplayStatus): StatusVariant {
     case "trouble":
     case "offline":
     case "disconnected":
-      return "trouble"
+      return "troubleStrong"
     case "inactive":
     case "not-ready":
       return "inactive"

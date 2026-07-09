@@ -40,6 +40,7 @@ export interface PredictionSummary {
   final_status: FinalStatus
   model_version: string | null
   is_stale: boolean
+  created_at: string
 }
 
 export interface Prediction extends PredictionSummary {
@@ -50,11 +51,11 @@ export interface Prediction extends PredictionSummary {
   input_window_end_at: string | null
   threshold_normal_max: number
   threshold_anomaly_min: number
-  created_at: string
 }
 
 export interface ActiveModelSummary {
   id: number
+  model_name: string
   version: string
   trained_at: string | null
 }
@@ -69,6 +70,8 @@ export interface TodaySummary {
   total_readings: number
   total_waspada: number
   total_anomali: number
+  total_alarm: number
+  total_pre_alarm: number
   total_trouble: number
 }
 
@@ -80,6 +83,7 @@ export interface TelegramSummary {
 export interface DashboardEvent {
   id: number
   sensor_code: string | null
+  event_type: "actual_threshold" | "prediction_threshold" | "sensor_trouble" | "gateway_trouble" | string
   status: FinalStatus
   severity: string
   description: string | null
@@ -93,10 +97,12 @@ export interface DashboardSummary {
   overall_current_thermal_source_sensor: SensorCode | null
   prediction_thermal_status: ThermalStatus | null
   latest_prediction: PredictionSummary | null
+  active_pre_alarm: PredictionSummary | null
   active_model: ActiveModelSummary | null
   latest_metrics: MetricsSummary | null
   today_summary: TodaySummary
   telegram: TelegramSummary
+  active_events: DashboardEvent[]
   recent_events: DashboardEvent[]
 }
 

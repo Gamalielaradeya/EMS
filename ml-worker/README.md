@@ -59,7 +59,10 @@ metrics are not thesis results.
 ```powershell
 ./.venv/Scripts/python.exe -m ml_worker.cli train
 ./.venv/Scripts/python.exe -m ml_worker.cli train --activate
+./.venv/Scripts/python.exe -m ml_worker.cli train-augmented --synthetic ./reports/synthetic-run-01/synthetic_ml_wide.csv
 ./.venv/Scripts/python.exe -m ml_worker.cli evaluate
+./.venv/Scripts/python.exe -m ml_worker.cli early-warning-report
+./.venv/Scripts/python.exe -m ml_worker.cli generate-synthetic
 ./.venv/Scripts/python.exe -m ml_worker.cli infer
 ./.venv/Scripts/python.exe -m ml_worker.cli infer-loop
 ```
@@ -88,6 +91,54 @@ $env:ML_INFER_INTERVAL_SECONDS = "60"
 
 Keep this process running alongside the backend when the dashboard needs a
 fresh non-stale prediction stream. It uses the active model; it does not retrain.
+
+`early-warning-report` is read-only. It compares stored LSTM metrics with the
+best stored baseline and audits predictions that backend has matched to actual
+S2 readings. The report includes threshold episodes, missed warnings, false
+warnings, transition MAE, threshold recall, and median lead time. It never
+activates or deactivates a model.
+
+`train --activate` also applies the same baseline gate. A candidate that is
+worse than the best baseline is still saved for audit, but remains inactive and
+the command output explains the failed MAE/RMSE checks.
+
+`generate-synthetic` creates deterministic development-only temperature
+patterns without writing to PostgreSQL or calling the backend. It produces a
+wide ML CSV, a long sensor-like CSV marked `source=simulator` and
+`quality_status=simulated`, plus a manifest. The patterns include stable,
+gradual/rapid heating, hot hold, and recovery periods.
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli generate-synthetic `
+  --output ./reports/synthetic-run-01 `
+  --minutes 1440 `
+  --seed 42
+```
+
+Synthetic rows may later be evaluated as training augmentation. They must not
+enter validation/test partitions, hardware evidence, active inference input, or
+Telegram testing. Model comparison must include hardware-only test results.
+
+`train-augmented` implements that controlled experiment. Hardware readings are
+split chronologically first. Synthetic windows are added only to the hardware
+training partition and are capped at 30% by default. Validation, test metrics,
+and persistence/moving-average baselines use hardware only. The resulting model
+is always saved inactive, even if its promotion gate passes.
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli train-augmented `
+  --synthetic ./reports/synthetic-run-01/synthetic_ml_wide.csv `
+  --max-synthetic-ratio 0.30 `
+  --seed 42
+```
+
+Example for a controlled heat/recovery period:
+
+```powershell
+./.venv/Scripts/python.exe -m ml_worker.cli early-warning-report `
+  --start 2026-07-07T11:30:00+07:00 `
+  --end 2026-07-07T13:00:00+07:00
+```
 
 ## Pipeline
 

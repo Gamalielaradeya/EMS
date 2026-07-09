@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"ems-thermal-lstm/backend-go/internal/model"
@@ -27,15 +28,18 @@ func (s *Service) InsertPrediction(ctx context.Context, input model.PredictionIn
 		s.publish(sse.EventSystemLog, systemLog)
 	}
 	s.publish(sse.EventPredictionLatest, prediction)
-	if prediction.IsStale || prediction.FinalStatus == "normal" {
+	if prediction.IsStale {
 		return prediction, nil, nil
 	}
-	event, err := s.repository.InsertAnomalyEvent(ctx, prediction, severityForStatus(prediction.FinalStatus), descriptionForStatus(prediction.FinalStatus))
+	event, err := s.repository.InsertPredictionTransitionEvent(ctx, prediction)
 	if err != nil {
 		return model.Prediction{}, nil, err
 	}
+	if event == nil {
+		return prediction, nil, nil
+	}
 	s.publish(sse.EventAnomalyCreated, event)
-	s.processTelegramNotification(ctx, &event, prediction)
+	s.processEventNotification(ctx, event)
 	return prediction, nil, nil
 }
 
@@ -59,6 +63,18 @@ func (s *Service) ListModelVersions(ctx context.Context) ([]model.ModelVersion, 
 
 func (s *Service) GetModelVersion(ctx context.Context, id int64) (model.ModelVersion, error) {
 	return s.repository.GetModelVersion(ctx, id)
+}
+
+func (s *Service) UpdateModelVersionName(ctx context.Context, id int64, name string) (model.ModelVersion, error) {
+	return s.repository.UpdateModelVersionName(ctx, id, name)
+}
+
+func (s *Service) DeleteModelVersion(ctx context.Context, id int64) error {
+	systemLog, err := s.repository.DeleteModelVersion(ctx, id)
+	if err == nil {
+		s.publish(sse.EventSystemLog, systemLog)
+	}
+	return err
 }
 
 func (s *Service) ActivateModelVersion(ctx context.Context, id int64) (model.ModelVersion, error) {
@@ -112,23 +128,27 @@ func (s *Service) refreshPredictions(ctx context.Context) error {
 	return s.repository.RefreshPredictions(ctx, settings)
 }
 
-func (s *Service) processTelegramNotification(ctx context.Context, event *model.AnomalyEvent, prediction model.Prediction) {
+func (s *Service) processEventNotification(ctx context.Context, event *model.AnomalyEvent) {
+	if event == nil || event.Status == "normal" {
+		return
+	}
 	settings, err := s.repository.TelegramSettings(ctx)
 	if err != nil {
 		return
 	}
-	message := thermalAlertMessage(prediction)
+	message := eventAlertMessage(*event)
 	item := model.NotificationLog{
 		AnomalyEventID: &event.ID,
 		Channel:        "telegram",
 		Message:        message,
 		Metadata: map[string]any{
-			"sensor_code": prediction.TargetSensor,
-			"status":      prediction.FinalStatus,
+			"event_type":  event.EventType,
+			"sensor_code": event.SensorCode,
+			"status":      event.Status,
 		},
 	}
-	if prediction.TargetSensorID != nil {
-		lastSentAt, lookupErr := s.repository.LastSentNotificationAt(ctx, *prediction.TargetSensorID, prediction.FinalStatus)
+	if event.EventType == "prediction_threshold" {
+		lastSentAt, lookupErr := s.repository.LastSentNotificationAt(ctx, event.SensorID, event.EventType, event.Status)
 		if lookupErr == nil && lastSentAt != nil && time.Since(*lastSentAt) < time.Duration(settings.CooldownMinutes)*time.Minute {
 			reason := "notification skipped during cooldown"
 			item.Status = "skipped"
@@ -211,14 +231,98 @@ func descriptionForStatus(status string) string {
 	}
 }
 
-func thermalAlertMessage(prediction model.Prediction) string {
+func eventAlertMessage(event model.AnomalyEvent) string {
+	category := alertCategory(event.EventType)
+	valueLabel := "Detail"
+	value := eventDetail(event)
+	switch event.EventType {
+	case "actual_threshold":
+		valueLabel = "Actual"
+		if event.ActualTemperature != nil {
+			value = fmt.Sprintf("%.2f C", *event.ActualTemperature)
+		}
+	case "prediction_threshold":
+		valueLabel = "Forecast"
+		if event.PredictedTemperature != nil {
+			value = fmt.Sprintf("%.2f C", *event.PredictedTemperature)
+		}
+	}
+	source := "Gateway"
+	if event.SensorCode != nil {
+		source = "Sensor " + *event.SensorCode
+	}
 	return fmt.Sprintf(
-		"[EMS THERMAL ALERT]\n\nStatus: %s\nSensor: %s - Hotspot/Exhaust\nPredicted temperature: %.2f C\nPredicted for: %s\nThreshold: Normal < %.2f C, Anomaly > %.2f C",
-		prediction.FinalStatus,
-		prediction.TargetSensor,
-		prediction.PredictedTemperature,
-		prediction.PredictedFor.Format(time.RFC3339),
-		prediction.ThresholdNormalMax,
-		prediction.ThresholdAnomalyMin,
+		"[EMS THERMAL - %s]\n\nStatus : %s\nSource : %s\nType   : %s\n%s : %s\nTime   : %s\nAction : %s",
+		category,
+		strings.ToUpper(event.Status),
+		source,
+		alertType(event.EventType),
+		valueLabel,
+		value,
+		formatAlertTime(event.DetectedAt),
+		alertAction(event),
 	)
+}
+
+func alertCategory(eventType string) string {
+	switch eventType {
+	case "actual_threshold":
+		return "ALARM"
+	case "prediction_threshold":
+		return "PRE-ALARM"
+	default:
+		return "TROUBLE"
+	}
+}
+
+func alertType(eventType string) string {
+	switch eventType {
+	case "actual_threshold":
+		return "Actual threshold"
+	case "prediction_threshold":
+		return "Prediction threshold"
+	case "gateway_trouble":
+		return "Gateway health"
+	case "sensor_trouble":
+		return "Sensor health"
+	default:
+		return "System event"
+	}
+}
+
+func eventDetail(event model.AnomalyEvent) string {
+	if event.Description != nil && strings.TrimSpace(*event.Description) != "" {
+		return strings.TrimSpace(*event.Description)
+	}
+	switch event.EventType {
+	case "gateway_trouble":
+		return "Gateway changed to trouble state."
+	case "sensor_trouble":
+		return "Sensor changed to trouble state."
+	default:
+		return "Thermal status transition detected."
+	}
+}
+
+func formatAlertTime(value time.Time) string {
+	wib := time.FixedZone("WIB", 7*60*60)
+	return value.In(wib).Format("02 Jan 2006 15:04:05 MST")
+}
+
+func alertAction(event model.AnomalyEvent) string {
+	switch event.EventType {
+	case "actual_threshold":
+		if event.Status == "anomali" {
+			return "Inspect hotspot area and verify the current S2 reading."
+		}
+		return "Monitor temperature trend and confirm room airflow."
+	case "prediction_threshold":
+		return "Monitor the 5-minute forecast and prepare thermal response."
+	case "gateway_trouble":
+		return "Check gateway power, network, and backend heartbeat."
+	case "sensor_trouble":
+		return "Check sensor wiring, RS485 connection, and latest gateway readings."
+	default:
+		return "Review dashboard events and system logs."
+	}
 }

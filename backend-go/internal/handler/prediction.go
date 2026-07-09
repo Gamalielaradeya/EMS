@@ -89,6 +89,42 @@ func (h *Handler) ActivateModelVersion(w http.ResponseWriter, r *http.Request) {
 	apiresponse.Success(w, http.StatusOK, "model activated successfully", item)
 }
 
+func (h *Handler) UpdateModelVersion(w http.ResponseWriter, r *http.Request) {
+	id, ok := resourceID(w, r)
+	if !ok {
+		return
+	}
+	var input struct {
+		ModelName string `json:"model_name"`
+	}
+	if err := decodeJSON(r, &input); err != nil {
+		apiresponse.Error(w, http.StatusBadRequest, "invalid JSON payload", map[string][]string{"body": {err.Error()}})
+		return
+	}
+	if strings.TrimSpace(input.ModelName) == "" {
+		apiresponse.Error(w, http.StatusBadRequest, "model_name is required", nil)
+		return
+	}
+	item, err := h.service.UpdateModelVersionName(r.Context(), id, input.ModelName)
+	if err != nil {
+		writeServiceError(w, err, nil)
+		return
+	}
+	apiresponse.Success(w, http.StatusOK, "model updated successfully", item)
+}
+
+func (h *Handler) DeleteModelVersion(w http.ResponseWriter, r *http.Request) {
+	id, ok := resourceID(w, r)
+	if !ok {
+		return
+	}
+	if err := h.service.DeleteModelVersion(r.Context(), id); err != nil {
+		writeServiceError(w, err, nil)
+		return
+	}
+	apiresponse.Success(w, http.StatusOK, "model deleted successfully", map[string]any{"id": id})
+}
+
 func (h *Handler) LatestModelMetrics(w http.ResponseWriter, r *http.Request) {
 	item, err := h.service.LatestModelMetrics(r.Context())
 	if err != nil {

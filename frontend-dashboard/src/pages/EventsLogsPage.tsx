@@ -1,15 +1,16 @@
-import { Bell, RefreshCw, RotateCcw, ScrollText, Search, ShieldAlert, Terminal } from "lucide-react"
+import { Bell, RotateCcw, ScrollText, Search, ShieldAlert, Terminal } from "lucide-react"
 import { useMemo, useState, type FormEvent, type ReactNode } from "react"
 
-import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/states/EmptyState"
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
+import { StatusBadge } from "@/components/status/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { type OperationalTab, useOperationalLogs } from "@/hooks/useOperationalLogs"
+import { getEventCategory } from "@/lib/events"
 import { formatDateTime } from "@/lib/format"
 import { controlClassName } from "@/lib/forms"
 import { cn } from "@/lib/utils"
@@ -51,17 +52,6 @@ export function EventsLogsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        actions={
-          <Button onClick={() => void workspace.refresh()} size="sm" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-4" />
-            Refresh
-          </Button>
-        }
-        description="Trace status events, Telegram delivery decisions, and operational evidence without leaving the monitoring dashboard."
-        title="Events & Logs"
-      />
-
       {workspace.error ? <ErrorState message={workspace.error} onRetry={() => void workspace.refresh()} title="Operational logs unavailable" /> : null}
 
       <Card className="overflow-hidden">
@@ -74,7 +64,12 @@ export function EventsLogsPage() {
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 aria-selected={tab === id}
-                className={cn("flex min-h-12 items-center gap-2 border-b px-4 py-3 text-left text-sm font-bold transition-colors last:border-b-0 hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:border-b-0 sm:border-r sm:last:border-r-0", tab === id && "bg-sidebar text-sidebar-foreground")}
+                className={cn(
+                  "flex min-h-12 items-center gap-2 border-b px-4 py-3 text-left text-sm font-bold transition-colors last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:border-b-0 sm:border-r sm:last:border-r-0",
+                  tab === id
+                    ? "bg-sidebar text-sidebar-foreground hover:bg-sidebar hover:text-sidebar-foreground"
+                    : "hover:bg-muted",
+                )}
                 key={id}
                 onClick={() => setTab(id)}
                 role="tab"
@@ -167,23 +162,65 @@ function OperationalTable({ items, tab }: { items: Array<AnomalyEvent | Notifica
 }
 
 function AnomalyTable({ items }: { items: AnomalyEvent[] }) {
-  return <RecordTable headings={["Detected", "Sensor", "Status", "Prediction", "Description"]} rows={items.map((item) => [formatDateTime(item.detected_at), item.sensor_code || "--", <RecordBadge key="status" label={item.status} tone={item.status} />, item.predicted_temperature === null ? "--" : `${item.predicted_temperature.toFixed(1)}°C`, item.description || "--"])} />
+  return <RecordTable columnClasses={["w-[15%]", "w-[8%]", "w-[13%]", "w-[13%]", "w-[13%]", "w-[38%]"]} headings={["Detected", "Sensor", "Event", "Condition", "Temperature", "Description"]} rows={items.map((item) => {
+    const category = getEventCategory(item.event_type, item.status)
+    return [formatDateTime(item.detected_at), item.sensor_code || (item.event_type === "gateway_trouble" ? "Gateway" : "--"), <EventBadge category={category} key="event" />, <StatusBadge key="status" status={item.status} />, eventTemperature(item), item.description || "--"]
+  })} />
+}
+
+function EventBadge({ category }: { category: ReturnType<typeof getEventCategory> }) {
+  const variant = category === "Alarm" ? "alarm" : category === "Pre-Alarm" ? "preAlarm" : category === "Trouble" ? "troubleStrong" : category === "Recovery" ? "normal" : "inactive"
+  return <Badge variant={variant}>{category}</Badge>
+}
+
+function eventTemperature(item: AnomalyEvent) {
+  const temperature = item.event_type === "actual_threshold" ? item.actual_temperature : item.predicted_temperature
+  if (typeof temperature !== "number") return "--"
+  return `${temperature.toFixed(1)}°C`
 }
 
 function NotificationTable({ items }: { items: NotificationLog[] }) {
-  return <RecordTable headings={["Created", "Channel", "Status", "Recipient", "Decision"]} rows={items.map((item) => [formatDateTime(item.created_at), item.channel, <RecordBadge key="status" label={item.status} tone={item.status} />, item.recipient || "--", item.error_message || item.message])} />
+  return <RecordTable columnClasses={["w-[16%]", "w-[10%]", "w-[12%]", "w-[18%]", "w-[44%]"]} headings={["Created", "Channel", "Status", "Recipient", "Decision"]} rows={items.map((item) => [formatDateTime(item.created_at), item.channel, <RecordBadge key="status" label={item.status} tone={item.status} />, item.recipient || "--", item.error_message || item.message])} />
 }
 
 function SystemLogTable({ items }: { items: SystemLog[] }) {
-  return <RecordTable headings={["Created", "Source", "Level", "Message", "Context"]} rows={items.map((item) => [formatDateTime(item.created_at), item.source, <RecordBadge key="level" label={item.level} tone={item.level} />, item.message, item.context ? JSON.stringify(item.context) : "--"])} />
+  return <RecordTable headings={["Created", "Source", "Level", "Message", "Context"]} rows={items.map((item) => [formatDateTime(item.created_at), item.source, <RecordBadge key="level" label={item.level} tone={item.level} />, item.message, item.context ? JSON.stringify(item.context) : "--"])} tableClassName="min-w-[760px] table-fixed text-left text-sm" />
 }
 
-function RecordTable({ headings, rows }: { headings: string[]; rows: ReactNode[][] }) {
+function RecordTable({
+  columnClasses,
+  headings,
+  rows,
+  tableClassName = "w-full min-w-[900px] table-fixed text-left text-sm",
+}: {
+  columnClasses?: string[]
+  headings: string[]
+  rows: ReactNode[][]
+  tableClassName?: string
+}) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-[760px] table-fixed text-left text-sm">
-        <thead><tr className="border-b text-xs uppercase tracking-[0.1em] text-muted-foreground">{headings.map((heading) => <th className="px-3 py-3" key={heading}>{heading}</th>)}</tr></thead>
-        <tbody>{rows.map((cells, rowIndex) => <tr className="border-b align-top last:border-0" key={rowIndex}>{cells.map((cell, index) => <td className="break-words px-3 py-3 leading-5" key={index}>{cell}</td>)}</tr>)}</tbody>
+      <table className={tableClassName}>
+        <thead>
+          <tr className="border-b text-xs uppercase tracking-[0.1em] text-muted-foreground">
+            {headings.map((heading, index) => (
+              <th className={cn("px-3 py-3", columnClasses?.[index])} key={heading}>
+                {heading}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((cells, rowIndex) => (
+            <tr className="border-b align-top last:border-0" key={rowIndex}>
+              {cells.map((cell, index) => (
+                <td className={cn("break-words px-3 py-3 leading-5", columnClasses?.[index])} key={index}>
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
       </table>
     </div>
   )

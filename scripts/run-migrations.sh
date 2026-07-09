@@ -10,5 +10,5 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 for migration in "${ROOT_DIR}"/backend-go/migrations/*.sql; do
   echo "Applying $(basename "${migration}")"
-  psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -f "${migration}"
+  psql -v ON_ERROR_STOP=1 -f "${migration}" "${DATABASE_URL}"
 done

@@ -11,6 +11,7 @@ interface LayoutCanvasProps {
   compact?: boolean
   disabled?: boolean
   onPositionChange?: (sensorCode: SensorCode, positionX: number, positionY: number) => void
+  onSensorSelect?: (sensorCode: SensorCode) => void
   selectedSensor?: SensorCode
 }
 
@@ -21,6 +22,7 @@ export function LayoutCanvas({
   compact = false,
   disabled = false,
   onPositionChange,
+  onSensorSelect,
   selectedSensor,
 }: LayoutCanvasProps) {
   const mapRef = useRef<HTMLDivElement>(null)
@@ -78,10 +80,12 @@ export function LayoutCanvas({
           compact={compact}
           device={device}
           disabled={disabled}
+          isActive={selectedSensor === device.sensor_code}
           key={device.sensor_code}
           onPointerDown={(event) => {
-            if (disabled || !onPositionChange) return
             event.stopPropagation()
+            if (disabled || !onPositionChange) return
+            onSensorSelect?.(device.sensor_code)
             event.currentTarget.setPointerCapture(event.pointerId)
             setDragging(device.sensor_code)
           }}
@@ -96,17 +100,19 @@ interface MarkerProps {
   compact: boolean
   device: LayoutDevice
   disabled: boolean
+  isActive: boolean
   onPointerDown: (event: PointerEvent<HTMLButtonElement>) => void
   position: Position
 }
 
-function Marker({ compact, device, disabled, onPointerDown, position }: MarkerProps) {
+function Marker({ compact, device, disabled, isActive, onPointerDown, position }: MarkerProps) {
   return (
     <button
       aria-label={`${device.sensor_code} ${device.sensor_role} marker. ${device.final_status}. Temperature ${formatMeasurement(device.temperature ?? undefined, "°C")}. Humidity ${formatMeasurement(device.humidity ?? undefined, "%")}.`}
       className={cn(
         "absolute -translate-x-1/2 -translate-y-1/2 rounded-md border bg-card text-left shadow-card transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         compact ? "px-2 py-1" : "min-w-32 px-3 py-2",
+        isActive && "border-primary",
         disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing",
       )}
       onClick={(event) => event.stopPropagation()}
