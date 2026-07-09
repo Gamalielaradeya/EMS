@@ -12,7 +12,8 @@ export function AppLayout() {
   const [eventRevision, setEventRevision] = useState(0)
   const handleSSEEvent = useCallback(() => {
     setEventRevision((revision) => revision + 1)
-    void refresh()
+    // Soft refresh keeps mounted summary content so page scroll does not jump.
+    void refresh("soft")
   }, [refresh])
   const sseStatus = useSSE(handleSSEEvent)
 
@@ -24,7 +25,7 @@ export function AppLayout() {
           hasApiError={Boolean(dashboard.error)}
           isLoading={dashboard.isLoading}
           lastUpdatedAt={dashboard.lastUpdatedAt}
-          onRefresh={() => void dashboard.refresh()}
+          onRefresh={() => void dashboard.refresh("hard")}
           sseStatus={sseStatus}
           summary={dashboard.summary}
         />

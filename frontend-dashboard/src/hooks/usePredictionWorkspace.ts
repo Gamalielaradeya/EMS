@@ -25,8 +25,12 @@ export function usePredictionWorkspace(eventRevision: number) {
   const [isLoading, setIsLoading] = useState(true)
   const [isActivating, setIsActivating] = useState(false)
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true)
+  const refresh = useCallback(async (mode: "hard" | "soft" = "hard") => {
+    // Soft SSE refresh must not flip isLoading while data already exists,
+    // or the page can flash empty/loading and jump scroll.
+    if (mode === "hard") {
+      setIsLoading(true)
+    }
     try {
       const [latest, history, models, metrics, comparison] = await Promise.all([
         api.getLatestPrediction(),
@@ -52,7 +56,7 @@ export function usePredictionWorkspace(eventRevision: number) {
     setIsActivating(true)
     try {
       await api.activateModelVersion(id)
-      await refresh()
+      await refresh("hard")
     } catch (requestError) {
       setError(
         requestError instanceof ApiError ? requestError.message : "Model activation failed.",
@@ -63,8 +67,8 @@ export function usePredictionWorkspace(eventRevision: number) {
   }, [refresh])
 
   useEffect(() => {
-    queueMicrotask(() => void refresh())
+    queueMicrotask(() => void refresh(eventRevision === 0 ? "hard" : "soft"))
   }, [eventRevision, refresh])
 
-  return { ...workspace, error, isActivating, isLoading, refresh, activate }
+  return { ...workspace, error, isActivating, isLoading, refresh: () => refresh("hard"), activate }
 }

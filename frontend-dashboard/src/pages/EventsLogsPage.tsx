@@ -212,7 +212,9 @@ function RecordTable({
         </thead>
         <tbody>
           {rows.map((cells, rowIndex) => (
-            <tr className="border-b align-top last:border-0" key={rowIndex}>
+            // Prefer stable first-cell text when available so soft SSE updates
+            // reuse DOM rows instead of remounting the whole table.
+            <tr className="border-b align-top last:border-0" key={rowKey(cells, rowIndex)}>
               {cells.map((cell, index) => (
                 <td className={cn("break-words px-3 py-3 leading-5", columnClasses?.[index])} key={index}>
                   {cell}
@@ -233,6 +235,14 @@ function RecordBadge({ label, tone }: { label: string; tone: string }) {
 
 function FilterField({ children, label }: { children: ReactNode; label: string }) {
   return <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}{children}</label>
+}
+
+function rowKey(cells: ReactNode[], rowIndex: number) {
+  const first = cells[0]
+  if (typeof first === "string" || typeof first === "number") {
+    return `${first}-${rowIndex}`
+  }
+  return rowIndex
 }
 
 function toApiFilters(values: FilterValues): OperationalLogFilters {

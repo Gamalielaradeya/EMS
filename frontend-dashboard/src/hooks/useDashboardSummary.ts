@@ -9,8 +9,11 @@ export function useDashboardSummary() {
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true)
+  const refresh = useCallback(async (mode: "hard" | "soft" = "hard") => {
+    // Keep existing summary mounted during SSE soft refresh to avoid layout jumps.
+    if (mode === "hard") {
+      setIsLoading(true)
+    }
     try {
       const data = await api.getDashboardSummary()
       setSummary(data)
