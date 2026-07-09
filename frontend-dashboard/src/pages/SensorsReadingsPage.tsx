@@ -10,6 +10,7 @@ import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
 import { StatusBadge } from "@/components/status/StatusBadge"
 import { Card, CardContent } from "@/components/ui/card"
+import { useAdminToken } from "@/hooks/useAdminToken"
 import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { useSensorReadings } from "@/hooks/useSensorReadings"
 import { formatDateTime } from "@/lib/format"
@@ -25,8 +26,20 @@ export function SensorsReadingsPage() {
   const [filters, setFilters] = useState<ReadingHistoryFilters>({ limit: 100 })
   const stableFilters = useMemo(() => filters, [filters])
   const { eventRevision, sseStatus, summary } = useDashboardContext()
-  const { sensors, latestReadings, history, activeLayout, meta, error, isLoading, refresh } =
-    useSensorReadings(stableFilters, eventRevision)
+  const { hasToken } = useAdminToken()
+  const {
+    sensors,
+    latestReadings,
+    history,
+    activeLayout,
+    meta,
+    error,
+    message,
+    isLoading,
+    isSaving,
+    refresh,
+    updateSensor,
+  } = useSensorReadings(stableFilters, eventRevision)
   const sensorPlacements = {
     S1: resolveSensorPlacement(activeLayout, "S1"),
     S2: resolveSensorPlacement(activeLayout, "S2"),
@@ -41,6 +54,11 @@ export function SensorsReadingsPage() {
           onRetry={() => void refresh()}
           title="Sensor API unavailable"
         />
+      ) : null}
+      {message ? (
+        <p className="rounded-md border border-normal/30 bg-normal-muted px-4 py-3 text-sm font-semibold text-normal">
+          {message}
+        </p>
       ) : null}
 
       <Card className="overflow-hidden bg-sidebar text-sidebar-foreground">
@@ -108,7 +126,15 @@ export function SensorsReadingsPage() {
             />
           </section>
 
-          <SensorMetadata placements={sensorPlacements} sensors={sensors} />
+          <SensorMetadata
+            canEdit={hasToken}
+            isSaving={isSaving}
+            onRename={async (sensorCode, name) => {
+              await updateSensor(sensorCode, { name })
+            }}
+            placements={sensorPlacements}
+            sensors={sensors}
+          />
           <ReadingsFilters filters={filters} onApply={setFilters} />
           <ReadingsTable meta={meta} readings={history} />
 

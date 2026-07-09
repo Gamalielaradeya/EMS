@@ -7,6 +7,7 @@ import type {
   ReadingHistoryMeta,
   Sensor,
   SensorReading,
+  SensorUpdateInput,
 } from "@/types/api"
 
 const emptyMeta: ReadingHistoryMeta = { total: 0, limit: 0, offset: 0 }
@@ -20,7 +21,9 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
   const [activeLayout, setActiveLayout] = useState<ActiveLayout | null>(null)
   const [meta, setMeta] = useState<ReadingHistoryMeta>(emptyMeta)
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
   const refresh = useCallback(async () => {
     setIsLoading(true)
@@ -39,6 +42,27 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
       setIsLoading(false)
     }
   }, [filters])
+
+  const updateSensor = useCallback(async (sensorCode: string, input: SensorUpdateInput) => {
+    setIsSaving(true)
+    setMessage(null)
+    try {
+      const updated = await api.updateSensor(sensorCode, input)
+      setSensors((current) =>
+        current.map((sensor) => (sensor.sensor_code === updated.sensor_code ? updated : sensor)),
+      )
+      setError(null)
+      setMessage(`${updated.sensor_code} metadata saved.`)
+      return updated
+    } catch (requestError) {
+      const nextError =
+        requestError instanceof ApiError ? requestError.message : "Sensor update failed."
+      setError(nextError)
+      throw requestError
+    } finally {
+      setIsSaving(false)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -65,7 +89,19 @@ export function useSensorReadings(filters: ReadingHistoryFilters, eventRevision 
     }
   }, [eventRevision, filters])
 
-  return { sensors, latestReadings, history, activeLayout, meta, error, isLoading, refresh }
+  return {
+    sensors,
+    latestReadings,
+    history,
+    activeLayout,
+    meta,
+    error,
+    message,
+    isLoading,
+    isSaving,
+    refresh,
+    updateSensor,
+  }
 }
 
 async function fetchSensorReadings(filters: ReadingHistoryFilters) {

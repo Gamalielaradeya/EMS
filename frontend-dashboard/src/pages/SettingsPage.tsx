@@ -9,6 +9,7 @@ import {
   KeyRound,
   LockKeyhole,
   LogOut,
+  RadioTower,
   RotateCcw,
   Save,
   Send,
@@ -20,13 +21,16 @@ import { type ReactNode, useEffect, useMemo, useState } from "react"
 
 import { ErrorState } from "@/components/states/ErrorState"
 import { LoadingState } from "@/components/states/LoadingState"
+import { StatusBadge } from "@/components/status/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAdminToken } from "@/hooks/useAdminToken"
+import { useDashboardContext } from "@/hooks/useDashboardContext"
 import { type SettingsDraft, useSettingsWorkspace } from "@/hooks/useSettingsWorkspace"
 import { controlClassName } from "@/lib/forms"
-import type { Setting } from "@/types/api"
+import { formatDateTime } from "@/lib/format"
+import type { GatewaySummary, Setting } from "@/types/api"
 
 const EMPTY_DRAFT: SettingsDraft = {
   normalMax: "",
@@ -49,6 +53,7 @@ const NON_SECRET_KEYS: (keyof SettingsDraft)[] = [
 
 export function SettingsPage() {
   const workspace = useSettingsWorkspace()
+  const { summary } = useDashboardContext()
   const { hasToken, saveToken, removeToken } = useAdminToken()
   const byKey = useMemo(
     () => new Map(workspace.settings.map((setting) => [setting.key, setting])),
@@ -245,6 +250,12 @@ export function SettingsPage() {
             <SectionLabel
               title="System Information (Read-only)"
               description="Current runtime and model configuration."
+            />
+            <GatewayLiveCard
+              gateway={summary?.gateway ?? null}
+              heartbeatSeconds={value(byKey, "gateway_heartbeat_interval_seconds")}
+              offlineCheckSeconds={value(byKey, "backend_offline_check_interval_seconds")}
+              configuredCode={value(byKey, "active_gateway_code")}
             />
             <InfoCard
               icon={Workflow}
@@ -446,6 +457,65 @@ function SettingsCard({
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
+  )
+}
+
+function GatewayLiveCard({
+  configuredCode,
+  gateway,
+  heartbeatSeconds,
+  offlineCheckSeconds,
+}: {
+  configuredCode: string
+  gateway: GatewaySummary | null
+  heartbeatSeconds: string
+  offlineCheckSeconds: string
+}) {
+  const code = gateway?.gateway_code || configuredCode || "—"
+  const status = gateway?.status || "inactive"
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <RadioTower aria-hidden="true" className="size-5 text-primary" />
+          <CardTitle>Gateway (live)</CardTitle>
+        </div>
+        <CardDescription>
+          Live status from dashboard summary. Gateway token stays masked and is managed by the backend.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <dl className="space-y-3">
+          <LiveRow label="Gateway code" value={code} />
+          <div className="flex items-center justify-between gap-4 border-b pb-3">
+            <dt className="text-sm text-muted-foreground">Status</dt>
+            <dd>
+              <StatusBadge status={status} />
+            </dd>
+          </div>
+          <LiveRow label="Last seen" value={formatDateTime(gateway?.last_seen_at)} />
+          <LiveRow
+            label="Heartbeat interval"
+            value={heartbeatSeconds ? `${heartbeatSeconds} s` : "—"}
+          />
+          <LiveRow
+            label="Offline check"
+            value={offlineCheckSeconds ? `${offlineCheckSeconds} s` : "—"}
+          />
+          <LiveRow label="Token" value="Masked (backend-managed)" />
+        </dl>
+      </CardContent>
+    </Card>
+  )
+}
+
+function LiveRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="text-right text-sm font-semibold tabular-nums text-foreground">{value}</dd>
+    </div>
   )
 }
 

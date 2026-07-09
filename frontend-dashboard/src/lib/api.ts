@@ -19,6 +19,7 @@ import type {
   PredictionHistoryResult,
   Sensor,
   SensorReading,
+  SensorUpdateInput,
   Setting,
   SystemLog,
 } from "@/types/api"
@@ -123,6 +124,12 @@ export const api = {
   getHealth: () => request<HealthSummary>("/health"),
   getDashboardSummary: () => request<DashboardSummary>("/dashboard/summary"),
   getSensors: () => request<Sensor[]>("/sensors"),
+  updateSensor: (sensorCode: string, input: SensorUpdateInput) =>
+    request<Sensor>(`/sensors/${sensorCode}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify(input),
+    }),
   getLatestReadings: () =>
     request<Partial<Record<"S1" | "S2", SensorReading>>>("/readings/latest"),
   getReadingHistory: async (filters: ReadingHistoryFilters): Promise<ReadingHistoryResult> => {

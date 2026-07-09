@@ -196,11 +196,27 @@ function BaselineComparison({ comparison }: { comparison: ReturnType<typeof useP
         {!comparison ? (
           <EmptyState description="Comparison appears after active-model metrics exist." icon={Activity} title="No comparison yet" />
         ) : (
-          <div className="space-y-3 text-sm">
-            <ComparisonRow label="LSTM" rmse={comparison.lstm.rmse} />
-            {comparison.baselines.map((baseline) => (
-              <ComparisonRow key={baseline.baseline_type} label={baseline.baseline_type.replace("_", " ")} rmse={baseline.rmse} />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[20rem] text-left text-sm">
+              <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-2 font-bold">Model</th>
+                  <th className="px-2 py-2 text-right font-bold">RMSE</th>
+                  <th className="px-2 py-2 text-right font-bold">MAE</th>
+                  <th className="px-2 py-2 text-right font-bold">MAPE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ComparisonRow label="LSTM" metrics={comparison.lstm} />
+                {comparison.baselines.map((baseline) => (
+                  <ComparisonRow
+                    key={baseline.baseline_type}
+                    label={baseline.baseline_type.replace("_", " ")}
+                    metrics={baseline}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
@@ -208,12 +224,20 @@ function BaselineComparison({ comparison }: { comparison: ReturnType<typeof useP
   )
 }
 
-function ComparisonRow({ label, rmse }: { label: string; rmse: number }) {
+function ComparisonRow({
+  label,
+  metrics,
+}: {
+  label: string
+  metrics: { rmse: number; mae: number; mape: number }
+}) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border bg-muted px-3 py-2">
-      <span className="capitalize text-muted-foreground">{label}</span>
-      <span className="font-mono text-sm font-bold">{rmse.toFixed(2)} RMSE</span>
-    </div>
+    <tr className="border-b last:border-0">
+      <td className="px-2 py-2.5 capitalize text-muted-foreground">{label}</td>
+      <td className="px-2 py-2.5 text-right font-mono text-sm font-bold">{metrics.rmse.toFixed(2)}</td>
+      <td className="px-2 py-2.5 text-right font-mono text-sm font-bold">{metrics.mae.toFixed(2)}</td>
+      <td className="px-2 py-2.5 text-right font-mono text-sm font-bold">{metrics.mape.toFixed(2)}%</td>
+    </tr>
   )
 }
 

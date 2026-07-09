@@ -126,6 +126,13 @@ export interface Sensor {
   updated_at: string
 }
 
+/** Editable sensor fields for PUT /sensors/{sensorCode}. */
+export interface SensorUpdateInput {
+  name?: string
+  location?: string | null
+  modbus_slave_id?: number | null
+}
+
 export interface SensorReading {
   id: number
   gateway_id: string
