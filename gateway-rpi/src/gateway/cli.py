@@ -52,7 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
     simulate_parser.add_argument("--interval", type=float, default=10.0, help="send interval in seconds")
     simulate_parser.add_argument("--duration", default="30m", help="duration, for example 300s, 30m, 1h, or forever")
     simulate_parser.add_argument("--seed", type=int, default=42)
-    simulate_parser.add_argument("--drop-sensor", choices=("S1", "S2"), help="omit one sensor after --drop-after")
+    simulate_parser.add_argument(
+        "--drop-sensor",
+        choices=("S1", "S2", "alternate"),
+        help="omit S1, S2, or alternate between them after --drop-after",
+    )
     simulate_parser.add_argument("--drop-after", default="0s", help="when to start dropping --drop-sensor")
     simulate_parser.add_argument("--drop-for", help="cycle mode: how long to omit --drop-sensor each cycle")
     simulate_parser.add_argument("--recover-for", help="cycle mode: how long to restore --drop-sensor each cycle")

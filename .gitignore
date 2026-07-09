@@ -9,6 +9,7 @@ config.yaml
 failed_payloads.jsonl
 uploads/
 backups/
+.runtime/
 
 # Python
 __pycache__/

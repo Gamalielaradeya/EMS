@@ -46,7 +46,7 @@ export function SensorWorkspaceCard({
           />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
-          <Badge variant="info">{reading?.quality_status || "no reading"}</Badge>
+          <Badge variant="info">{readingSourceLabel(reading?.source)}</Badge>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <MapPin aria-hidden="true" className="size-3.5" />
             {placement}
@@ -60,6 +60,14 @@ export function SensorWorkspaceCard({
       </CardContent>
     </Card>
   )
+}
+
+function readingSourceLabel(source?: string) {
+  if (!source) return "No source"
+  if (source === "simulator") return "Simulator"
+  if (source === "hardware") return "Hardware"
+  if (source === "replay") return "Replay"
+  return source
 }
 
 interface MeasurementProps {

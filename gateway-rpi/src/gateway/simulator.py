@@ -68,13 +68,16 @@ class SmoothThermalSimulator:
             SensorReading("S1", "ambient", round(self._s1_temperature, 2), round(self._s1_humidity, 2)),
             SensorReading("S2", "hotspot", round(self._s2_temperature, 2), round(self._s2_humidity, 2)),
         ]
-        readings = self._apply_drop_sensor(readings)
+        dropped_sensor = self._active_drop_sensor()
+        if dropped_sensor:
+            readings = [reading for reading in readings if reading.sensor_code != dropped_sensor]
         metadata = {
             "elapsed_seconds": round(self._elapsed, 3),
             "segment": segment.name,
             "target_s1": segment.target_s1,
             "target_s2": segment.target_s2,
             "readings_count": len(readings),
+            "dropped_sensor": dropped_sensor,
         }
         self._advance()
         return readings, metadata
@@ -90,28 +93,30 @@ class SmoothThermalSimulator:
             self._segment_start_s1 = self._s1_temperature
             self._segment_start_s2 = self._s2_temperature
 
-    def _apply_drop_sensor(self, readings: list[SensorReading]) -> list[SensorReading]:
+    def _active_drop_sensor(self) -> str | None:
         if not self._options.drop_sensor or self._options.drop_after_seconds is None:
-            return readings
+            return None
         if self._elapsed < self._options.drop_after_seconds:
-            return readings
-        if not self._drop_active():
-            return readings
-        dropped = self._options.drop_sensor.upper()
-        return [reading for reading in readings if reading.sensor_code != dropped]
-
-    def _drop_active(self) -> bool:
+            return None
+        configured = self._options.drop_sensor.upper()
         if self._options.drop_for_seconds is None and self._options.recover_for_seconds is None:
-            return True
+            if configured == "ALTERNATE":
+                raise ValueError("alternating drop requires drop_for_seconds and recover_for_seconds")
+            return configured
         if not self._options.drop_for_seconds or not self._options.recover_for_seconds:
             raise ValueError("drop cycle requires both drop_for_seconds and recover_for_seconds")
         if self._options.drop_for_seconds <= 0 or self._options.recover_for_seconds <= 0:
             raise ValueError("drop_for_seconds and recover_for_seconds must be positive")
 
-        cycle_elapsed = (self._elapsed - (self._options.drop_after_seconds or 0.0)) % (
-            self._options.drop_for_seconds + self._options.recover_for_seconds
-        )
-        return cycle_elapsed < self._options.drop_for_seconds
+        elapsed = self._elapsed - (self._options.drop_after_seconds or 0.0)
+        cycle_seconds = self._options.drop_for_seconds + self._options.recover_for_seconds
+        cycle_index = int(elapsed // cycle_seconds)
+        cycle_elapsed = elapsed % cycle_seconds
+        if cycle_elapsed >= self._options.drop_for_seconds:
+            return None
+        if configured == "ALTERNATE":
+            return "S1" if cycle_index % 2 == 0 else "S2"
+        return configured
 
     def _build_segments(self, scenario: str) -> list[Segment]:
         if scenario == "normal":
@@ -126,10 +131,15 @@ class SmoothThermalSimulator:
         if scenario != "random-smooth":
             raise ValueError("scenario must be random-smooth, heat-cycle, or normal")
 
-        segments: list[Segment] = [Segment("normal_stable", self._rng.uniform(120, 240), 27.8, 28.4)]
+        segments: list[Segment] = [Segment("normal_stable", self._rng.uniform(30, 60), 27.8, 28.4)]
+        impact_cycle = ["both"]
         target_duration = self._options.duration_seconds or 86400
         while sum(segment.seconds for segment in segments) < target_duration + 300:
-            peak_s1, peak_s2, impact = self._random_heat_targets()
+            if not impact_cycle:
+                impact_cycle = ["s1_only", "s2_only", "both"]
+                self._rng.shuffle(impact_cycle)
+            impact = impact_cycle.pop(0)
+            peak_s1, peak_s2 = self._random_heat_targets(impact)
             recovery_s1 = self._rng.uniform(27.6, 28.5)
             recovery_s2 = self._rng.uniform(28.1, 29.0)
             segments.extend(
@@ -157,14 +167,13 @@ class SmoothThermalSimulator:
             )
         return segments
 
-    def _random_heat_targets(self) -> tuple[float, float, str]:
-        impact = self._rng.choices(("s2_only", "s1_only", "both"), weights=(0.55, 0.20, 0.25), k=1)[0]
+    def _random_heat_targets(self, impact: str) -> tuple[float, float]:
         if impact == "s1_only":
-            return self._rng.uniform(30.1, 31.6), self._rng.uniform(28.4, 29.4), impact
+            return self._rng.uniform(30.1, 31.6), self._rng.uniform(28.4, 29.4)
         if impact == "both":
             base_peak = self._rng.uniform(30.1, 32.4)
-            return base_peak + self._rng.uniform(-0.4, 0.4), base_peak + self._rng.uniform(0.2, 1.2), impact
-        return self._rng.uniform(27.7, 28.7), self._rng.uniform(30.2, 33.4), impact
+            return base_peak + self._rng.uniform(-0.4, 0.4), base_peak + self._rng.uniform(0.2, 1.2)
+        return self._rng.uniform(27.7, 28.7), self._rng.uniform(30.2, 33.4)
 
 
 def run_simulator(

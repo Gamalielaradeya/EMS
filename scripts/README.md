@@ -19,3 +19,17 @@ Docker PowerShell usage from the repository root:
 docker compose up -d postgres
 ./scripts/run-migrations-docker.ps1
 ```
+
+Local runtime services:
+
+```powershell
+./scripts/dev-services.ps1 start
+./scripts/dev-services.ps1 status
+./scripts/dev-services.ps1 stop
+```
+
+`start` builds and launches the backend, ML infer-loop, and continuous
+random-smooth simulator with separate logs under `.runtime/logs`. Use
+`start -TroubleCycle` keeps random-smooth thermal changes active while cycling
+S1 Trouble/Recovery and then S2 Trouble/Recovery. Each drop lasts 330 seconds,
+long enough to cross the default five-minute backend timeout.

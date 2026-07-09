@@ -1,5 +1,5 @@
 import { AlertTriangle, BrainCircuit, MapPinned, Wifi, type LucideIcon } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { MonitoringBottomSheet } from "@/components/dashboard/MonitoringBottomSheet"
 import { FloorplanMonitoringMap } from "@/components/layout-map/FloorplanMonitoringMap"
@@ -22,17 +22,13 @@ export function DashboardPage() {
   const predictionThermalStatus = summary?.prediction_thermal_status
   const activeEvents = useActiveDashboardEvents(summary)
   const [focusedEventId, setFocusedEventId] = useState<number | null>(null)
-  const focusedEvent = activeEvents.find((event) => event.id === focusedEventId) ?? activeEvents[0] ?? null
+  const resolvedFocusedEventId = activeEvents.some((event) => event.id === focusedEventId)
+    ? focusedEventId
+    : activeEvents[0]?.id ?? null
+  const focusedEvent =
+    activeEvents.find((event) => event.id === resolvedFocusedEventId) ?? null
   const focusedSensorCode = sensorCodeFromEvent(focusedEvent)
   const focusedEventTone = focusedEvent ? eventToneFromEvent(focusedEvent) : null
-
-  useEffect(() => {
-    if (activeEvents.length === 0) {
-      setFocusedEventId(null)
-      return
-    }
-    setFocusedEventId((current) => activeEvents.some((event) => event.id === current) ? current : activeEvents[0].id)
-  }, [activeEvents])
 
   return (
     <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8">
@@ -88,7 +84,7 @@ export function DashboardPage() {
         ) : null}
 
         <MonitoringBottomSheet
-          focusedEventId={focusedEventId}
+          focusedEventId={resolvedFocusedEventId}
           historyError={history.error}
           historyIsLoading={history.isLoading}
           onFocusEvent={setFocusedEventId}
@@ -175,8 +171,7 @@ function GlassMetric({ detail, icon: Icon, label, status, value }: { detail: str
 function useActiveDashboardEvents(summary: DashboardSummary | null) {
   return useMemo(() => {
     const activePreAlarm = summary?.active_pre_alarm
-    const now = Date.now()
-    const preAlarmEvent: DashboardEvent | null = activePreAlarm && new Date(activePreAlarm.predicted_for).getTime() > now
+    const preAlarmEvent: DashboardEvent | null = activePreAlarm
       ? {
           id: -activePreAlarm.id,
           sensor_code: activePreAlarm.target_sensor,

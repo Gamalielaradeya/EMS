@@ -34,6 +34,7 @@ export function FloorplanMonitoringMap({ activeLayout, className, focusedEventTo
   const sourceImageUrl = useMemo(() => {
     return activeLayout ? resolveApiAssetUrl(activeLayout.layout.image_url) : null
   }, [activeLayout])
+  const layoutName = activeLayout?.layout.name
 
   useEffect(() => {
     if (!sourceImageUrl) {
@@ -59,7 +60,7 @@ export function FloorplanMonitoringMap({ activeLayout, className, focusedEventTo
 
   useEffect(() => {
     const container = mapContainerRef.current
-    if (!container || !activeLayout || !preparedImage || preparedImage.sourceUrl !== sourceImageUrl) return
+    if (!container || !layoutName || !preparedImage || preparedImage.sourceUrl !== sourceImageUrl) return
 
     const bounds: LatLngBoundsExpression = [[0, 0], [dimensions.height, dimensions.width]]
     const map = L.map(container, {
@@ -74,7 +75,7 @@ export function FloorplanMonitoringMap({ activeLayout, className, focusedEventTo
     })
 
     L.imageOverlay(preparedImage.url, bounds, {
-      alt: `${activeLayout.layout.name} dark floorplan`,
+      alt: `${layoutName} dark floorplan`,
       className: "ems-floorplan-image-overlay",
       interactive: false,
     }).addTo(map)
@@ -88,7 +89,7 @@ export function FloorplanMonitoringMap({ activeLayout, className, focusedEventTo
       lastFocusRef.current = null
       map.remove()
     }
-  }, [activeLayout?.layout.name, dimensions.height, dimensions.width, preparedImage, sourceImageUrl])
+  }, [dimensions.height, dimensions.width, layoutName, preparedImage, sourceImageUrl])
 
   useEffect(() => {
     const map = mapRef.current

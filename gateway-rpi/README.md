@@ -141,6 +141,9 @@ Gateway heartbeat/status reports are separate from readings and default to every
 `simulate` sends smooth S1/S2 readings to the backend as `source=simulator`.
 It does not read Modbus and should not run at the same time as the hardware
 gateway, otherwise dashboard/latest status will mix hardware and simulator rows.
+The `random-smooth` scenario starts with a joint S1/S2 heat episode after a
+30-60 second stable period, then rotates shuffled S1-only, S2-only, and joint
+episodes.
 
 Examples:
 
@@ -151,6 +154,7 @@ python -m gateway.cli simulate --scenario normal --duration 10m
 python -m gateway.cli simulate --scenario random-smooth --duration forever
 python -m gateway.cli simulate --scenario random-smooth --duration 10m --drop-sensor S2 --drop-after 2m
 python -m gateway.cli simulate --scenario random-smooth --duration forever --drop-sensor S2 --drop-after 30s --drop-for 90s --recover-for 120s
+python -m gateway.cli simulate --scenario random-smooth --duration forever --drop-sensor alternate --drop-after 60s --drop-for 330s --recover-for 120s
 ```
 
 Use it for frontend/backend/SSE/event/Telegram behavior tests. Do not use
@@ -158,7 +162,9 @@ simulator rows as thesis hardware evidence or as validation/test data for ML.
 
 For repeated Trouble/Recovery testing, use `--drop-for` and `--recover-for`.
 Without those two options, `--drop-sensor` keeps the selected sensor omitted
-after `--drop-after`.
+after `--drop-after`. The `alternate` mode cycles S1 drop, recovery, S2 drop,
+and recovery. Use a drop duration longer than `sensor_timeout_minutes` to create
+real backend Trouble events.
 
 Runtime files default to:
 

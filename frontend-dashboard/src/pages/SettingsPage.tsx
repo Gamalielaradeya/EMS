@@ -73,7 +73,13 @@ export function SettingsPage() {
 
   // Reseed the draft whenever a fresh settings snapshot arrives (load or post-save refresh).
   useEffect(() => {
-    setDraft(baseline)
+    let active = true
+    queueMicrotask(() => {
+      if (active) setDraft(baseline)
+    })
+    return () => {
+      active = false
+    }
   }, [baseline])
 
   const set = <K extends keyof SettingsDraft>(key: K, val: SettingsDraft[K]) =>

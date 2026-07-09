@@ -38,6 +38,12 @@ class SimulatorTests(unittest.TestCase):
         self.assertTrue(any(name.startswith("s2_only_") for name in segment_names))
         self.assertTrue(any(name.startswith("both_") for name in segment_names))
 
+    def test_random_smooth_starts_with_joint_heat_after_stable_period(self) -> None:
+        simulator = SmoothThermalSimulator(SimulatorOptions(duration_seconds=7200, interval_seconds=10, seed=42))
+
+        self.assertEqual(simulator._segments[0].name, "normal_stable")  # noqa: SLF001
+        self.assertTrue(simulator._segments[1].name.startswith("both_"))  # noqa: SLF001
+
     def test_drop_sensor_omits_sensor_after_configured_time(self) -> None:
         simulator = SmoothThermalSimulator(
             SimulatorOptions(duration_seconds=120, interval_seconds=10, drop_sensor="S2", drop_after_seconds=10)
@@ -71,6 +77,31 @@ class SimulatorTests(unittest.TestCase):
         self.assertEqual(sensor_sets[5], {"S1", "S2"})
         self.assertEqual(sensor_sets[6], {"S1"})
         self.assertEqual(sensor_sets[7], {"S1"})
+
+    def test_alternating_drop_cycles_s1_then_s2(self) -> None:
+        simulator = SmoothThermalSimulator(
+            SimulatorOptions(
+                duration_seconds=120,
+                interval_seconds=10,
+                drop_sensor="alternate",
+                drop_after_seconds=10,
+                drop_for_seconds=20,
+                recover_for_seconds=30,
+            )
+        )
+        sensor_sets = []
+        dropped_sensors = []
+        for _ in range(8):
+            readings, metadata = simulator.next_readings()
+            sensor_sets.append({reading.sensor_code for reading in readings})
+            dropped_sensors.append(metadata["dropped_sensor"])
+
+        self.assertEqual(sensor_sets[0], {"S1", "S2"})
+        self.assertEqual(sensor_sets[1:3], [{"S2"}, {"S2"}])
+        self.assertEqual(sensor_sets[3:6], [{"S1", "S2"}] * 3)
+        self.assertEqual(sensor_sets[6:8], [{"S1"}, {"S1"}])
+        self.assertEqual(dropped_sensors[1:3], ["S1", "S1"])
+        self.assertEqual(dropped_sensors[6:8], ["S2", "S2"])
 
     def test_duration_parser(self) -> None:
         self.assertEqual(duration_to_seconds("10s"), 10)
