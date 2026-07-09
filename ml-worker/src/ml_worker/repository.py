@@ -174,7 +174,7 @@ def get_model_version(connection: Connection, version: str | None = None) -> dic
         query += " WHERE version = %s ORDER BY trained_at DESC NULLS LAST, id DESC LIMIT 1"
         params = (version,)
     else:
-        query += " ORDER BY is_active DESC, trained_at DESC NULLS LAST, id DESC LIMIT 1"
+        query += " WHERE is_active = TRUE ORDER BY trained_at DESC NULLS LAST, id DESC LIMIT 1"
     with connection.cursor() as cursor:
         cursor.execute(query, params)
         row = cursor.fetchone()

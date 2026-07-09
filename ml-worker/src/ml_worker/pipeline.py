@@ -55,10 +55,10 @@ def train(
             )
         split = chronological_split(prepared, settings)
         scaled = scale_split(split)
-        train_x, train_y = build_windows(scaled.train, settings.window_size)
-        validation_x, validation_y = build_windows(scaled.validation, settings.window_size)
-        test_x, _ = build_windows(scaled.test, settings.window_size)
-        raw_test_x, raw_test_y = build_windows(split.test, settings.window_size)
+        train_x, train_y = _build_windows(scaled.train, settings)
+        validation_x, validation_y = _build_windows(scaled.validation, settings)
+        test_x, _ = _build_windows(scaled.test, settings)
+        raw_test_x, raw_test_y = _build_windows(split.test, settings)
         baselines = evaluate_baselines(raw_test_x, raw_test_y, settings.moving_average_window)
 
         tf = tensorflow()
@@ -212,8 +212,8 @@ def train_augmented(
         synthetic = load_synthetic_training_csv(synthetic_path, settings)
         scaled = scale_augmented_data(split, synthetic)
 
-        real_train_x, real_train_y = build_windows(scaled.real.train, settings.window_size)
-        synthetic_x, synthetic_y = build_windows(scaled.synthetic, settings.window_size)
+        real_train_x, real_train_y = _build_windows(scaled.real.train, settings)
+        synthetic_x, synthetic_y = _build_windows(scaled.synthetic, settings)
         train_x, train_y, augmentation = combine_training_windows(
             real_train_x,
             real_train_y,
@@ -222,9 +222,9 @@ def train_augmented(
             max_synthetic_ratio,
             seed,
         )
-        validation_x, validation_y = build_windows(scaled.real.validation, settings.window_size)
-        test_x, _ = build_windows(scaled.real.test, settings.window_size)
-        raw_test_x, raw_test_y = build_windows(split.test, settings.window_size)
+        validation_x, validation_y = _build_windows(scaled.real.validation, settings)
+        test_x, _ = _build_windows(scaled.real.test, settings)
+        raw_test_x, raw_test_y = _build_windows(split.test, settings)
         baselines = evaluate_baselines(raw_test_x, raw_test_y, settings.moving_average_window)
 
         tf = tensorflow()
@@ -352,8 +352,8 @@ def evaluate(
         )
         transformed_test.loc[:, FEATURE_COLUMNS] = feature_scaler.transform(split.test.loc[:, FEATURE_COLUMNS])
         transformed_test.loc[:, [TARGET_COLUMN]] = target_scaler.transform(split.test.loc[:, [TARGET_COLUMN]])
-        test_x, _ = build_windows(transformed_test, settings.window_size)
-        raw_test_x, raw_test_y = build_windows(split.test, settings.window_size)
+        test_x, _ = _build_windows(transformed_test, settings)
+        raw_test_x, raw_test_y = _build_windows(split.test, settings)
         predicted = target_scaler.inverse_transform(
             load_model(model_version["model_path"]).predict(test_x, verbose=0)
         ).reshape(-1)
@@ -390,7 +390,11 @@ def infer(
         target_scaler = joblib.load(model_version["target_scaler_path"])
         scaled_features = features.astype({column: "float64" for column in FEATURE_COLUMNS})
         scaled_features.loc[:, FEATURE_COLUMNS] = feature_scaler.transform(features.loc[:, FEATURE_COLUMNS])
-        window = latest_window(scaled_features, settings.window_size)
+        window = latest_window(
+            scaled_features,
+            settings.window_size,
+            settings.resample_interval_seconds,
+        )
         prediction = float(
             target_scaler.inverse_transform(
                 load_model(model_version["model_path"]).predict(window, verbose=0)
@@ -459,13 +463,22 @@ def _display_model_name(settings: Settings, version: str) -> str:
 def _require_model_version(connection: Connection, version: str | None) -> dict[str, Any]:
     model_version = get_model_version(connection, version)
     if not model_version:
-        requested = f" version {version}" if version else ""
-        raise MLWorkerError(f"No trained model{requested} exists in model_versions.")
+        if version:
+            raise MLWorkerError(f"No trained model version {version} exists in model_versions.")
+        raise MLWorkerError("No active model exists in model_versions.")
     return model_version
 
 
 def _split_sizes(split: Any) -> tuple[int, int, int]:
     return len(split.train), len(split.validation), len(split.test)
+
+
+def _build_windows(frame: Any, settings: Settings) -> tuple[Any, Any]:
+    return build_windows(
+        frame,
+        settings.window_size,
+        settings.resample_interval_seconds,
+    )
 
 
 def _record_failure(connection: Connection, run_id: int, operation: str, exc: Exception) -> None:

@@ -30,7 +30,6 @@ func New(handler *handler.Handler, tokenValidator interface {
 
 		router.Get("/sensors", handler.ListSensors)
 		router.Get("/sensors/{sensorCode}", handler.GetSensor)
-		router.Put("/sensors/{sensorCode}", handler.UpdateSensor)
 		router.Get("/readings/latest", handler.LatestReadings)
 		router.Get("/readings/history", handler.ReadingHistory)
 		router.Get("/predictions/latest", handler.LatestPrediction)
@@ -49,6 +48,7 @@ func New(handler *handler.Handler, tokenValidator interface {
 		router.Group(func(router chi.Router) {
 			router.Use(middleware.AdminOrInternalBearerAuth(adminToken, internalAPIToken))
 			router.Post("/ml/predictions", handler.InsertPrediction)
+			router.Put("/sensors/{sensorCode}", handler.UpdateSensor)
 			router.Put("/model-versions/{id}/activate", handler.ActivateModelVersion)
 			router.Put("/model-versions/{id}", handler.UpdateModelVersion)
 			router.Delete("/model-versions/{id}", handler.DeleteModelVersion)

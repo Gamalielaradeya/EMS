@@ -41,12 +41,13 @@ def load_synthetic_training_csv(path: Path, settings: Settings) -> pd.DataFrame:
         & prepared["humidity_s1"].between(0, 100)
         & prepared["humidity_s2"].between(0, 100)
     ]
-    horizon_steps = (settings.horizon_minutes * 60) // settings.resample_interval_seconds
-    prepared[TARGET_COLUMN] = prepared["temperature_s2"].shift(-horizon_steps)
-    prepared = prepared.dropna(subset=[TARGET_COLUMN])
-    if len(prepared) <= settings.window_size:
+    horizon = pd.Timedelta(minutes=settings.horizon_minutes)
+    future_target = prepared["temperature_s2"].rename(TARGET_COLUMN).copy()
+    future_target.index = future_target.index - horizon
+    prepared = prepared.join(future_target, how="inner").dropna(subset=[TARGET_COLUMN])
+    if len(prepared) < settings.window_size:
         raise InsufficientDataError(
-            f"Synthetic CSV needs more than {settings.window_size} usable target rows; received {len(prepared)}."
+            f"Synthetic CSV needs at least {settings.window_size} usable target rows; received {len(prepared)}."
         )
     return prepared
 

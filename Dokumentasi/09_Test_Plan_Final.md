@@ -1206,6 +1206,18 @@ Verifikasi Alarm/Trouble hilang dari bottom sheet setelah Recovery, sedangkan ev
 
 Verifikasi marker S1 dan S2 serta card Sensors & Readings mengikuti status suhu aktual yang sama dengan dashboard; trouble hanya muncul ketika health bermasalah, dan Pre-Alarm tidak mengubah warna perangkat.
 
+Verifikasi korektif pipeline dan backend:
+
+1. Gap lebih dari batas interpolasi tidak boleh menghasilkan window yang
+   melompati timestamp atau target selain tepat `t+5 menit`.
+2. Target train tidak boleh berada pada periode validation dan target
+   validation tidak boleh berada pada periode test.
+3. Inference tanpa `--version` harus gagal jika tidak ada model aktif.
+4. `PUT /api/v1/sensors/{sensorCode}` tanpa admin/internal token menghasilkan
+   `401`.
+5. Prediction non-stale dengan `final_status = trouble` disimpan tanpa membuat
+   event atau Telegram Pre-Alarm.
+
 ---
 
 ## 22. Early-Warning Validation Addendum

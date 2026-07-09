@@ -55,15 +55,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="maximum allowed LSTM MAE/RMSE ratio versus the best baseline (default: 1.0)",
     )
 
-    infer_parser = subparsers.add_parser("infer", help="produce one local prediction from the active/latest model")
-    infer_parser.add_argument("--version", help="specific model version; defaults to active or latest")
+    infer_parser = subparsers.add_parser("infer", help="produce one local prediction from the active model")
+    infer_parser.add_argument("--version", help="specific model version; defaults to the active model")
     infer_parser.add_argument("--end", help="ISO-8601 end timestamp; defaults to now")
 
     infer_loop_parser = subparsers.add_parser(
         "infer-loop",
         help="run periodic active-model inference and submit each prediction to the backend",
     )
-    infer_loop_parser.add_argument("--version", help="specific model version; defaults to active or latest")
+    infer_loop_parser.add_argument("--version", help="specific model version; defaults to the active model")
 
     synthetic_parser = subparsers.add_parser(
         "generate-synthetic",

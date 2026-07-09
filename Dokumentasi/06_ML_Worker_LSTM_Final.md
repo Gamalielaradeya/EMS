@@ -1143,3 +1143,24 @@ Command membagi data hardware secara kronologis terlebih dahulu. Window sintetis
 hanya ditambahkan ke training dan dibatasi maksimal 30% secara default.
 Validation, test, dan perhitungan baseline tetap 100% hardware. Kandidat hasil
 training selalu disimpan inactive dan memerlukan review sebelum aktivasi.
+
+---
+
+## 37. Corrective Rules - Time-Series Integrity
+
+Aturan berikut mengikat pipeline training, evaluation, dan inference:
+
+1. `future_temperature_s2` harus diambil dari timestamp tepat `t+5 menit`,
+   bukan lima posisi baris berikutnya.
+2. Window 30 langkah hanya valid jika seluruh timestamp berjarak tepat sesuai
+   `resample_interval_seconds`.
+3. Window yang melintasi gap data wajib dibuang.
+4. Baris train yang targetnya masuk periode validation wajib dipurge.
+5. Baris validation yang targetnya masuk periode test wajib dipurge.
+6. Input window berakhir pada timestamp `t` dan labelnya adalah suhu S2 pada
+   timestamp `t+5 menit`.
+7. Inference tanpa `--version` wajib memakai model dengan `is_active = TRUE`;
+   jika tidak ada model aktif, inference harus gagal dengan pesan jelas.
+8. Prediction dengan `final_status = trouble` tetap disimpan tetapi tidak
+   membuat event atau Telegram Pre-Alarm. Trouble berasal dari kesehatan
+   sensor/gateway.

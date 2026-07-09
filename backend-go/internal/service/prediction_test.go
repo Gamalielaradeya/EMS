@@ -62,3 +62,39 @@ func TestSeverityForStatus(t *testing.T) {
 		t.Fatal("status severity mapping is incorrect")
 	}
 }
+
+func TestPredictionTransitionEligibility(t *testing.T) {
+	tests := []struct {
+		name       string
+		prediction model.Prediction
+		expected   bool
+	}{
+		{
+			name:       "fresh thermal warning",
+			prediction: model.Prediction{FinalStatus: "waspada"},
+			expected:   true,
+		},
+		{
+			name:       "fresh thermal recovery",
+			prediction: model.Prediction{FinalStatus: "normal"},
+			expected:   true,
+		},
+		{
+			name:       "stale prediction",
+			prediction: model.Prediction{FinalStatus: "waspada", IsStale: true},
+			expected:   false,
+		},
+		{
+			name:       "sensor or gateway trouble",
+			prediction: model.Prediction{FinalStatus: "trouble"},
+			expected:   false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if actual := predictionTransitionEligible(test.prediction); actual != test.expected {
+				t.Fatalf("expected %t, got %t", test.expected, actual)
+			}
+		})
+	}
+}

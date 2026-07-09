@@ -49,10 +49,10 @@ class ScaledSplit:
 
 def prepare_training_dataset(raw: pd.DataFrame, settings: Settings) -> tuple[pd.DataFrame, ResampleStats]:
     features, stats = prepare_feature_dataset(raw, settings)
-    horizon_steps = (settings.horizon_minutes * 60) // settings.resample_interval_seconds
-    prepared = features.copy()
-    prepared[TARGET_COLUMN] = prepared["temperature_s2"].shift(-horizon_steps)
-    prepared = prepared.dropna(subset=[TARGET_COLUMN])
+    horizon = pd.Timedelta(minutes=settings.horizon_minutes)
+    future_target = features["temperature_s2"].rename(TARGET_COLUMN).copy()
+    future_target.index = future_target.index - horizon
+    prepared = features.join(future_target, how="inner").dropna(subset=[TARGET_COLUMN])
     if prepared.empty:
         raise InsufficientDataError("No rows remain after creating the future S2 target.")
     return prepared, stats
@@ -118,12 +118,23 @@ def chronological_split(frame: pd.DataFrame, settings: Settings) -> Chronologica
     row_count = len(frame)
     train_end = int(row_count * settings.train_ratio)
     validation_end = train_end + int(row_count * settings.validation_ratio)
+    validation_start_at = frame.index[train_end]
+    test_start_at = frame.index[validation_end]
+    horizon = pd.Timedelta(minutes=settings.horizon_minutes)
+
+    train = frame.iloc[:train_end].copy()
+    validation = frame.iloc[train_end:validation_end].copy()
+    test = frame.iloc[validation_end:].copy()
+
+    # Purge rows whose future target belongs to the next partition.
+    train = train[train.index + horizon < validation_start_at]
+    validation = validation[validation.index + horizon < test_start_at]
     split = ChronologicalSplit(
-        train=frame.iloc[:train_end].copy(),
-        validation=frame.iloc[train_end:validation_end].copy(),
-        test=frame.iloc[validation_end:].copy(),
+        train=train,
+        validation=validation,
+        test=test,
     )
-    minimum_partition_rows = settings.window_size + 1
+    minimum_partition_rows = settings.window_size
     sizes = (len(split.train), len(split.validation), len(split.test))
     if min(sizes) < minimum_partition_rows:
         raise InsufficientDataError(

@@ -69,8 +69,8 @@ metrics are not thesis results.
 
 All commands accept PostgreSQL settings through environment variables.
 `train` and `evaluate` also accept `--start` and `--end` ISO-8601 timestamps.
-`evaluate` and `infer` accept `--version`; otherwise the active model is
-preferred, then the latest model. `infer` submits its final S2 prediction to
+`evaluate` and `infer` accept `--version`; otherwise they require the active
+model and fail safely when no model is active. `infer` submits its final S2 prediction to
 `POST /api/v1/ml/predictions`; it fails safely when backend or token is
 unavailable.
 
@@ -147,10 +147,12 @@ Example for a controlled heat/recovery period:
 3. Pivot the feature columns:
    `temperature_s1`, `humidity_s1`, `temperature_s2`, `humidity_s2`.
 4. Apply bounded interpolation and forward fill, then drop incomplete rows.
-5. Create `future_temperature_s2` by shifting S2 five minutes ahead.
+5. Join `future_temperature_s2` at the exact `t+5 minute` timestamp.
 6. Split chronologically into train `70%`, validation `15%`, and test `15%`.
-7. Fit feature and target scalers on the train partition only.
-8. Compare persistence and five-point moving-average baselines in Celsius.
+7. Purge horizon-crossing rows at split boundaries to prevent target leakage.
+8. Build windows only from continuous one-minute timestamps.
+9. Fit feature and target scalers on the train partition only.
+10. Compare persistence and five-point moving-average baselines in Celsius.
 9. Train and evaluate the LSTM in Celsius units.
 10. Save model files under `models/`, reports under `reports/`, and metadata in
     PostgreSQL.

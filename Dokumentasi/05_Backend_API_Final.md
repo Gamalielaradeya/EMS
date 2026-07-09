@@ -243,7 +243,7 @@ POST /api/v1/ml/predictions
 |---|---|---|
 | GET | `/sensors` | Daftar sensor |
 | GET | `/sensors/{sensorCode}` | Detail sensor |
-| PUT | `/sensors/{sensorCode}` | Update metadata sensor |
+| PUT | `/sensors/{sensorCode}` | Update metadata sensor; admin/internal token required |
 | GET | `/readings/latest` | Data sensor terbaru |
 | GET | `/readings/history` | Data historis sensor |
 

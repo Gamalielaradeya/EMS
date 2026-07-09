@@ -28,7 +28,7 @@ func (s *Service) InsertPrediction(ctx context.Context, input model.PredictionIn
 		s.publish(sse.EventSystemLog, systemLog)
 	}
 	s.publish(sse.EventPredictionLatest, prediction)
-	if prediction.IsStale {
+	if !predictionTransitionEligible(prediction) {
 		return prediction, nil, nil
 	}
 	event, err := s.repository.InsertPredictionTransitionEvent(ctx, prediction)
@@ -41,6 +41,10 @@ func (s *Service) InsertPrediction(ctx context.Context, input model.PredictionIn
 	s.publish(sse.EventAnomalyCreated, event)
 	s.processEventNotification(ctx, event)
 	return prediction, nil, nil
+}
+
+func predictionTransitionEligible(prediction model.Prediction) bool {
+	return !prediction.IsStale && prediction.FinalStatus != "trouble"
 }
 
 func (s *Service) LatestPrediction(ctx context.Context) (*model.Prediction, error) {
