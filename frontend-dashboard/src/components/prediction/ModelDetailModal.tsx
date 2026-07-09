@@ -1,8 +1,10 @@
 import { Check, Pencil, Trash2, X } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock"
 import { ApiError, api } from "@/lib/api"
 import { controlClassName } from "@/lib/forms"
 import { formatDateTime, formatMeasurement } from "@/lib/format"
@@ -25,6 +27,8 @@ export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onDe
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [renameError, setRenameError] = useState<string | null>(null)
+
+  useBodyScrollLock(true)
 
   // Close on Escape key
   useEffect(() => {
@@ -84,15 +88,21 @@ export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onDe
   const metrics = fullMetrics && fullMetrics.model_version === model.version ? fullMetrics : null
   const hasMetrics = model.metrics || metrics
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-      role="dialog"
       aria-modal="true"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/55 p-4 overscroll-none"
+      onClick={onClose}
+      onWheel={(event) => {
+        if (!(event.target instanceof Element) || !event.target.closest("[data-modal-scroll]")) {
+          event.preventDefault()
+        }
+      }}
+      role="dialog"
     >
       <div
-        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border bg-card shadow-floating"
+        className="max-h-[min(85vh,40rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-lg border bg-card shadow-floating"
+        data-modal-scroll
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -271,7 +281,8 @@ export function ModelDetailModal({ model, fullMetrics, comparison, onClose, onDe
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
