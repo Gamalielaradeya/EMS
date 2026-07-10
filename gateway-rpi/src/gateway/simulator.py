@@ -50,6 +50,8 @@ class SmoothThermalSimulator:
         self._segment_elapsed = 0.0
         self._segment_start_s1 = self._s1_temperature
         self._segment_start_s2 = self._s2_temperature
+        # Per drop-cycle plan for --drop-sensor random: cycle_index -> kind
+        self._random_drop_plan: dict[int, str] = {}
 
     def next_readings(self) -> tuple[list[SensorReading], dict[str, object]]:
         segment = self._segments[self._segment_index]
@@ -68,9 +70,17 @@ class SmoothThermalSimulator:
             SensorReading("S1", "ambient", round(self._s1_temperature, 2), round(self._s1_humidity, 2)),
             SensorReading("S2", "hotspot", round(self._s2_temperature, 2), round(self._s2_humidity, 2)),
         ]
-        dropped_sensor = self._active_drop_sensor()
-        if dropped_sensor:
-            readings = [reading for reading in readings if reading.sensor_code != dropped_sensor]
+        drop_kind, dropped_codes = self._active_drop()
+        if dropped_codes:
+            readings = [reading for reading in readings if reading.sensor_code not in dropped_codes]
+        # Back-compat single-sensor field for older tests/log consumers.
+        dropped_sensor: str | None
+        if drop_kind in {"S1", "S2"}:
+            dropped_sensor = drop_kind
+        elif drop_kind in {"both", "gateway"}:
+            dropped_sensor = drop_kind
+        else:
+            dropped_sensor = None
         metadata = {
             "elapsed_seconds": round(self._elapsed, 3),
             "segment": segment.name,
@@ -78,6 +88,8 @@ class SmoothThermalSimulator:
             "target_s2": segment.target_s2,
             "readings_count": len(readings),
             "dropped_sensor": dropped_sensor,
+            "drop_kind": drop_kind,
+            "dropped_codes": sorted(dropped_codes),
         }
         self._advance()
         return readings, metadata
@@ -93,16 +105,22 @@ class SmoothThermalSimulator:
             self._segment_start_s1 = self._s1_temperature
             self._segment_start_s2 = self._s2_temperature
 
-    def _active_drop_sensor(self) -> str | None:
+    def _active_drop(self) -> tuple[str | None, set[str]]:
+        """Return (drop_kind, dropped sensor codes).
+
+        drop_kind is None during healthy periods, otherwise one of:
+        S1, S2, both, gateway, or ALTERNATE's current single sensor.
+        """
         if not self._options.drop_sensor or self._options.drop_after_seconds is None:
-            return None
+            return None, set()
         if self._elapsed < self._options.drop_after_seconds:
-            return None
-        configured = self._options.drop_sensor.upper()
+            return None, set()
+        configured = self._options.drop_sensor.lower()
         if self._options.drop_for_seconds is None and self._options.recover_for_seconds is None:
-            if configured == "ALTERNATE":
-                raise ValueError("alternating drop requires drop_for_seconds and recover_for_seconds")
-            return configured
+            if configured in {"alternate", "random"}:
+                raise ValueError(f"{configured} drop requires drop_for_seconds and recover_for_seconds")
+            return self._drop_kind_to_codes(configured.upper() if configured in {"s1", "s2"} else configured)
+
         if not self._options.drop_for_seconds or not self._options.recover_for_seconds:
             raise ValueError("drop cycle requires both drop_for_seconds and recover_for_seconds")
         if self._options.drop_for_seconds <= 0 or self._options.recover_for_seconds <= 0:
@@ -113,10 +131,35 @@ class SmoothThermalSimulator:
         cycle_index = int(elapsed // cycle_seconds)
         cycle_elapsed = elapsed % cycle_seconds
         if cycle_elapsed >= self._options.drop_for_seconds:
-            return None
-        if configured == "ALTERNATE":
-            return "S1" if cycle_index % 2 == 0 else "S2"
-        return configured
+            return None, set()
+
+        if configured == "alternate":
+            kind = "S1" if cycle_index % 2 == 0 else "S2"
+            return kind, {kind}
+        if configured == "random":
+            kind = self._random_drop_plan.get(cycle_index)
+            if kind is None:
+                # Weighted toward single-sensor faults; both/gateway less common.
+                kind = self._rng.choices(
+                    population=["S1", "S2", "both", "gateway"],
+                    weights=[0.35, 0.35, 0.20, 0.10],
+                    k=1,
+                )[0]
+                self._random_drop_plan[cycle_index] = kind
+            return self._drop_kind_to_codes(kind)
+
+        kind = configured.upper() if configured in {"s1", "s2"} else configured
+        return self._drop_kind_to_codes(kind)
+
+    def _drop_kind_to_codes(self, kind: str) -> tuple[str | None, set[str]]:
+        normalized = kind.lower()
+        if normalized == "s1":
+            return "S1", {"S1"}
+        if normalized == "s2":
+            return "S2", {"S2"}
+        if normalized in {"both", "gateway"}:
+            return normalized, {"S1", "S2"}
+        raise ValueError(f"unsupported drop kind: {kind}")
 
     def _build_segments(self, scenario: str) -> list[Segment]:
         if scenario == "normal":
@@ -213,7 +256,8 @@ def run_simulator(
                     printer(f"simulator delivery failed: {exc}")
                     return 1
             else:
-                printer("simulator skipped payload because all sensors are dropped")
+                drop_kind = metadata.get("drop_kind") or "sensors"
+                printer(f"simulator skipped payload drop_kind={drop_kind} (no readings this cycle)")
             sleeper(options.interval_seconds)
         return 0
     finally:

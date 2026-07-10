@@ -133,8 +133,9 @@ hardware inserts for both sensors. Full evidence is recorded in
   backend, PostgreSQL, and dashboard running.
 - [x] Attempt XY-MD02 `STOP` command over Raspberry Pi `/dev/ttyUSB0` to
   disable ordinary UART/common-protocol automatic reporting.
-- [ ] Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
-  sensors and rerun long passive Modbus RTU collection.
+- [x] Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
+  sensors (operator-confirmed resolved; historical STOP failures remain in
+  `M10B_HARDWARE_VALIDATION_LOG.md` / `TEST_LOG.md` as earlier blocked period).
 - [x] Train from hardware readings with `source=hardware` and
   `quality_status=valid` as a final-candidate/preliminary run.
 - [x] Record one-minute resampling, chronological split sizes, and window count
@@ -190,46 +191,46 @@ with HTTP `201` readings posts.
 - [ ] Verify cooldown suppresses duplicate notification delivery.
 - [ ] Verify stale predictions stay in history but do not send alerts.
 
-## Next Step
+## Historical notes (auto-report period, 2026-06-03)
 
-Disable XY-MD02 ordinary UART/common-protocol automatic reporting on both
-sensors, verify the RS485 bus is quiet when idle, then rerun long hardware
-collection before final TensorFlow training.
+The following is retained as the earlier blocked period only. **XY-MD02
+auto-report / RS485 bus noise is operator-confirmed resolved** and is no longer
+the active M10B blocker.
 
 The hardware dataset collection attempt started on 2026-06-03 with Pi gateway
 PID `1309` and was stopped after the long run became unstable. It reached S1
 `273` and S2 `253` hardware-valid rows, with latest values S1 `26.10 C` /
 `51.90 %` and S2 `27.30 C` / `43.40 %` at
-`2026-06-03 07:42:26.761374+00`. These rows prove short hardware delivery, but
-they are not accepted as the final thesis ML dataset because gateway logs showed
-ordinary ASCII temperature/humidity reports on the RS485 bus and Modbus RTU ID
-mismatch errors (`id=32`, `id=161`, `id=163`). Next hardware step: send the
-ordinary-protocol `STOP` command, or equivalent vendor configuration command, on
-both XY-MD02 sensors; confirm no automatic ASCII output while idle; then rerun
-the 2+ hour passive Modbus RTU collection.
+`2026-06-03 07:42:26.761374+00`. At that time rows were not accepted as final
+thesis ML dataset because gateway logs showed ordinary ASCII temperature/humidity
+reports on the RS485 bus and Modbus RTU ID mismatch errors (`id=32`, `id=161`,
+`id=163`).
 
 Follow-up STOP attempt on 2026-06-03 did not clear the bus. `STOP\r\n`,
 `STOP\n`, `STOP`, and a repeated STOP burst were sent over `/dev/ttyUSB0`, but a
 10-second quiet check still found `4080` queued bytes containing repeated ASCII
-temperature/humidity reports. The requested repeated raw-read validation could
-not complete because the first raw diagnostic hung on the noisy serial stream.
-No 10-minute or 2-hour collection was started. Next step remains hardware/device
-configuration: power-cycle and isolate each XY-MD02, stop automatic reporting or
-set passive Modbus RTU mode, confirm idle bus silence, then rerun collection.
+temperature/humidity reports.
 
 Best-effort opportunistic collection on 2026-06-03 ran for about 1 hour 56
 minutes with the gateway process alive, but collected zero new hardware-valid
-rows. Counts stayed S1 `273` and S2 `253`; latest hardware timestamps stayed at
-`2026-06-03 07:42:26.761374+00`. Gateway logs continued to show `/readings` and
-`/gateway/status` HTTP timeouts plus ASCII receive-buffer cleanup. This evidence
-is preliminary/noisy only and is not final ML dataset evidence.
+rows (token mismatch later fixed in M10E; serial noise still present then).
 
-M10E token alignment on 2026-06-03 fixed the gateway bearer token mismatch.
-After updating Raspberry Pi `config.yaml`, Pi health returned HTTP `200` and a
-direct authenticated manual readings POST returned HTTP `201` in about `0.190`
-seconds. The two manual validation rows were deleted immediately afterward.
-However, a 60-second gateway retry collected zero new hardware-valid rows:
-counts stayed S1 `273` and S2 `253`, and the collection log showed serial
-receive-buffer cleanup from unsolicited ASCII temperature/humidity bytes before
-any new delivery. The token/backend path is now valid; the remaining blocker is
-the noisy serial/run-loop hardware path.
+## Next Step (post auto-report resolution)
+
+XY-MD02 auto-report / bus-noise blocker is **closed**. Remaining open checklist
+items for final Bab 4 / M10B closure:
+
+1. **Telegram enabled evidence** — configure settings safely, run protected
+   test, capture waspada/anomali alert + cooldown + stale non-alert behavior.
+2. **Graceful hardware edge cases** — disconnect one sensor (trouble), temporary
+   backend interrupt (buffer + replay), heartbeat/gateway recovery.
+3. **Final Bab 4 evidence pack** — screenshots, API samples, DB counts for
+   live hardware path; prediction/anomaly/notification/system-log rows; layout
+   marker ratios if still missing.
+4. **Model-quality narrative honesty** — hardware candidate models exist
+   (`v20260603_200711`, `v20260604_010335` and later), but baselines may still
+   outperform LSTM; do not claim final LSTM superiority without supporting
+   metrics. Optional: longer clean hardware collection + retrain if thesis needs
+   stronger model-quality claims.
+5. **Pi power risk** — recheck `vcgencmd get_throttled` after clean reboot
+   before long final capture (historical undervoltage `0x50000`).

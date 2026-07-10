@@ -480,7 +480,8 @@ Gateway stabilization and hardware validation:
 
 ## Milestone 10B - XY-MD02 Auto-Report Disable Attempt
 
-Status: Blocked - automatic reporting persists
+Status (at time of attempt): Blocked - automatic reporting persists  
+**Resolution (operator-confirmed later): auto-report / bus noise fixed**
 
 Documentation and operator validation only:
 
@@ -489,20 +490,21 @@ Documentation and operator validation only:
   `pyserial`: `STOP\r\n`, `STOP\n`, `STOP`, and a repeated burst including
   `STOP\r`.
 - Did not print tokens or modify committed gateway configuration.
-- Confirmed the RS485 receive buffer remained noisy after STOP attempts; a
-  10-second quiet check still queued `4080` bytes containing ASCII
-  temperature/humidity reports.
+- Confirmed at the time that the RS485 receive buffer remained noisy after
+  STOP attempts; a 10-second quiet check still queued `4080` bytes containing
+  ASCII temperature/humidity reports.
 - Attempted the requested repeated raw-read validation, but the first S1 raw
   diagnostic hung on the noisy serial stream before 20 attempts could complete.
 - Stopped the leftover diagnostic process and confirmed no intended gateway
   collection loop was left running.
-- Did not start the 10-minute or 2-hour collection and did not mark the final
-  hardware dataset valid.
+- Did not start the 10-minute or 2-hour collection during that blocked period
+  and did not mark the final hardware dataset valid then.
 - Added no source-code mitigation because ignoring ASCII bytes in software is
   not the root fix for final thesis evidence.
-- Next required hardware action: power-cycle/isolate each XY-MD02, disable
-  ordinary UART/common-protocol automatic reporting or set passive Modbus RTU
-  mode, verify idle bus silence, then rerun raw reads and long collection.
+- Later operator confirmation: XY-MD02 auto-report / bus noise is **resolved**.
+  Historical STOP failures remain in the log as the earlier blocked period.
+  Active remaining work is Telegram evidence, edge-case recovery checks, final
+  Bab 4 capture, and honest model-quality narrative — not bus noise.
 
 ## Milestone 10E - Best-Effort Hardware Collection
 
@@ -510,8 +512,9 @@ Status: Completed - zero new rows
 
 Documentation and operator validation only:
 
-- Kept the known XY-MD02 ASCII auto-report issue in scope as an unresolved
-  blocker and labeled the run as preliminary/noisy, not final thesis evidence.
+- At the time of this run, the known XY-MD02 ASCII auto-report issue was still
+  unresolved and the run was labeled preliminary/noisy, not final thesis
+  evidence. (Auto-report/bus noise has since been operator-confirmed resolved.)
 - Reused the running local EMS stack: PostgreSQL on Docker host port `15432`,
   backend on `APP_PORT=8081`, and frontend on `localhost:5173`.
 - Confirmed local backend health and Raspberry Pi access to

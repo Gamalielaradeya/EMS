@@ -103,6 +103,37 @@ class SimulatorTests(unittest.TestCase):
         self.assertEqual(dropped_sensors[1:3], ["S1", "S1"])
         self.assertEqual(dropped_sensors[6:8], ["S2", "S2"])
 
+    def test_random_drop_picks_from_s1_s2_both_gateway(self) -> None:
+        simulator = SmoothThermalSimulator(
+            SimulatorOptions(
+                duration_seconds=600,
+                interval_seconds=10,
+                seed=7,
+                drop_sensor="random",
+                drop_after_seconds=10,
+                drop_for_seconds=20,
+                recover_for_seconds=10,
+            )
+        )
+        kinds: set[str] = set()
+        for _ in range(60):
+            readings, metadata = simulator.next_readings()
+            kind = metadata.get("drop_kind")
+            if not kind:
+                continue
+            kinds.add(str(kind))
+            codes = set(metadata.get("dropped_codes") or [])
+            remaining = {reading.sensor_code for reading in readings}
+            self.assertTrue(codes.isdisjoint(remaining))
+            if kind in {"both", "gateway"}:
+                self.assertEqual(remaining, set())
+            elif kind == "S1":
+                self.assertEqual(remaining, {"S2"})
+            elif kind == "S2":
+                self.assertEqual(remaining, {"S1"})
+        self.assertTrue(kinds)
+        self.assertTrue(kinds.issubset({"S1", "S2", "both", "gateway"}))
+
     def test_duration_parser(self) -> None:
         self.assertEqual(duration_to_seconds("10s"), 10)
         self.assertEqual(duration_to_seconds("2m"), 120)

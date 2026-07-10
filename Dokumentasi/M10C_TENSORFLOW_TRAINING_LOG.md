@@ -5,8 +5,10 @@
 **Done - development validation only**
 
 This run validates TensorFlow installation and real LSTM pipeline execution on
-the laptop. It is not final thesis model evidence because Raspberry Pi hardware
-readings are not available. Milestone `10B` remains blocked.
+the laptop. It is not final thesis model evidence by itself (later hardware
+candidate runs are recorded below). The earlier Milestone `10B` XY-MD02
+auto-report / bus-noise blocker is operator-confirmed resolved; remaining M10B
+gaps are thesis evidence and model-quality narrative, not serial noise.
 
 ## Environment
 
@@ -186,11 +188,11 @@ After recording evidence:
 ## Limitations and Next Step
 
 - This run does not use Raspberry Pi or XY-MD02 hardware data.
-- This run does not unblock Milestone `10B`.
-- This run is not final Bab 4 LSTM model evidence.
-- Resume Milestone `10B` when hardware becomes available.
-- After collecting hardware readings, run final training and capture final
-  metrics, artifacts, API results, and screenshots.
+- This run alone is not final Bab 4 LSTM model evidence.
+- Hardware candidate training runs are recorded in later sections of this log.
+- XY-MD02 auto-report / bus noise is no longer the active hardware blocker.
+- Remaining work is honest model-quality narrative plus final Bab 4
+  metrics/artifacts/API/screenshot evidence as needed.
 
 ## M10F Hardware Dataset Candidate Training
 
@@ -328,8 +330,9 @@ Limitations:
 - Validation and test windows are small (`12` and `14`).
 - Both baselines outperform the LSTM, so the model is not selected as final
   evidence yet.
-- XY-MD02 automatic-report/noisy-bus risk remains part of the hardware evidence
-  context.
+- Historical XY-MD02 automatic-report/noisy-bus risk applied to earlier
+  collection windows; that issue is operator-confirmed resolved and should not
+  be cited as a current active blocker.
 
 ## M10H Larger Overnight Hardware Dataset Training
 

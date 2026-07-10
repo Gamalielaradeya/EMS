@@ -2,7 +2,7 @@
 
 ## Status
 
-**Partial - two-sensor hardware path validated; long collection blocked**
+**Partial - two-sensor hardware path validated; XY-MD02 auto-report/bus noise resolved**
 
 Stage-two validation on 2026-06-03 confirmed Raspberry Pi gateway delivery with
 one connected XY-MD02 sensor as S1. M10B is not complete because S2 was not
@@ -20,8 +20,12 @@ hardware rows for both S1 and S2.
 
 Later final dataset collection was stopped because XY-MD02 ordinary
 UART/common-protocol ASCII temperature and humidity reports continued to enter
-the RS485 receive buffer. The two-sensor short hardware path remains valid, but
-the long dataset collection is not valid yet.
+the RS485 receive buffer. That **auto-report / bus-noise issue is now
+operator-confirmed resolved** and is no longer the active collection blocker.
+Sections below that describe STOP failures and noisy-bus collection remain as
+the historical blocked period. M10B stays partial only for remaining thesis
+evidence (Telegram, edge-case recovery checks, final Bab 4 capture / model
+narrative), not for bus noise.
 
 ## Summary
 
@@ -779,10 +783,11 @@ Recommended next hardware configuration step:
     while idle.
 ```
 
-Final dataset collection remains blocked until XY-MD02 automatic reporting is
-disabled and passive Modbus RTU polling is stable.
+Historical conclusion at the time: final dataset collection remained blocked
+until XY-MD02 automatic reporting was disabled and passive Modbus RTU polling
+was stable. **Later operator confirmation: auto-report / bus noise is resolved.**
 
-## XY-MD02 STOP Attempt - Still Blocked
+## XY-MD02 STOP Attempt - Still Blocked (historical)
 
 Status on 2026-06-03:
 
@@ -875,9 +880,12 @@ Recommended next hardware step:
 9. Only then run S1/S2 20-attempt raw reads and the 10-minute gateway loop.
 ```
 
-M10B remains partial/blocked for final dataset collection.
+Historical note: during the 2026-06-03 STOP attempts, M10B was partial/blocked
+for final dataset collection by auto-report noise. **That bus-noise blocker is
+now resolved (operator-confirmed).** Remaining M10B work is evidence/Telegram/
+Bab 4 closure, not auto-report disable.
 
-## Isolated S1 STOP Attempt - Still Auto-Reporting
+## Isolated S1 STOP Attempt - Still Auto-Reporting (historical)
 
 Status on 2026-06-03 `15:09 +07:00`:
 
@@ -1096,24 +1104,25 @@ Conclusion:
   increase after gateway start/restart.
 - No new valid hardware data was collected in this attempt.
 - The existing hardware-valid counts remained S1 `273` and S2 `253`.
-- The preliminary collection remains blocked by current runtime behavior:
-  gateway loop HTTP sends time out while ASCII auto-report noise continues on
-  the serial bus.
+- At the time, preliminary collection remained blocked by runtime behavior:
+  gateway loop HTTP sends timed out while ASCII auto-report noise continued on
+  the serial bus. **Later: auto-report / bus noise operator-confirmed resolved.**
 - Direct Pi-to-backend write sanity checks prove the backend can still accept a
   valid authenticated readings payload.
 - This run is preliminary/noisy validation only and must not be used as final
   thesis dataset evidence.
 
-## Best-Effort Opportunistic Collection - Ran, Zero New Rows
+## Best-Effort Opportunistic Collection - Ran, Zero New Rows (historical)
 
 Status on 2026-06-03:
 
 ```text
-Goal: keep best-effort collection running for about 2 hours while the known
-      XY-MD02 ASCII auto-report issue remains unresolved.
+Goal: keep best-effort collection running for about 2 hours while the then-known
+      XY-MD02 ASCII auto-report issue was still unresolved.
 Dataset status: preliminary/noisy only; not final thesis dataset.
 Code changed: no
 Final TensorFlow training: not run
+Note: auto-report/bus noise later operator-confirmed resolved.
 ```
 
 Stack and network:

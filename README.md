@@ -74,8 +74,9 @@ If port `5432` is already used locally, set `POSTGRES_PORT` in the local `.env` 
 ## Milestone Status
 
 Milestones `-1` through `9` and local integration Milestone `10A` are complete.
-Milestone `10B` remains pending for Raspberry Pi hardware validation, real
-TensorFlow training evidence, enabled Telegram evidence, and final Bab 4
-capture. Current model evidence must remain honest: the LSTM pipeline works,
-but persistence and moving-average baselines may outperform LSTM on the current
-dataset.
+Hardware path for Milestone `10B` is largely validated; the earlier XY-MD02
+auto-report / RS485 bus-noise blocker is operator-confirmed resolved. Remaining
+`10B` / Bab 4 work is enabled Telegram evidence, final screenshots/API/DB
+capture, optional edge-case recovery checks, and honest model-quality narrative
+(LSTM pipeline works, but persistence and moving-average baselines may still
+outperform LSTM on current hardware-candidate datasets).

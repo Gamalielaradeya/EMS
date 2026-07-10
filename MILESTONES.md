@@ -17,7 +17,7 @@ Canonical plan source: `Dokumentasi/10_Codex_Implementation_Runbook.md`.
 | `8` | Alert, Telegram, and Events Logs | Done |
 | `9` | Layout Upload and Sensor Marker | Done |
 | `10A` | Local Full Integration Test and Evidence Checklist | Done |
-| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - long collection blocked by XY-MD02 auto-report |
+| `10B` | Raspberry Pi Hardware Validation and Final Bab 4 Evidence | Partial - XY-MD02 auto-report/bus noise resolved; remaining Bab 4 evidence, Telegram, final capture |
 | `10C` | TensorFlow Setup and ML Training Runtime Validation | Done - development validation only |
 
 ## Milestone -1 Completion
@@ -221,7 +221,7 @@ Milestone `9` requires explicit user approval.
 - Kept simulator readings and manual predictions explicitly limited to local
   integration validation, not thesis evidence.
 
-## Milestone 10B Stage-One Blocker
+## Milestone 10B Stage-One Blocker (historical; later superseded)
 
 - Raspberry Pi SSH access is now available at `gamaliel@192.168.18.33`
   (`lmnop`).
@@ -233,12 +233,13 @@ Milestone `9` requires explicit user approval.
   `dialout`.
 - Raspberry Pi undervoltage was recorded with `vcgencmd get_throttled`
   returning `0x50000`; this is a hardware risk for final evidence.
-- M10B remains blocked because safe raw Modbus reads for slave ID `1` at
-  addresses `0` and `1` returned no response, and a slave ID `2` check also
-  returned no response.
-- M10B also remains blocked because the Pi cannot reach
+- At stage one, M10B was blocked because safe raw Modbus reads for slave ID `1`
+  at addresses `0` and `1` returned no response, and a slave ID `2` check also
+  returned no response (later fixed via function `04` / two-sensor path).
+- At stage one, M10B was also blocked because the Pi cannot reach
   `http://192.168.18.9:8081/api/v1/health`; laptop backend is healthy locally,
-  but Pi-side curl times out and non-admin firewall-rule creation was denied.
+  but Pi-side curl times out and non-admin firewall-rule creation was denied
+  (later network/backend path was fixed in subsequent stages).
 - S1/S2 sensor diagnostics, hardware reading insert, dashboard realtime update,
   and the 3-5 minute gateway run-loop were not run or claimed.
 - Continue from `Dokumentasi/M10B_HARDWARE_VALIDATION_LOG.md` after fixing
@@ -326,7 +327,7 @@ Milestone `9` requires explicit user approval.
 - Kept Raspberry Pi `throttled=0x50000` as historical undervoltage/throttling
   risk; recommend a clean reboot and recheck before long final evidence runs.
 
-## Milestone 10B Final Collection Blocker
+## Milestone 10B Final Collection Blocker (historical)
 
 - Attempted to disable XY-MD02 ordinary UART/common-protocol automatic
   reporting from the Raspberry Pi over `/dev/ttyUSB0`.
@@ -338,9 +339,17 @@ Milestone `9` requires explicit user approval.
 - A requested repeated raw-read validation could not complete because the first
   raw diagnostic hung on the noisy serial stream; the leftover diagnostic
   process was stopped.
-- No 10-minute or 2-hour collection was started, and no final ML dataset was
-  marked valid.
-- M10B remains partial: the two-sensor hardware path is validated for short
-  operation, but final long hardware collection is blocked until XY-MD02
-  automatic reporting is disabled, likely by isolating or power-cycling each
-  sensor and applying the vendor `STOP`/passive-mode configuration.
+- No 10-minute or 2-hour collection was started during that blocked period, and
+  no final ML dataset was marked valid at that time.
+
+## Milestone 10B Auto-Report Resolution
+
+- Operator-confirmed: the XY-MD02 ordinary UART/common-protocol automatic
+  reporting / RS485 bus-noise issue is **resolved**.
+- Historical STOP-attempt failures and noisy-bus collection notes above remain
+  as the record of the earlier blocked period; they are no longer the active
+  collection blocker.
+- M10B remains **partial** only for remaining thesis evidence work (not bus
+  noise): longer clean hardware collection if still needed for final model
+  narrative, enabled Telegram evidence, disconnect/buffer recovery checks,
+  and final Bab 4 screenshots/API/DB capture.

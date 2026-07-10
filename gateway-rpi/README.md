@@ -155,6 +155,7 @@ python -m gateway.cli simulate --scenario random-smooth --duration forever
 python -m gateway.cli simulate --scenario random-smooth --duration 10m --drop-sensor S2 --drop-after 2m
 python -m gateway.cli simulate --scenario random-smooth --duration forever --drop-sensor S2 --drop-after 30s --drop-for 90s --recover-for 120s
 python -m gateway.cli simulate --scenario random-smooth --duration forever --drop-sensor alternate --drop-after 60s --drop-for 330s --recover-for 120s
+python -m gateway.cli simulate --scenario random-smooth --duration forever --drop-sensor random --drop-after 2m --drop-for 70s --recover-for 5m
 ```
 
 Use it for frontend/backend/SSE/event/Telegram behavior tests. Do not use
